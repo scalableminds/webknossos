@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.{
   VoxelSize,
   WebknossosAdHocMeshRequest
 }
-import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshHelper, FullMeshRequest, MappingType}
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMesh, FullMeshHelper, FullMeshRequest, MappingType}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -136,24 +136,22 @@ class TSFullMeshService @Inject() (
       _ <- Fox.fromBool(bucketPositions.length <= maxAdHocFullMeshChunks) ?~> Msg.Mesh.tooManyAdHocMeshRequests(
         maxAdHocFullMeshChunks
       )
-      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(bucketPositions) {
-        bucketPosition =>
-          val adHocMeshRequest = WebknossosAdHocMeshRequest(
-            position = Vec3Int(bucketPosition.voxelMag1X, bucketPosition.voxelMag1Y, bucketPosition.voxelMag1Z),
-            mag = mag,
-            cubeSize = Vec3Int.full(DataLayer.bucketLength + 1),
-            fullMeshRequest.segmentId,
-            voxelSize.factor,
-            fullMeshRequest.mappingName,
-            fullMeshRequest.mappingType,
-            fullMeshRequest.additionalCoordinates,
-            fullMeshRequest.annotationVersion,
-            findNeighbors = false
-          )
-          loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
+      meshChunks: List[AdHocMesh] <- Fox.serialCombined(bucketPositions) { bucketPosition =>
+        val adHocMeshRequest = WebknossosAdHocMeshRequest(
+          position = Vec3Int(bucketPosition.voxelMag1X, bucketPosition.voxelMag1Y, bucketPosition.voxelMag1Z),
+          mag = mag,
+          cubeSize = Vec3Int.full(DataLayer.bucketLength + 1),
+          fullMeshRequest.segmentId,
+          voxelSize.factor,
+          fullMeshRequest.mappingName,
+          fullMeshRequest.mappingType,
+          fullMeshRequest.additionalCoordinates,
+          fullMeshRequest.annotationVersion,
+          findNeighbors = false
+        )
+        loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
       }
-      allVertices = vertexChunksWithNeighbors.map(_._1)
-    } yield allVertices
+    } yield meshChunks.map(_.triangleSoup)
 
   private def getAllAdHocChunksWithNeighborLogic(
       annotationId: ObjectId,
@@ -196,18 +194,17 @@ class TSFullMeshService @Inject() (
                 fullMeshRequest.additionalCoordinates,
                 fullMeshRequest.annotationVersion
               )
-              loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map {
-                case (vertices, neighborIds) =>
-                  (
-                    vertices,
-                    generateNextTopLeftsFromNeighbors(
-                      position,
-                      neighborIds,
-                      chunkSize,
-                      visited,
-                      datasetBoundingBox
-                    )
+              loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map { mesh =>
+                (
+                  mesh.triangleSoup,
+                  generateNextTopLeftsFromNeighbors(
+                    position,
+                    mesh.neighbors,
+                    chunkSize,
+                    visited,
+                    datasetBoundingBox
                   )
+                )
               }
             })
           }
@@ -233,7 +230,7 @@ class TSFullMeshService @Inject() (
       tracingId: String,
       tracing: VolumeTracing,
       adHocMeshRequest: WebknossosAdHocMeshRequest
-  )(using tc: TokenContext): Fox[(Array[Float], List[Int])] =
+  )(using tc: TokenContext): Fox[AdHocMesh] =
     if (tracing.getHasEditableMapping) {
       val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
       editableMappingService.createAdHocMesh(mappingLayer, adHocMeshRequest)

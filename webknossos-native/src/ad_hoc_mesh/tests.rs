@@ -38,8 +38,49 @@ fn mesh_of(data: &[u8], bytes_per_element: i32, dimensions: [usize; 3], segment_
     ad_hoc_mesh(&cuboid, segment_id, ORIGIN, UNIT)
 }
 
+/// Three floats per vertex and three vertices per triangle, without shared vertices, as [reference_mesh] returns
+/// them.
+fn triangle_soup(mesh: &Mesh) -> Vec<f32> {
+    mesh.indices
+        .iter()
+        .flat_map(|&index| {
+            let start = index as usize * 3;
+            mesh.vertices[start..start + 3].iter().copied()
+        })
+        .collect()
+}
+
+/// Asserts that each vertex is stored once and used by a triangle, and that the indices form whole triangles.
+fn assert_vertices_unique_and_used(mesh: &Mesh) {
+    assert_eq!(mesh.vertices.len() % 3, 0);
+    assert_eq!(mesh.indices.len() % 3, 0);
+    let vertices = mesh.vertices.as_chunks::<3>().0;
+    let distinct: std::collections::HashSet<_> =
+        vertices.iter().map(|v| v.map(f32::to_bits)).collect();
+    assert_eq!(distinct.len(), vertices.len(), "duplicate vertex");
+    let mut used = vec![false; vertices.len()];
+    for &index in &mesh.indices {
+        used[index as usize] = true;
+    }
+    assert!(used.iter().all(|&u| u), "unused vertex");
+    // Vertices are stored in the order of first use.
+    let mut next = 0;
+    for &index in &mesh.indices {
+        assert!(index <= next);
+        if index == next {
+            next += 1;
+        }
+    }
+}
+
 /// A direct port of the former Scala implementation (per-block search, eight lookups per cube), as reference.
-fn reference_mesh(cuboid: &Cuboid, segment_id: i64, offset: [f32; 3], scale: [f32; 3]) -> Mesh {
+/// Returns the triangle soup and the neighbors.
+fn reference_mesh(
+    cuboid: &Cuboid,
+    segment_id: i64,
+    offset: [f32; 3],
+    scale: [f32; 3],
+) -> (Vec<f32>, Neighbors) {
     let [width, height, depth] = cuboid.dimensions;
     let size = cuboid.bytes_per_element;
     let low_mask = if size == 8 {
@@ -117,10 +158,7 @@ fn reference_mesh(cuboid: &Cuboid, segment_id: i64, offset: [f32; 3], scale: [f3
             }
         }
     }
-    Mesh {
-        vertices,
-        neighbors,
-    }
+    (vertices, neighbors)
 }
 
 /// A small deterministic pseudo random generator (xorshift64*), so the tests need no dependency.
@@ -175,9 +213,11 @@ fn single_voxel_gives_a_closed_octahedron() {
     let dimensions = [3, 3, 3];
     let data = volume::<u32>(dimensions, 7, 0, |x, y, z| (x, y, z) == (1, 1, 1));
     let mesh = mesh_of(&data, 4, dimensions, 7);
-    assert_eq!(mesh.vertices.len(), 8 * 9); // one triangle per cube around the voxel
+    assert_eq!(mesh.indices.len(), 8 * 3); // one triangle per cube around the voxel
+    assert_eq!(mesh.vertices.len(), 6 * 3);
     assert_eq!(mesh.neighbors, 0);
-    assert_watertight(&mesh.vertices);
+    assert_vertices_unique_and_used(&mesh);
+    assert_watertight(&triangle_soup(&mesh));
     for vertex in mesh.vertices.as_chunks::<3>().0 {
         let distance: f32 = vertex.iter().map(|c| (c - 1.0).abs()).sum();
         assert_eq!(distance, 0.5);
@@ -206,6 +246,7 @@ fn empty_and_full_cuboids_have_no_triangles() {
         mesh_of(&empty, 2, dimensions, 5),
         Mesh {
             vertices: vec![],
+            indices: vec![],
             neighbors: 0
         }
     );
@@ -214,6 +255,7 @@ fn empty_and_full_cuboids_have_no_triangles() {
         mesh_of(&full, 2, dimensions, 5),
         Mesh {
             vertices: vec![],
+            indices: vec![],
             neighbors: 0b111111
         }
     );
@@ -230,6 +272,7 @@ fn a_single_voxel_cuboid_has_no_cubes_and_no_faces() {
             mesh,
             Mesh {
                 vertices: vec![],
+                indices: vec![],
                 neighbors: 0
             }
         );
@@ -264,7 +307,8 @@ fn a_ball_is_watertight_for_all_element_sizes() {
         mesh_of(&volume::<u32>(dimensions, 9, 3, inside), 4, dimensions, 9),
         mesh_of(&volume::<u64>(dimensions, 9, 3, inside), 8, dimensions, 9),
     ];
-    assert_watertight(&meshes[0].vertices);
+    assert_watertight(&triangle_soup(&meshes[0]));
+    assert_vertices_unique_and_used(&meshes[0]);
     assert_eq!(meshes[0].neighbors, 0);
     for mesh in &meshes[1..] {
         assert_eq!(mesh, &meshes[0]);
@@ -287,11 +331,11 @@ fn compares_only_the_low_bytes_of_the_segment_id() {
     ] {
         let mesh = mesh_of(&data, bytes_per_element, dimensions, high_bits | raw);
         assert_eq!(mesh, mesh_of(&data, bytes_per_element, dimensions, raw));
-        assert_eq!(mesh.vertices.len(), 8 * 9);
+        assert_eq!(mesh.indices.len(), 8 * 3);
     }
     // Values whose topmost bit is set (negative if read as signed) match as well.
     let data = volume::<u64>(dimensions, -2, 0, inside);
-    assert_eq!(mesh_of(&data, 8, dimensions, -2).vertices.len(), 8 * 9);
+    assert_eq!(mesh_of(&data, 8, dimensions, -2).indices.len(), 8 * 3);
     assert!(
         mesh_of(&data, 8, dimensions, 0xff_ffff_fffe)
             .vertices
@@ -337,15 +381,17 @@ fn matches_the_reference_on_random_volumes() {
                 .unwrap();
                 let offset = [random.next() as u16 as f32 * 0.25, -3.5, 1.0e5];
                 let scale = [11.24, 0.3, 28.0];
-                let expected = reference_mesh(&cuboid, segment_id, offset, scale);
+                let (expected_soup, expected_neighbors) =
+                    reference_mesh(&cuboid, segment_id, offset, scale);
                 let actual = ad_hoc_mesh(&cuboid, segment_id, offset, scale);
                 assert_eq!(
-                    actual.neighbors, expected.neighbors,
+                    actual.neighbors, expected_neighbors,
                     "{dimensions:?} {density} {bytes_per_element}"
                 );
+                assert_vertices_unique_and_used(&actual);
                 let bits = |v: &[f32]| v.iter().map(|f| f.to_bits()).collect::<Vec<_>>();
                 assert!(
-                    bits(&actual.vertices) == bits(&expected.vertices),
+                    bits(&triangle_soup(&actual)) == bits(&expected_soup),
                     "{dimensions:?} {density} {bytes_per_element}"
                 );
             }
@@ -376,13 +422,13 @@ fn rejects_invalid_arguments() {
         let message = invalid_argument_message(Cuboid::new(&data, 4, &dimensions));
         assert!(message.contains("positive"), "{message}");
     }
-    for (bytes_per_element, dimensions) in [
-        (4, [2, 3, 2]),
-        (8, [2, 3, 1]),
-        (1, [2, 3, 1]),
-        (8, [i32::MAX; 3]),
-    ] {
+    for (bytes_per_element, dimensions) in [(4, [2, 3, 2]), (8, [2, 3, 1]), (1, [2, 3, 1])] {
         let message = invalid_argument_message(Cuboid::new(&data, bytes_per_element, &dimensions));
         assert!(message.contains("data length"), "{message}");
+    }
+    // The vertex indices must fit into a Java int.
+    for dimensions in [[i32::MAX; 3], [1000, 1000, 1000]] {
+        let message = invalid_argument_message(Cuboid::new(&data, 1, &dimensions));
+        assert!(message.contains("at most"), "{message}");
     }
 }

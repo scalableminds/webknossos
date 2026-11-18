@@ -10,12 +10,17 @@
 //! - Within a block, cubes are iterated with z outermost and x innermost. A cube is the 2×2×2 voxels starting at its
 //!   corner `(x, y, z)`. It emits the vertices of its triangles from [TRIANGLES] as
 //!   `(x + edgeMidpoint.x + offset.x) * scale.x` (likewise for y and z) in f32.
+//! - The mesh is indexed: a vertex is stored once, when it is first emitted, and the triangles refer to it by index.
+//!   Vertices are identified by the voxel edge they lie on, so the merging is exact. Resolving the indices gives the
+//!   triangle soup with three vertices per triangle.
 //! - The neighbors are the faces of the cuboid that contain a voxel of the segment, see [Neighbors].
 
 mod triangle_table;
 
+use std::cell::Cell;
+
 use jni::EnvUnowned;
-use jni::objects::{JByteArray, JFloatArray, JIntArray, JObject};
+use jni::objects::{JByteArray, JFloatArray, JIntArray, JObject, JObjectArray};
 use jni::sys::{jint, jlong};
 
 use crate::bucket_scanner::Element;
@@ -38,10 +43,16 @@ pub type Neighbors = u8;
 /// The mesh of a segment in a cuboid.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Mesh {
-    /// Three floats per vertex and three vertices per triangle.
+    /// Three floats per vertex, each vertex once, in the order of first use.
     pub vertices: Vec<f32>,
+    /// Three vertex indices per triangle.
+    pub indices: Vec<u32>,
     pub neighbors: Neighbors,
 }
+
+/// The largest cuboid, in voxels, whose vertex indices fit into a Java `int`: there are at most three edges, and
+/// so three vertices, per voxel.
+const MAX_VOXELS: usize = i32::MAX as usize / 3;
 
 /// A cuboid of segment ids with its size in voxels.
 #[derive(Debug, Clone, Copy)]
@@ -66,6 +77,9 @@ impl<'a> Cuboid<'a> {
             return invalid_argument("dimensions must be positive");
         }
         let checked = [x, y, z].map(|d| d as usize);
+        if checked.iter().product::<usize>() > MAX_VOXELS {
+            return invalid_argument(format!("cuboid must have at most {MAX_VOXELS} voxels"));
+        }
         let expected_length = checked
             .iter()
             .try_fold(bytes_per_element as usize, |product, &d| {
@@ -229,15 +243,114 @@ const CUBE_INDEX: [u8; 256] = {
     table
 };
 
-/// Emits the triangles of the cubes of one block.
-fn march_block(
-    mask: &SegmentMask,
-    start: [usize; 3],
-    end: [usize; 3],
+/// For each edge of [EDGE_MIDPOINTS], the axis it runs along and the offset of its first voxel from the cube's
+/// origin corner.
+const EDGE_VOXELS: [(usize, [usize; 3]); 12] = {
+    let mut table = [(0, [0; 3]); 12];
+    let mut edge = 0;
+    while edge < 12 {
+        let mut axis = 0;
+        while axis < 3 {
+            // 0, 1 or 2 half voxels; 1 for the axis of the edge.
+            let halves = (EDGE_MIDPOINTS[edge][axis] * 2.0) as usize;
+            if halves == 1 {
+                table[edge].0 = axis;
+            }
+            table[edge].1[axis] = halves / 2;
+            axis += 1;
+        }
+        edge += 1;
+    }
+    table
+};
+
+/// The largest edge table, in entries, that a thread keeps between calls (16 MB, enough for 110³ voxels). Larger
+/// tables are allocated per call.
+const MAX_CACHED_EDGE_TABLE: usize = 4 << 20;
+
+thread_local! {
+    /// The edge table of the previous call on this thread, all zeros, see [MeshBuilder::edge_vertices]. Reusing it
+    /// avoids allocating and zeroing megabytes per call; only the entries of the vertices are reset.
+    static EDGE_TABLE: Cell<Vec<u32>> = const { Cell::new(Vec::new()) };
+}
+
+/// Collects the indexed mesh, merging the vertices of the same voxel edge.
+struct MeshBuilder {
+    /// For each edge of [EDGE_MIDPOINTS], its entry in [Self::edge_vertices] relative to the cube's.
+    edge_offsets: [usize; 12],
     offset: [f32; 3],
     scale: [f32; 3],
-    vertices: &mut Vec<f32>,
-) {
+    vertices: Vec<f32>,
+    indices: Vec<u32>,
+    /// For each voxel edge, its vertex index + 1, or 0 if it has none yet. Indexed by
+    /// `3 * (x + width * (y + height * z)) + axis` of the edge's first voxel and axis.
+    edge_vertices: Vec<u32>,
+    /// The entry of [Self::edge_vertices] of each vertex, to reset the table.
+    vertex_edges: Vec<usize>,
+}
+
+impl MeshBuilder {
+    fn new(dimensions: [usize; 3], offset: [f32; 3], scale: [f32; 3]) -> Self {
+        let edge_count = 3 * dimensions.iter().product::<usize>();
+        // Taken out of the thread local, so a panic drops it instead of leaving set entries behind.
+        let mut edge_vertices = EDGE_TABLE.take();
+        if edge_vertices.len() < edge_count {
+            edge_vertices = vec![0; edge_count];
+        }
+        let [width, height, _] = dimensions;
+        let edge_offsets =
+            EDGE_VOXELS.map(|(axis, [vx, vy, vz])| 3 * (vx + width * (vy + height * vz)) + axis);
+        MeshBuilder {
+            edge_offsets,
+            offset,
+            scale,
+            vertices: Vec::new(),
+            indices: Vec::new(),
+            edge_vertices,
+            vertex_edges: Vec::new(),
+        }
+    }
+
+    /// Adds the vertex on `edge` of the cube at `(x, y, z)` to the current triangle. `cube_slot` is the cube's
+    /// entry in [Self::edge_vertices], `3 * (x + width * (y + height * z))`.
+    #[inline(always)]
+    fn add(&mut self, [x, y, z]: [usize; 3], cube_slot: usize, edge: u8) {
+        let slot = cube_slot + self.edge_offsets[edge as usize];
+        let index = match self.edge_vertices[slot] {
+            0 => {
+                let index = self.vertex_edges.len() as u32;
+                self.edge_vertices[slot] = index + 1;
+                self.vertex_edges.push(slot);
+                let [dx, dy, dz] = EDGE_MIDPOINTS[edge as usize];
+                let [ox, oy, oz] = self.offset;
+                let [sx, sy, sz] = self.scale;
+                self.vertices.extend_from_slice(&[
+                    (x as f32 + dx + ox) * sx,
+                    (y as f32 + dy + oy) * sy,
+                    (z as f32 + dz + oz) * sz,
+                ]);
+                index
+            }
+            stored => stored - 1,
+        };
+        self.indices.push(index);
+    }
+
+    /// Resets the edge table, keeps it for the next call on this thread if it isn't too large, and returns the
+    /// vertices and indices.
+    fn finish(mut self) -> (Vec<f32>, Vec<u32>) {
+        if self.edge_vertices.len() <= MAX_CACHED_EDGE_TABLE {
+            for &slot in &self.vertex_edges {
+                self.edge_vertices[slot] = 0;
+            }
+            EDGE_TABLE.set(self.edge_vertices);
+        }
+        (self.vertices, self.indices)
+    }
+}
+
+/// Emits the triangles of the cubes of one block.
+fn march_block(mask: &SegmentMask, start: [usize; 3], end: [usize; 3], mesh: &mut MeshBuilder) {
     let [width, height, _] = mask.dimensions;
     let row = |y: usize, z: usize| &mask.voxels[(y + height * z) * width..][..width];
     // The four voxels of column x of the current cube row as bits 0..3, see [CUBE_INDEX].
@@ -259,15 +372,10 @@ fn march_block(
                 if key == 0 || key == 0xff {
                     continue; // fully outside or inside: no triangles
                 }
-                let x = (start[0] + i) as f32;
-                let (y, z) = (y as f32, z as f32);
+                let x = start[0] + i;
+                let cube_slot = 3 * (x + width * (y + height * z));
                 for &edge in TRIANGLES[CUBE_INDEX[key as usize] as usize] {
-                    let [dx, dy, dz] = EDGE_MIDPOINTS[edge as usize];
-                    vertices.extend_from_slice(&[
-                        (x + dx + offset[0]) * scale[0],
-                        (y + dy + offset[1]) * scale[1],
-                        (z + dz + offset[2]) * scale[2],
-                    ]);
+                    mesh.add([x, y, z], cube_slot, edge);
                 }
             }
         }
@@ -276,8 +384,15 @@ fn march_block(
 
 /// Meshes the voxels of a segment mask.
 fn mesh_segment(mask: &SegmentMask, offset: [f32; 3], scale: [f32; 3]) -> Mesh {
+    if !mask.occupied_blocks.contains(&true) {
+        return Mesh {
+            vertices: Vec::new(),
+            indices: Vec::new(),
+            neighbors: mask.neighbors,
+        };
+    }
     let [count_x, count_y, count_z] = mask.block_counts;
-    let mut vertices = Vec::new();
+    let mut mesh = MeshBuilder::new(mask.dimensions, offset, scale);
     for block_x in 0..count_x {
         for block_y in 0..count_y {
             for block_z in 0..count_z {
@@ -287,12 +402,14 @@ fn mesh_segment(mask: &SegmentMask, offset: [f32; 3], scale: [f32; 3]) -> Mesh {
                 let start = [block_x, block_y, block_z].map(|b| b * BLOCK_SIZE);
                 let end =
                     [0, 1, 2].map(|axis| (start[axis] + BLOCK_SIZE + 1).min(mask.dimensions[axis]));
-                march_block(mask, start, end, offset, scale, &mut vertices);
+                march_block(mask, start, end, &mut mesh);
             }
         }
     }
+    let (vertices, indices) = mesh.finish();
     Mesh {
         vertices,
+        indices,
         neighbors: mask.neighbors,
     }
 }
@@ -318,6 +435,7 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
     offset: JFloatArray<'local>,
     scale: JFloatArray<'local>,
     neighbors_out: JIntArray<'local>,
+    indices_out: JObjectArray<'local>,
 ) -> JFloatArray<'local> {
     jni_util::run(env, "AdHocMesher adHocMesh", |env| {
         let dimensions = jni_util::read_array(env, &dimensions)?;
@@ -326,6 +444,9 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
         if neighbors_out.len(env)? != 1 {
             return invalid_argument("neighborsOut must have one element");
         }
+        if indices_out.len(env)? != 1 {
+            return invalid_argument("indicesOut must have one element");
+        }
         // The cuboid is only needed to build the mask, a single pass, so it is borrowed rather than copied.
         let mask = jni_util::with_bytes_critical(env, &data, |data| {
             Cuboid::new(data, bytes_per_element, &dimensions)
@@ -333,6 +454,10 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
         })??;
         let mesh = mesh_segment(&mask, offset, scale);
         neighbors_out.set_region(env, 0, &[jint::from(mesh.neighbors)])?;
+        // The indices are below MAX_VOXELS * 3 <= i32::MAX.
+        let indices: Vec<i32> = mesh.indices.iter().map(|&index| index as i32).collect();
+        let indices = jni_util::new_int_array(env, &indices)?;
+        indices_out.set_element(env, 0, &indices)?;
         jni_util::new_float_array(env, &mesh.vertices)
     })
 }

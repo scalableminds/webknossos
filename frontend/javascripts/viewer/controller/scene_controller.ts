@@ -94,7 +94,6 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
-import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
 
 // Add the extension functions
@@ -716,7 +715,7 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
-  private applyTransformToGroup(transform: Transform, group: Group | CustomLOD) {
+  private applyTransformToGroup(transform: Transform, group: Group) {
     if (transform.affineMatrix) {
       const matrix = new Matrix4();
       matrix.set(...transform.affineMatrix);

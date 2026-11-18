@@ -54,7 +54,7 @@ import type { Action } from "viewer/model/actions/actions";
 import {
   removeAgglomerateDiffsAction,
   requestAgglomerateDiffAction,
-  stopAwaitingAgglomerateSkeletonAction,
+  setAgglomerateDiffSourceTreeAction,
 } from "viewer/model/actions/agglomerate_diff_actions";
 import {
   addConnectomeTreesAction,
@@ -100,7 +100,7 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { api, Model } from "viewer/singletons";
-import type { SkeletonTracing, WebknossosState } from "viewer/store";
+import type { AgglomerateDiffKey, SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { dispatchEnsureHasNewestVersionAsync } from "../actions/save_actions";
 import {
@@ -456,7 +456,8 @@ function* loadAgglomerateTreeWithAtPosition(
   }
 
   // The diff to the reference mapping that was requested together with the agglomerate skeleton
-  let diffKey: string | null = null;
+  let diffKey: AgglomerateDiffKey | null = null;
+  let newTree: Tree | undefined;
   try {
     // The lookup happens within the try block so that the mutex is released if it fails.
     let agglomerateId: bigint;
@@ -524,7 +525,7 @@ function* loadAgglomerateTreeWithAtPosition(
     );
     if (clickedPositionInLayer != null && referenceMappingName != null) {
       const descriptor = { layerName, mappingName, agglomerateId, referenceMappingName };
-      yield* put(requestAgglomerateDiffAction(descriptor, clickedPositionInLayer, true));
+      yield* put(requestAgglomerateDiffAction(descriptor, clickedPositionInLayer, null));
       diffKey = getAgglomerateDiffKey(descriptor);
     }
 
@@ -536,7 +537,6 @@ function* loadAgglomerateTreeWithAtPosition(
 
     let usedTreeIds: number[] | null = null;
     let agglomerateTree: ServerSkeletonTracing;
-    let newTree: Tree | undefined;
     agglomerateTree = yield* call(
       getAgglomerateTreeAsSkeletonTracing,
       layerName,
@@ -610,7 +610,8 @@ function* loadAgglomerateTreeWithAtPosition(
 
   if (diffKey != null) {
     // The agglomerate_diff_saga removes the diff now, if it isn't desired anymore
-    yield* put(stopAwaitingAgglomerateSkeletonAction(diffKey));
+    // newTree exists, as the function returns early otherwise
+    yield* put(setAgglomerateDiffSourceTreeAction(diffKey, newTree!.treeId));
     yield* call(
       progressCallback,
       false,
@@ -626,7 +627,7 @@ function* loadAgglomerateTreeWithAtPosition(
 }
 
 function* reportAgglomerateDiffLoading(
-  diffKey: string,
+  diffKey: AgglomerateDiffKey,
   progressCallback: ProgressCallback,
 ): Saga<void> {
   const isDiffLoaded = yield* call(waitForAgglomerateDiff, diffKey);
@@ -842,10 +843,35 @@ export function* diffTrees(
   }
 }
 
-export const cachedDiffTrees = memoizeOne(
-  (tracingId: string, prevTrees: TreeMap, trees: TreeMap, useDeepEqualityCheck: boolean) =>
-    Array.from(diffTrees(tracingId, prevTrees, trees, useDeepEqualityCheck)),
-);
+type DiffTreesOfTracing = (
+  prevTrees: TreeMap,
+  trees: TreeMap,
+  useDeepEqualityCheck: boolean,
+) => UpdateActionWithoutIsolationRequirement[];
+const cachedDiffTreesByTracingId = new Map<string, DiffTreesOfTracing>();
+
+/*
+ * Returns the tree diff of the given tracing and caches the latest one per tracing. This way, the
+ * diff is computed only once, even though the save queue, the rendered skeletons and the merger
+ * mode all need it.
+ */
+export function cachedDiffTrees(
+  tracingId: string,
+  prevTrees: TreeMap,
+  trees: TreeMap,
+  useDeepEqualityCheck: boolean,
+): UpdateActionWithoutIsolationRequirement[] {
+  // Most store updates don't change the trees. This case shouldn't evict the cached diff.
+  if (prevTrees === trees) return [];
+  let cachedDiffTreesOfTracing = cachedDiffTreesByTracingId.get(tracingId);
+  if (cachedDiffTreesOfTracing == null) {
+    cachedDiffTreesOfTracing = memoizeOne((_prevTrees, _trees, _useDeepEqualityCheck) =>
+      Array.from(diffTrees(tracingId, _prevTrees, _trees, _useDeepEqualityCheck)),
+    );
+    cachedDiffTreesByTracingId.set(tracingId, cachedDiffTreesOfTracing);
+  }
+  return cachedDiffTreesOfTracing(prevTrees, trees, useDeepEqualityCheck);
+}
 
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,

@@ -157,18 +157,18 @@ export type AgglomerateDiffDescriptor = {
   readonly agglomerateId: bigint;
   readonly referenceMappingName: string;
 };
+// Identifies a diff in AgglomerateDiffOverlay.diffs (see getAgglomerateDiffKey)
+export type AgglomerateDiffKey = string;
 export type AgglomerateDiff = AgglomerateDiffDescriptor & {
   readonly status: "loading" | "loaded" | "failed";
   // The agglomerate is compared to the reference agglomerate that contains the segment at this
   // (floored) position in the coordinate system of the layer.
   readonly positionInLayer: Vector3;
-  // Set if the diff was requested while its agglomerate skeleton was still loading, so that it
-  // is not considered obsolete until the agglomerate skeleton was added.
-  readonly awaitsAgglomerateSkeleton: boolean;
-  // The agglomerate skeleton (annotation tree) of the diff. Null while it is awaited.
+  // The agglomerate skeleton (annotation tree) of the diff. Null while the agglomerate skeleton is
+  // still loading (see requestAgglomerateDiffAction and isAwaitingAgglomerateSkeleton).
   readonly sourceTreeId: number | null;
   // The diff is only shown while its agglomerate skeleton is visible and its layer is enabled
-  readonly isShown: boolean;
+  readonly isVisible: boolean;
   // The fields below are only set once the diff is loaded
   readonly referenceAgglomerateId: bigint | null;
   // The trees of the overlay skeleton that show this diff
@@ -180,8 +180,7 @@ export type AgglomerateDiff = AgglomerateDiffDescriptor & {
 // derived from the agglomerate skeletons and the reference mappings (see agglomerate_diff_saga.ts).
 // They are only kept locally, so they can never become inconsistent with the agglomerate skeletons.
 export type AgglomerateDiffOverlay = {
-  // Keyed by getAgglomerateDiffKey
-  readonly diffs: Record<string, AgglomerateDiff>;
+  readonly diffs: Record<AgglomerateDiffKey, AgglomerateDiff>;
   // Holds the trees of all diffs (one for the added and one for the removed edges per diff).
   // It is rendered on top of the annotation's skeleton. In contrast to annotation trees, these
   // trees are not necessarily connected.

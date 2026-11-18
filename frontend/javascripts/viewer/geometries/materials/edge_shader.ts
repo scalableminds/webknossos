@@ -16,6 +16,7 @@ import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "viewer/shaders/thin_plate_spline.glsl";
+import { formatNumberAsGLSLFloat } from "viewer/shaders/utils.glsl";
 import { Store } from "viewer/singletons";
 
 class EdgeShader {
@@ -183,14 +184,14 @@ void main() {
       mod(floor(treeId / ${COLOR_TEXTURE_WIDTH_FIXED}), ${COLOR_TEXTURE_WIDTH_FIXED})
     );
     vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
-    bool isVisible = mod(rgba.a, ${DIMMED_TREE_ALPHA_OFFSET.toFixed(1)}) == 1.0;
+    bool isVisible = mod(rgba.a, ${formatNumberAsGLSLFloat(DIMMED_TREE_ALPHA_OFFSET)}) == 1.0;
 
     if (!isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
       return;
     }
-    if (rgba.a >= ${DIMMED_TREE_ALPHA_OFFSET.toFixed(1)}) {
-      alpha *= ${DIMMED_TREE_OPACITY.toFixed(2)};
+    if (rgba.a >= ${formatNumberAsGLSLFloat(DIMMED_TREE_ALPHA_OFFSET)}) {
+      alpha *= ${formatNumberAsGLSLFloat(DIMMED_TREE_OPACITY)};
     }
 
     // As nodes are rendered in the center of a voxel, so are edges.

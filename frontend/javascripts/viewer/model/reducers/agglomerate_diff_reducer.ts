@@ -4,6 +4,7 @@ import Constants, { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import {
   getAgglomerateDiffKey,
   getAgglomerateDiffOverlay,
+  isAwaitingAgglomerateSkeleton,
   isDiffOfPosition,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -105,9 +106,9 @@ function updateOverlay(
   });
 }
 
-// A diff is shown if its agglomerate skeleton exists (see AgglomerateDiff.isShown)
+// A diff is shown if its agglomerate skeleton exists (see AgglomerateDiff.isVisible)
 function isDiffVisible(diff: AgglomerateDiff): boolean {
-  return diff.sourceTreeId != null && diff.isShown;
+  return diff.sourceTreeId != null && diff.isVisible;
 }
 
 // Sets the visibility of the trees of the given diffs according to isDiffVisible
@@ -138,10 +139,8 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
             ...action.descriptor,
             status: "loading",
             positionInLayer: action.positionInLayer,
-            awaitsAgglomerateSkeleton: action.awaitsAgglomerateSkeleton,
-            // Set by the agglomerate_diff_saga once the agglomerate skeleton exists
-            sourceTreeId: null,
-            isShown: true,
+            sourceTreeId: action.sourceTree?.treeId ?? null,
+            isVisible: action.sourceTree?.isVisible ?? true,
             referenceAgglomerateId: null,
             treeIds: [],
             errorMessage: null,
@@ -224,12 +223,17 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
       });
     }
 
-    case "STOP_AWAITING_AGGLOMERATE_SKELETON": {
+    case "SET_AGGLOMERATE_DIFF_SOURCE_TREE": {
       const overlay = getAgglomerateDiffOverlay(state);
       const diff = overlay.diffs[action.key];
-      if (diff == null || !diff.awaitsAgglomerateSkeleton) return state;
+      if (diff == null || !isAwaitingAgglomerateSkeleton(diff)) return state;
+      const updatedDiff = { ...diff, sourceTreeId: action.treeId };
       return updateOverlay(state, {
-        diffs: { ...overlay.diffs, [action.key]: { ...diff, awaitsAgglomerateSkeleton: false } },
+        diffs: { ...overlay.diffs, [action.key]: updatedDiff },
+        skeleton: {
+          ...overlay.skeleton,
+          trees: updateTreeVisibility(overlay.skeleton.trees, [updatedDiff]),
+        },
       });
     }
 
@@ -243,8 +247,7 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
         diffs[key] = {
           ...diff,
           sourceTreeId: sourceTree.treeId,
-          isShown: sourceTree.isShown,
-          awaitsAgglomerateSkeleton: false,
+          isVisible: sourceTree.isVisible,
         };
         changedDiffs.push(diffs[key]);
       }

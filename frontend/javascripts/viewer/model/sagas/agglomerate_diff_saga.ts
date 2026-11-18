@@ -3,7 +3,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import type { Channel } from "redux-saga";
 import { buffers } from "redux-saga";
-import { actionChannel, fork, put, take } from "typed-redux-saga";
+import { actionChannel, delay, fork, put, take } from "typed-redux-saga";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import {
   getAgglomerateDiffKey,
@@ -11,12 +11,17 @@ import {
   getClickedPositionInLayer,
   getLayerNameOfAgglomerateSkeleton,
   getUsableAgglomerateDiffReference,
+  isAwaitingAgglomerateSkeleton,
   isComparedToAgglomerateDiffReference,
   isDiffOfPosition,
   needsAgglomerateFilesForDiffs,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
-import { getDataLayers, getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import {
+  getMagInfo,
+  getSegmentationLayerByName,
+  getSegmentationLayers,
+} from "viewer/model/accessors/dataset_accessor";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -35,7 +40,12 @@ import {
 } from "viewer/model/helpers/proto_helpers";
 import { call, type Saga, select } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
-import type { AgglomerateDiff, AgglomerateDiffDescriptor, WebknossosState } from "viewer/store";
+import type {
+  AgglomerateDiff,
+  AgglomerateDiffDescriptor,
+  AgglomerateDiffKey,
+  WebknossosState,
+} from "viewer/store";
 
 /*
  * The differences of the agglomerate skeletons to the reference mappings are derived
@@ -52,13 +62,15 @@ import type { AgglomerateDiff, AgglomerateDiffDescriptor, WebknossosState } from
 
 // Number of diffs that are requested in parallel
 const MAX_PARALLEL_DIFF_REQUESTS = 4;
+// Minimum time between two reconciliations, so that bursts of actions are handled at once
+const RECONCILE_THROTTLE_MS = 100;
 
 type DesiredDiff = {
   descriptor: AgglomerateDiffDescriptor;
   // The agglomerate is compared to the reference agglomerate that contains the segment at this position
   positionInLayer: Vector3;
-  // isShown is false while the agglomerate skeleton is hidden or the layer is disabled
-  sourceTree: { treeId: number; isShown: boolean };
+  // isVisible is false while the agglomerate skeleton is hidden or the layer is disabled
+  sourceTree: { treeId: number; isVisible: boolean };
   // While the layer is disabled, its loaded diffs are kept (but hidden), because layers are often
   // toggled quickly. Missing diffs are only requested once the layer is enabled again.
   isLayerDisabled: boolean;
@@ -68,16 +80,15 @@ type DesiredDiff = {
 // disabled layers), keyed by getAgglomerateDiffKey, and the enabled layers whose agglomerate files
 // are not known, yet.
 function getDesiredDiffs(state: WebknossosState): {
-  desiredDiffs: Map<string, DesiredDiff>;
+  desiredDiffs: Map<AgglomerateDiffKey, DesiredDiff>;
   layersWithUnknownAgglomerateFiles: string[];
 } {
-  const desiredDiffs = new Map<string, DesiredDiff>();
+  const desiredDiffs = new Map<AgglomerateDiffKey, DesiredDiff>();
   const layersWithUnknownAgglomerateFiles: string[] = [];
   const skeletonTracing = getSkeletonTracing(state.annotation);
   if (skeletonTracing == null) return { desiredDiffs, layersWithUnknownAgglomerateFiles };
 
-  for (const layer of getDataLayers(state.dataset)) {
-    if (layer.category !== "segmentation") continue;
+  for (const layer of getSegmentationLayers(state.dataset)) {
     const layerName = layer.name;
     const isLayerDisabled = state.datasetConfiguration.layers[layerName]?.isDisabled ?? false;
     if (needsAgglomerateFilesForDiffs(state, layerName)) {
@@ -121,7 +132,7 @@ function getDesiredDiffs(state: WebknossosState): {
       desiredDiffs.set(getAgglomerateDiffKey(descriptor), {
         descriptor,
         positionInLayer: positionInLayer.map(Math.floor) as Vector3,
-        sourceTree: { treeId: tree.treeId, isShown: tree.isVisible && !isLayerDisabled },
+        sourceTree: { treeId: tree.treeId, isVisible: tree.isVisible && !isLayerDisabled },
         isLayerDisabled,
       });
     }
@@ -151,12 +162,9 @@ function* fetchAgglomerateDiff(
 ): Saga<{ diff: ServerAgglomerateGraphDiff } | { errorMessage: string }> {
   const { layerName, mappingName, agglomerateId, referenceMappingName } = descriptor;
   const dataset = yield* select((state) => state.dataset);
-  const layerInfo = getLayerByName(dataset, layerName);
+  const layerInfo = getSegmentationLayerByName(dataset, layerName);
   // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
-  const effectiveLayerName =
-    layerInfo.category === "segmentation" && layerInfo.fallbackLayer != null
-      ? layerInfo.fallbackLayer
-      : layerName;
+  const effectiveLayerName = layerInfo.fallbackLayer ?? layerName;
 
   try {
     const segmentId = yield* call(
@@ -167,10 +175,7 @@ function* fetchAgglomerateDiff(
       layerInfo.elementClass,
       positionInLayer,
       // The magnifications of the fallback layer might differ from the ones of the annotation layer
-      getMagInfo(
-        (layerInfo.category === "segmentation" ? layerInfo.fallbackLayerInfo?.mags : null) ??
-          layerInfo.mags,
-      ).getFinestMag(),
+      getMagInfo(layerInfo.fallbackLayerInfo?.mags ?? layerInfo.mags).getFinestMag(),
     );
     const protoBuffer = yield* call(
       getAgglomerateDiffToReference,
@@ -239,6 +244,16 @@ function* loadRequestedDiffs(requests: Channel<RequestAgglomerateDiffAction>): S
   }
 }
 
+// A diff is obsolete if it's not desired anymore or if it compares the reference agglomerate at
+// another position than the desired one (e.g., if the first node of an agglomerate skeleton that
+// was not loaded by clicking was deleted). A diff that is requested before its agglomerate skeleton
+// is added (see skeletontracing_saga) is kept until then.
+function isDiffObsolete(diff: AgglomerateDiff, desiredDiff: DesiredDiff | undefined): boolean {
+  return desiredDiff == null
+    ? !isAwaitingAgglomerateSkeleton(diff)
+    : !isDiffOfPosition(diff, desiredDiff.positionInLayer);
+}
+
 function* reconcileAgglomerateDiffs(layersWithRequestedAgglomerateFiles: Set<string>): Saga<void> {
   const { desiredDiffs, layersWithUnknownAgglomerateFiles } = yield* select(getDesiredDiffs);
   for (const layerName of layersWithUnknownAgglomerateFiles) {
@@ -248,30 +263,19 @@ function* reconcileAgglomerateDiffs(layersWithRequestedAgglomerateFiles: Set<str
   }
 
   const { diffs } = yield* select(getAgglomerateDiffOverlay);
-  // A diff is obsolete if it's not desired anymore or if it compares the reference agglomerate at
-  // another position (e.g., if the clicked position of the agglomerate skeleton was edited). A diff
-  // that is requested before its agglomerate skeleton is added (see skeletontracing_saga) is kept
-  // until then.
   const obsoleteKeys = new Set(
-    Object.keys(diffs).filter((key) => {
-      const desiredDiff = desiredDiffs.get(key);
-      return desiredDiff == null
-        ? !diffs[key].awaitsAgglomerateSkeleton
-        : !isDiffOfPosition(diffs[key], desiredDiff.positionInLayer);
-    }),
+    Object.keys(diffs).filter((key) => isDiffObsolete(diffs[key], desiredDiffs.get(key))),
   );
   if (obsoleteKeys.size > 0) {
     yield* put(removeAgglomerateDiffsAction([...obsoleteKeys]));
   }
 
-  const sourceTreeByKey: Record<string, { treeId: number; isShown: boolean }> = {};
+  const sourceTreeByKey: Record<AgglomerateDiffKey, { treeId: number; isVisible: boolean }> = {};
   for (const [key, { sourceTree }] of desiredDiffs) {
     const diff = obsoleteKeys.has(key) ? null : diffs[key];
     if (
       diff != null &&
-      (diff.sourceTreeId !== sourceTree.treeId ||
-        diff.isShown !== sourceTree.isShown ||
-        diff.awaitsAgglomerateSkeleton)
+      (diff.sourceTreeId !== sourceTree.treeId || diff.isVisible !== sourceTree.isVisible)
     ) {
       sourceTreeByKey[key] = sourceTree;
     }
@@ -281,14 +285,14 @@ function* reconcileAgglomerateDiffs(layersWithRequestedAgglomerateFiles: Set<str
   }
 
   // Failed diffs are not requested again until they are obsolete
-  for (const [key, { descriptor, positionInLayer, isLayerDisabled }] of desiredDiffs) {
+  for (const [key, { descriptor, positionInLayer, sourceTree, isLayerDisabled }] of desiredDiffs) {
     if (isLayerDisabled || (diffs[key] != null && !obsoleteKeys.has(key))) continue;
-    yield* put(requestAgglomerateDiffAction(descriptor, positionInLayer, false));
+    yield* put(requestAgglomerateDiffAction(descriptor, positionInLayer, sourceTree));
   }
 }
 
 // Waits until the given diff is not loading anymore. Returns whether it was loaded successfully.
-export function* waitForAgglomerateDiff(key: string): Saga<boolean> {
+export function* waitForAgglomerateDiff(key: AgglomerateDiffKey): Saga<boolean> {
   while (true) {
     const diff = yield* select((state) => getAgglomerateDiffOverlay(state).diffs[key]);
     if (diff?.status !== "loading") return diff?.status === "loaded";
@@ -318,7 +322,7 @@ export default function* watchAgglomerateDiffs(): Saga<void> {
   // skeletons were cancelled, so these diffs are removed (and requested again if still needed).
   const orphanedKeys = yield* select((state) =>
     Object.entries(getAgglomerateDiffOverlay(state).diffs)
-      .filter(([_key, diff]) => diff.status === "loading" || diff.awaitsAgglomerateSkeleton)
+      .filter(([_key, diff]) => diff.status === "loading" || isAwaitingAgglomerateSkeleton(diff))
       .map(([key]) => key),
   );
   if (orphanedKeys.length > 0) {
@@ -352,5 +356,7 @@ export default function* watchAgglomerateDiffs(): Saga<void> {
       yield* call(reconcileAgglomerateDiffs, layersWithRequestedAgglomerateFiles);
     }
     yield* take(actions);
+    // The sliding buffer keeps the latest action that is dispatched in the meantime
+    yield* delay(RECONCILE_THROTTLE_MS);
   }
 }

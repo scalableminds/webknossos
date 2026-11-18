@@ -6,12 +6,13 @@ import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type {
   AgglomerateDiff,
   AgglomerateDiffDescriptor,
+  AgglomerateDiffKey,
   AgglomerateDiffOverlay,
   SkeletonTracing,
   WebknossosState,
 } from "viewer/store";
 
-export function getAgglomerateDiffKey(descriptor: AgglomerateDiffDescriptor): string {
+export function getAgglomerateDiffKey(descriptor: AgglomerateDiffDescriptor): AgglomerateDiffKey {
   return JSON.stringify([
     descriptor.layerName,
     descriptor.mappingName,
@@ -30,6 +31,12 @@ export function getLayerNameOfAgglomerateSkeleton(tree: Tree): string | null {
 // TreeAgglomerateInfo.clickedPosition)
 export function getClickedPositionInLayer(tree: Tree): Vector3 | null {
   return (tree.agglomerateInfo?.clickedPosition?.map(Math.floor) as Vector3 | undefined) ?? null;
+}
+
+// Whether the diff was requested while its agglomerate skeleton was still loading and the skeleton
+// wasn't added, yet. Such a diff is not considered obsolete until then.
+export function isAwaitingAgglomerateSkeleton(diff: AgglomerateDiff): boolean {
+  return diff.sourceTreeId == null;
 }
 
 // Whether the diff compares the reference agglomerate at the given position (see AgglomerateDiff)
@@ -66,7 +73,7 @@ export function getAgglomerateDiffReferenceMappingName(
 }
 
 // Whether the comparison is enabled and a reference mapping is selected for an agglomerate mapping
-function isAgglomerateDiffRequested(state: WebknossosState, layerName: string): boolean {
+function isAgglomerateDiffActive(state: WebknossosState, layerName: string): boolean {
   return (
     isAgglomerateDiffEnabled(state, layerName) &&
     getAgglomerateDiffReferenceMappingName(state, layerName) != null &&
@@ -81,7 +88,7 @@ export function needsAgglomerateFilesForDiffs(state: WebknossosState, layerName:
   return (
     layer.category === "segmentation" &&
     layer.agglomerates == null &&
-    isAgglomerateDiffRequested(state, layerName)
+    isAgglomerateDiffActive(state, layerName)
   );
 }
 
@@ -99,7 +106,7 @@ export function getUsableAgglomerateDiffReference(
   layerName: string,
 ): string | null {
   const referenceMappingName = getAgglomerateDiffReferenceMappingName(state, layerName);
-  if (referenceMappingName == null || !isAgglomerateDiffRequested(state, layerName)) return null;
+  if (referenceMappingName == null || !isAgglomerateDiffActive(state, layerName)) return null;
   const layer = getLayerByName(state.dataset, layerName);
   if (layer.category !== "segmentation" || !layer.agglomerates?.includes(referenceMappingName)) {
     return null;
@@ -154,7 +161,7 @@ const getAgglomerateTreeIdsWithVisibleDiffsMemoized = memoizeOne(
   (diffs: AgglomerateDiffOverlay["diffs"]): ReadonlySet<number> => {
     const treeIds = new Set<number>();
     for (const diff of Object.values(diffs)) {
-      if (diff.sourceTreeId != null && diff.isShown && diff.treeIds.length > 0) {
+      if (diff.sourceTreeId != null && diff.isVisible && diff.treeIds.length > 0) {
         treeIds.add(diff.sourceTreeId);
       }
     }

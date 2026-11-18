@@ -1,14 +1,12 @@
 import type { Vector3 } from "viewer/constants";
 import type { ServerAgglomerateGraphDiff } from "viewer/model/helpers/proto_helpers";
-import type { AgglomerateDiffDescriptor } from "viewer/store";
+import type { AgglomerateDiffDescriptor, AgglomerateDiffKey } from "viewer/store";
 
 export type RequestAgglomerateDiffAction = ReturnType<typeof requestAgglomerateDiffAction>;
 type FinishLoadingAgglomerateDiffAction = ReturnType<typeof finishLoadingAgglomerateDiffAction>;
 type FailLoadingAgglomerateDiffAction = ReturnType<typeof failLoadingAgglomerateDiffAction>;
 type RemoveAgglomerateDiffsAction = ReturnType<typeof removeAgglomerateDiffsAction>;
-type StopAwaitingAgglomerateSkeletonAction = ReturnType<
-  typeof stopAwaitingAgglomerateSkeletonAction
->;
+type SetAgglomerateDiffSourceTreeAction = ReturnType<typeof setAgglomerateDiffSourceTreeAction>;
 type SyncAgglomerateDiffsWithSourceTreesAction = ReturnType<
   typeof syncAgglomerateDiffsWithSourceTreesAction
 >;
@@ -18,7 +16,7 @@ export type AgglomerateDiffAction =
   | FinishLoadingAgglomerateDiffAction
   | FailLoadingAgglomerateDiffAction
   | RemoveAgglomerateDiffsAction
-  | StopAwaitingAgglomerateSkeletonAction
+  | SetAgglomerateDiffSourceTreeAction
   | SyncAgglomerateDiffsWithSourceTreesAction;
 
 // None of these actions change the annotation. The diffs are only kept locally.
@@ -27,20 +25,20 @@ export type AgglomerateDiffAction =
 // to the reference agglomerate that contains the segment at the given position (in the coordinate
 // system of the layer). The position is floored, so that it can be compared to the clicked position
 // stored with the agglomerate skeleton (see TreeAgglomerateInfo.clickedPosition).
-// awaitsAgglomerateSkeleton has to be set if the diff is requested while its agglomerate skeleton is
-// still loading. Otherwise, the diff would be considered obsolete. In case the agglomerate skeleton
-// cannot be added, the requester has to remove the diff. Otherwise, it has to dispatch
-// stopAwaitingAgglomerateSkeletonAction once the agglomerate skeleton was added.
+// sourceTree is the agglomerate skeleton of the diff. It is null if the diff is requested while its
+// agglomerate skeleton is still loading (see isAwaitingAgglomerateSkeleton). In case the agglomerate
+// skeleton cannot be added, the requester has to remove the diff. Otherwise, it has to dispatch
+// setAgglomerateDiffSourceTreeAction once the agglomerate skeleton was added.
 export const requestAgglomerateDiffAction = (
   descriptor: AgglomerateDiffDescriptor,
   positionInLayer: Vector3,
-  awaitsAgglomerateSkeleton: boolean,
+  sourceTree: { treeId: number; isVisible: boolean } | null,
 ) =>
   ({
     type: "REQUEST_AGGLOMERATE_DIFF",
     descriptor,
     positionInLayer: positionInLayer.map(Math.floor) as Vector3,
-    awaitsAgglomerateSkeleton,
+    sourceTree,
   }) as const;
 
 // The position is the one of the request (see requestAgglomerateDiffAction). The result is ignored
@@ -70,29 +68,29 @@ export const failLoadingAgglomerateDiffAction = (
     errorMessage,
   }) as const;
 
-export const removeAgglomerateDiffsAction = (keys: Array<string>) =>
+export const removeAgglomerateDiffsAction = (keys: Array<AgglomerateDiffKey>) =>
   ({
     type: "REMOVE_AGGLOMERATE_DIFFS",
     keys,
   }) as const;
 
 // Has to be dispatched by the requester of a diff that awaits its agglomerate skeleton (see
-// requestAgglomerateDiffAction) once that skeleton was added. Usually, the diff stopped awaiting
-// already (see syncAgglomerateDiffsWithSourceTreesAction). But if the diff is not desired anymore
-// (e.g., because the reference mapping changed while the skeleton was loading), it would be kept
-// forever otherwise.
-export const stopAwaitingAgglomerateSkeletonAction = (key: string) =>
+// requestAgglomerateDiffAction) once that skeleton was added. Usually, the agglomerate_diff_saga
+// set the tree already (see syncAgglomerateDiffsWithSourceTreesAction). But if the diff is not
+// desired anymore (e.g., because the reference mapping changed while the skeleton was loading),
+// it would be kept forever otherwise.
+export const setAgglomerateDiffSourceTreeAction = (key: AgglomerateDiffKey, treeId: number) =>
   ({
-    type: "STOP_AWAITING_AGGLOMERATE_SKELETON",
+    type: "SET_AGGLOMERATE_DIFF_SOURCE_TREE",
     key,
+    treeId,
   }) as const;
 
 // Updates the diffs whose agglomerate skeletons exist (keyed by getAgglomerateDiffKey) with the
 // id of these agglomerate skeletons and whether the diffs are shown (only while their agglomerate
-// skeleton is visible and their layer is enabled). Also, these diffs don't await their agglomerate
-// skeleton anymore.
+// skeleton is visible and their layer is enabled).
 export const syncAgglomerateDiffsWithSourceTreesAction = (
-  sourceTreeByKey: Record<string, { treeId: number; isShown: boolean }>,
+  sourceTreeByKey: Record<AgglomerateDiffKey, { treeId: number; isVisible: boolean }>,
 ) =>
   ({
     type: "SYNC_AGGLOMERATE_DIFFS_WITH_SOURCE_TREES",

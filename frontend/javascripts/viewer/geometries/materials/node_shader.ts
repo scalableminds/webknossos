@@ -292,10 +292,10 @@ void main() {
     vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
 
     color = rgba.rgb;
-    float alpha = mod(rgba.a, ${DIMMED_TREE_ALPHA_OFFSET.toFixed(1)});
+    float alpha = mod(rgba.a, ${formatNumberAsGLSLFloat(DIMMED_TREE_ALPHA_OFFSET)});
     // A alpha value of 0.5 indicates that the edges of the tree are not visible but its nodes are.
     bool isVisible = alpha == 1.0 || alpha == 0.5 ;
-    v_opacity = rgba.a >= ${DIMMED_TREE_ALPHA_OFFSET.toFixed(1)} ? ${DIMMED_TREE_OPACITY.toFixed(2)} : 1.0;
+    v_opacity = rgba.a >= ${formatNumberAsGLSLFloat(DIMMED_TREE_ALPHA_OFFSET)} ? ${formatNumberAsGLSLFloat(DIMMED_TREE_OPACITY)} : 1.0;
 
     // DELETED OR INVISIBLE NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {

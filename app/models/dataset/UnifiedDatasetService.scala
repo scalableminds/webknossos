@@ -265,8 +265,9 @@ class UnifiedDatasetService @Inject() (
 
   // Dataset names are restricted to [A-Za-z0-9_\-.] with at least three characters, annotation names are not.
   private def convertedDatasetName(annotation: models.annotation.Annotation, source: Dataset): String = {
-    val fallback = s"${source.name}_annotation_${annotation._id.toString.takeRight(6)}"
-    val sanitized = annotation.name.trim.replaceAll("[^A-Za-z0-9_\\-.]+", "_").stripPrefix(".")
+    def sanitize(name: String) = name.trim.replaceAll("[^A-Za-z0-9_\\-.]+", "_").stripPrefix(".")
+    val fallback = sanitize(s"${source.name}_annotation_${annotation._id.toString.takeRight(6)}")
+    val sanitized = sanitize(annotation.name)
     if (sanitized.length >= 3) sanitized else fallback
   }
 

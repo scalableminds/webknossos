@@ -1,4 +1,5 @@
-import { useStartAndPollJob } from "admin/job/job_hooks";
+import { useIsJobAvailable, useStartAndPollJob } from "admin/job/job_hooks";
+import { areJobsAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import { doWithToken, downloadWithFilename, startExportTiffJob } from "admin/rest_api";
 import { Alert, Button, Checkbox, Col, Divider, Flex, Row, Segmented, Typography } from "antd";
 import type { SegmentedOptions } from "antd/es/segmented";
@@ -18,6 +19,7 @@ import {
   type AdditionalAxis,
   type APIDataLayer,
   type APIDataset,
+  APIExportFormat,
   APIJobCommand,
   type VoxelSize,
 } from "types/api_types";
@@ -49,22 +51,29 @@ type ExportLayerInfos = {
   additionalAxes?: AdditionalAxis[] | null;
 };
 
-enum ExportFormat {
-  OME_TIFF = "OME_TIFF",
-  TIFF_STACK = "TIFF_STACK",
-}
 const ExportFormatOptions: SegmentedOptions = [
   {
     label: "OME TIFF",
-    value: ExportFormat.OME_TIFF,
+    value: APIExportFormat.OME_TIFF,
   },
   {
     label: "TIFF Stack (as .zip)",
-    value: ExportFormat.TIFF_STACK,
+    value: APIExportFormat.TIFF_STACK,
+  },
+  {
+    label: "OME-Zarr (as .ozx)",
+    value: APIExportFormat.OZX,
   },
 ];
 
 const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
+
+// OME-Zarr is written compressed, so its estimate is an upper bound.
+const FILE_SIZE_FACTOR_BY_FORMAT: Record<APIExportFormat, number> = {
+  [APIExportFormat.OME_TIFF]: EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR,
+  [APIExportFormat.TIFF_STACK]: 1,
+  [APIExportFormat.OZX]: 1,
+};
 
 const exportKey = (layerInfos: ExportLayerInfos, mag: Vector3) =>
   `${layerInfos.layerName || ""}__${layerInfos.tracingId || ""}__${mag.join("-")}`;
@@ -145,15 +154,13 @@ function estimateFileSize(
   selectedLayer: APIDataLayer,
   mag: Vector3,
   boundingBox: BoundingBoxMinMaxType,
-  exportFormat: ExportFormat,
+  exportFormat: APIExportFormat,
 ) {
   const shape = computeShapeFromBoundingBox(boundingBox);
   const volume =
     Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
   return formatCountToDataAmountUnit(
-    volume *
-      getByteCountFromLayer(selectedLayer) *
-      (exportFormat === ExportFormat.OME_TIFF ? EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR : 1),
+    volume * getByteCountFromLayer(selectedLayer) * FILE_SIZE_FACTOR_BY_FORMAT[exportFormat],
   );
 }
 
@@ -175,6 +182,8 @@ export function DownloadTiffTab({
 }) {
   const annotation = useWkSelector((state) => state.annotation);
   const dataset = useWkSelector((state) => state.dataset);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  const isExportTiffJobAvailable = useIsJobAvailable(dataset.dataStore, APIJobCommand.EXPORT_TIFF);
   const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
   const isMergerModeEnabled = useWkSelector(
     (state) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -185,7 +194,7 @@ export function DownloadTiffTab({
   const [selectedLayerName, setSelectedLayerName] = useState<string>(
     dataset.dataSource.dataLayers[0].name,
   );
-  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
+  const [exportFormat, setExportFormat] = useState<APIExportFormat>(APIExportFormat.OME_TIFF);
 
   const { runningJobs: runningExportJobs, startJob } = useStartAndPollJob({
     async onSuccess(job) {
@@ -234,7 +243,10 @@ export function DownloadTiffTab({
     ([key]) => key === exportKey(selectedLayerInfos, mag),
   );
   const isDownloadButtonDisabled =
-    !isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled;
+    !isExportTiffJobAvailable ||
+    !isExportable ||
+    isCurrentlyRunningExportJob ||
+    isMergerModeEnabled;
 
   const handleKeepWindowOpenChecked = (e: any) => {
     setKeepWindowOpen(e.target.checked);
@@ -242,7 +254,7 @@ export function DownloadTiffTab({
 
   const handleExport = async () => {
     if (startJob == null) {
-      console.error("Could not start Tiff export.");
+      console.error("Could not start data export.");
       return;
     }
 
@@ -256,7 +268,7 @@ export function DownloadTiffTab({
         mag.join("-"),
         selectedLayerInfos.annotationId,
         selectedLayerInfos.displayName,
-        exportFormat === ExportFormat.OME_TIFF,
+        exportFormat,
       );
       return [exportKey(selectedLayerInfos, mag), job.id];
     });
@@ -275,15 +287,24 @@ export function DownloadTiffTab({
         </a>{" "}
         to track progress and download results.
       </Typography.Paragraph>
-      {!dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.EXPORT_TIFF) ? (
-        <WorkerInfo />
+      {!isExportTiffJobAvailable ? (
+        areJobsAllowedByPricingPlan(activeOrganization) ? (
+          <WorkerInfo />
+        ) : (
+          <Row>
+            <Divider />
+            <Typography.Paragraph type="warning">
+              Exporting data as TIFF is not available in the Open Source plan.
+            </Typography.Paragraph>
+          </Row>
+        )
       ) : (
         <div>
           <Divider>Export format</Divider>
           <Flex justify="center">
             <Segmented
               value={exportFormat}
-              onChange={(value) => setExportFormat(value as ExportFormat)}
+              onChange={(value) => setExportFormat(value as APIExportFormat)}
               options={ExportFormatOptions}
               size="large"
             />
@@ -341,7 +362,8 @@ export function DownloadTiffTab({
           )}
           <Typography.Paragraph>
             {onlyOneMagAvailable && <div>{mag.join("-")}</div>}
-            Estimated file size:{" "}
+            Estimated file size
+            {exportFormat === APIExportFormat.OZX ? " (uncompressed)" : ""}:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />
             Magnification: {formatSelectedScale(dataset, mag)}

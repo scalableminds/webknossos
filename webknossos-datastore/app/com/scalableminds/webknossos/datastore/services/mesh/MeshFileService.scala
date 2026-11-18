@@ -6,7 +6,6 @@ import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
@@ -49,8 +48,7 @@ case class MeshFileInfo(
 class MeshFileService @Inject() (
     hdf5MeshFileService: Hdf5MeshFileService,
     zarrMeshFileService: ZarrMeshFileService,
-    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
-    config: DataStoreConfig
+    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService
 ) extends LazyLogging {
 
   private val meshFileKeyCache: AlfuCache[(DataSourceId, String, String), MeshFileKey] =
@@ -139,17 +137,25 @@ class MeshFileService @Inject() (
       case _ => Fox.successful(0)
     }
 
-  def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(using
+  def listMeshChunksForSegmentsMerged(
+      meshFileKey: MeshFileKey,
+      segmentIds: Seq[Long],
+      failOnZeroChunks: Boolean = true
+  )(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[WebknossosSegmentInfo] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+        zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, failOnZeroChunks)
       case LayerAttachmentDataformat.hdf5 =>
-        hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+        hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, failOnZeroChunks)
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
-        neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+        neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(
+          meshFileKey,
+          segmentIds,
+          failOnZeroChunks
+        )
       case _ => unsupportedDataFormat(meshFileKey)
     }
 

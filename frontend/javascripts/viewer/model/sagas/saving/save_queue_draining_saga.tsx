@@ -7,7 +7,7 @@ import { sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import window, { alert, document, location } from "libs/window";
+import window, { alert, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { actionChannel, call, delay, flush, put, race, take } from "typed-redux-saga";
@@ -24,13 +24,17 @@ import {
 import {
   dispatchEnsureHasNewestVersionAsync,
   type SaveNowAction,
+  setHasSaveErrorAction,
   setLastSaveTimestampAction,
   setVersionNumberAction,
   shiftSaveQueueAction,
   snapshotAnnotationStateForNextRebaseAction,
 } from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
-import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
+import {
+  globalPositionToBucketPosition,
+  globalPositionToBucketPositionWithMag,
+} from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import {
@@ -260,7 +264,7 @@ export function* sendSaveRequestToServer(
           data: compactedSaveQueue,
           compress: process.env.NODE_ENV === "production",
           // Suppressing error toast, as the doWithToken retry with personal token functionality should not show an error.
-          // Instead the error is logged and toggleErrorHighlighting should take care of showing an error to the user.
+          // Instead the error is logged and setSaveErrorDisplay should take care of showing an error to the user.
           showErrorToast: false,
         },
       );
@@ -288,7 +292,7 @@ export function* sendSaveRequestToServer(
         throw error;
       }
 
-      yield* call(toggleErrorHighlighting, false);
+      yield* call(setSaveErrorDisplay, false);
       return { numberOfSentItems: saveQueue.length, hadConflict: false };
     } catch (error) {
       if (exceptionDuringMarkBucketsAsNotDirty) {
@@ -308,7 +312,7 @@ export function* sendSaveRequestToServer(
       if (!isViewOrSandboxMode) {
         // Notify user about error unless, view or sandbox mode is active. In that case,
         // we do not need to show the error as it is not so important and distracts the user.
-        yield* call(toggleErrorHighlighting, true);
+        yield* call(setSaveErrorDisplay, true);
       }
 
       // Log the error to airbrake. Also compactedSaveQueue needs to be within an object
@@ -389,30 +393,47 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
           continue;
         }
 
-        bucket.dirtyCount--;
+        bucket.fullBucketSaveState.dirtyCount--;
 
-        if (bucket.dirtyCount === 0) {
+        if (bucket.fullBucketSaveState.dirtyCount === 0) {
           bucket.markAsPushed();
+        }
+      } else if (updateAction.name === "updateBucketPartial") {
+        // The backend has the partial update now, so the bucket may be garbage collected
+        // again once it has no other unsaved ones (see DataBucket.partialUpdateState).
+        const { actionTracingId, position, mag, additionalCoordinates } = updateAction.value;
+        const { cube } = Model.getSegmentationTracingLayer(actionTracingId);
+        const bucket = cube.getBucket(
+          globalPositionToBucketPositionWithMag(position, mag, additionalCoordinates),
+        );
+        if (bucket.type === "data" && bucket.partialUpdateState.unsavedCount > 0) {
+          bucket.partialUpdateState.unsavedCount--;
         }
       }
     }
   }
 }
 
-export function toggleErrorHighlighting(state: boolean, permanentError: boolean = false): void {
-  if (document.body != null) {
-    document.body.classList.toggle("save-error", state);
-  }
+export function* setSaveErrorDisplay(
+  hasError: boolean,
+  permanentError: boolean = false,
+): Saga<void> {
+  yield* put(setHasSaveErrorAction(hasError));
 
-  const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
-
-  if (state) {
+  if (hasError) {
+    const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
     Toast.error(message, {
       sticky: true,
     });
   } else {
-    Toast.close(message);
+    closeSaveErrorToasts();
   }
+}
+
+// The toasts are not part of the store, so they are not cleared when the store is reset.
+export function closeSaveErrorToasts(): void {
+  Toast.close(messages["save.failed.permanent"]);
+  Toast.close(messages["save.failed"]);
 }
 
 // This function returns the first n batches of the provided array, so that the count of

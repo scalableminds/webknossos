@@ -71,7 +71,7 @@ class CreditTransactionDAO @Inject() (
       row.is_deleted
     )
 
-  implicit val getCreditTransactions: GetResult[CreditTransaction] =
+  implicit private val getCreditTransactions: GetResult[CreditTransaction] =
     prs => {
       import prs.*
       val transactionId = <<[ObjectId]

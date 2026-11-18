@@ -1,9 +1,10 @@
 /* eslint-disable no-eval */
+import { getScripts } from "admin/rest_api";
 import { App, Input, Modal, Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { fetchGistContent } from "libs/gist";
-import { makeComponentLazy, useGuardedFetch } from "libs/react_helpers";
-import Request from "libs/request";
+import { makeComponentLazy } from "libs/react_helpers";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { alert } from "libs/window";
 import messages from "messages";
 import type React from "react";
@@ -11,6 +12,18 @@ import { memo, useCallback, useState } from "react";
 import type { Script } from "viewer/store";
 
 const { TextArea } = Input;
+
+function runUserScript(code: string, onSuccess: () => void) {
+  try {
+    // biome-ignore lint/security/noGlobalEval: Loads a user provided frontend API script.
+    eval(code);
+    // close modal if the script executed successfully
+    return onSuccess();
+  } catch (error) {
+    console.error(error);
+    return alert(error);
+  }
+}
 
 type UserScriptsModalViewProps = {
   onOK: (...args: Array<any>) => any;
@@ -25,10 +38,12 @@ const UserScriptsModalViewInner: React.FC<UserScriptsModalViewProps> = ({ onOK, 
   const [selectedScript, setSelectedScript] = useState<string | null | undefined>(undefined);
   const [isLoadingScriptContent, setIsLoadingScriptContent] = useState(false);
 
-  const [scripts, isLoadingScripts] = useGuardedFetch<Script[]>(
-    () => Request.receiveJSON("/api/scripts", { showErrorToast: false }),
-    [],
-    [],
+  const { data: scripts = [], isLoading: isLoadingScripts } = useQueryWithErrorHandling(
+    {
+      queryKey: ["scripts"],
+      queryFn: getScripts,
+      refetchOnWindowFocus: false,
+    },
     "Could not load user scripts.",
   );
 
@@ -68,17 +83,7 @@ const UserScriptsModalViewInner: React.FC<UserScriptsModalViewProps> = ({ onOK, 
     [scripts, isCodeChanged, loadScript, modal],
   );
 
-  const handleClick = useCallback(() => {
-    try {
-      // biome-ignore lint/security/noGlobalEval: Loads a user provided frontend API script.
-      eval(code);
-      // close modal if the script executed successfully
-      return onOK();
-    } catch (error) {
-      console.error(error);
-      return alert(error);
-    }
-  }, [code, onOK]);
+  const handleClick = useCallback(() => runUserScript(code, onOK), [code, onOK]);
 
   const isLoading = isLoadingScripts || isLoadingScriptContent;
 

@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpsertSegmentGroupVolumeAction
 }
 import org.scalatest.wordspec.AsyncWordSpec
+import play.api.libs.json.Json
 
 class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryConversions {
 
@@ -270,27 +271,37 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
   "UpdateSegmentPartialVolumeAction" should {
     "update the specified segment partially" in {
       val segmentId = 5
-      val initialSegment = Dummies.volumeTracing.segments.find(_.segmentId == segmentId).get
+      val initialSegment = Segment(
+        segmentId,
+        anchorPosition = Some(Vec3IntProto(7, 7, 7)),
+        name = Some("aSegment"),
+        creationTime = Some(Dummies.timestampLong),
+        color = Some(colorToProto(Color(1.0, 0.0, 0.0, 1.0))),
+        groupId = Some(groupId1),
+        anchorPositionAdditionalCoordinates = Seq(AdditionalCoordinateProto("t", 3))
+      )
+      val tracing = Dummies.volumeTracing.withSegments(Seq(initialSegment))
+      // None keeps a property unchanged, Some(None) (the default) unsets it.
       val updateSegmentPartialAction = UpdateSegmentPartialVolumeAction(
         id = UnsignedLong(segmentId),
         anchorPosition = Some(Some(Vec3Int(8, 8, 8))),
         name = Some(Some("aRenamedSegment")),
         color = None,
         groupId = None,
-        creationTime = None,
+        creationTime = Some(None),
         actionTracingId = Dummies.tracingId
       )
-      val result = applyUpdateAction(updateSegmentPartialAction)
+      val result = updateSegmentPartialAction.applyOn(tracing)
 
-      assert(result.segments.length == Dummies.volumeTracing.segments.length)
-      val segment = result.segments.find(_.segmentId == updateSegmentPartialAction.id.toLong).get
+      assert(result.segments.length == 1)
+      val segment = result.segments.find(_.segmentId == segmentId).get
 
-      assert(segment.segmentId == updateSegmentPartialAction.id.toLong)
       assert(segment.anchorPosition.contains(vec3IntToProto(Vec3Int(8, 8, 8))))
       assert(segment.name.contains("aRenamedSegment"))
       assert(segment.color == initialSegment.color)
       assert(segment.groupId == initialSegment.groupId)
-      assert(segment.creationTime == initialSegment.creationTime)
+      assert(segment.creationTime.isEmpty)
+      assert(segment.anchorPositionAdditionalCoordinates.isEmpty)
     }
 
     "update the specified segment fully" in {
@@ -314,6 +325,33 @@ class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryC
       assert(updateSegmentPartialAction.color.contains(segment.color.map(colorFromProto)))
       assert(updateSegmentPartialAction.groupId.contains(segment.groupId))
       assert(updateSegmentPartialAction.creationTime.contains(segment.creationTime))
+    }
+
+    "distinguish between absent keys and null values when parsed from json" in {
+      def parse(json: String): UpdateSegmentPartialVolumeAction =
+        Json.parse(json).as[UpdateSegmentPartialVolumeAction]
+
+      val withGroup = applyUpdateAction(
+        parse(s"""{"id": 5, "groupId": 1, "actionTracingId": "${Dummies.tracingId}"}""")
+      )
+      assert(withGroup.segments.find(_.segmentId == 5).get.groupId.contains(1))
+
+      // An absent key must keep the property unchanged.
+      val absentAction = parse(s"""{"id": 5, "actionTracingId": "${Dummies.tracingId}"}""")
+      assert(absentAction.groupId.isEmpty)
+      assert(absentAction.anchorPosition.isEmpty)
+      val afterAbsent = absentAction.applyOn(withGroup).segments.find(_.segmentId == 5).get
+      assert(afterAbsent.groupId.contains(1))
+      assert(afterAbsent.anchorPosition.contains(Vec3IntProto(7, 7, 7)))
+
+      // A null value must unset the property.
+      val nullAction =
+        parse(s"""{"id": 5, "groupId": null, "anchorPosition": null, "actionTracingId": "${Dummies.tracingId}"}""")
+      assert(nullAction.groupId.contains(None))
+      assert(nullAction.anchorPosition.contains(None))
+      val afterNull = nullAction.applyOn(withGroup).segments.find(_.segmentId == 5).get
+      assert(afterNull.groupId.isEmpty)
+      assert(afterNull.anchorPosition.isEmpty)
     }
   }
 

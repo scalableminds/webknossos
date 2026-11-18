@@ -18,8 +18,8 @@ import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/k
 const defaultViewportRect = {
   top: 0,
   left: 0,
-  width: Constants.VIEWPORT_WIDTH,
-  height: Constants.VIEWPORT_WIDTH,
+  width: Constants.DEFAULT_VIEWPORT_SIZE_IN_PX,
+  height: Constants.DEFAULT_VIEWPORT_SIZE_IN_PX,
 };
 const initialAnnotationInfo = {
   annotationId: "",
@@ -217,6 +217,7 @@ const defaultState: WebknossosState = {
   save: {
     queue: [],
     isSavingDisabled: false,
+    hasSaveError: false,
     lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
@@ -298,7 +299,7 @@ const defaultState: WebknossosState = {
       right: false,
       left: false,
     },
-    theme: getSystemColorTheme(),
+    systemTheme: getSystemColorTheme(),
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",

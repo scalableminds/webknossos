@@ -1,11 +1,9 @@
-import { AiAddonUpgradeCard } from "admin/organization/organization_cards";
-import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
+import { useCanRequestUpgrades } from "admin/organization/organization_hooks";
+import { AiAddonUpgradeCard } from "admin/organization/plan_upgrade_cards";
 import { Alert, Space, Typography } from "antd";
-import { useWkSelector } from "libs/react_hooks";
 
 export function AiTrainingUnavailableNotice() {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const canRequestAiAddon = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
+  const canRequestAiAddon = useCanRequestUpgrades();
 
   return (
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>

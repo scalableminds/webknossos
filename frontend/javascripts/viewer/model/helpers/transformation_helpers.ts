@@ -2,10 +2,19 @@ import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { M4x4 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
 import type { Matrix4x4 } from "mjs";
-import type { NestedMatrix4, Vector3 } from "viewer/constants";
+import type { NestedMatrix4, Vector3, Vector4 } from "viewer/constants";
 
 export function nestedToFlatMatrix(matrix: NestedMatrix4): Matrix4x4 {
   return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
+}
+
+export function flatToNestedMatrix(matrix: Matrix4x4): NestedMatrix4 {
+  return [
+    matrix.slice(0, 4) as Vector4,
+    matrix.slice(4, 8) as Vector4,
+    matrix.slice(8, 12) as Vector4,
+    matrix.slice(12, 16) as Vector4,
+  ];
 }
 
 export type Transform =

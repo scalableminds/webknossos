@@ -6,7 +6,13 @@
  */
 
 import type { BucketWrite } from "./bucket_write_map";
-import type { BucketAddress, SegmentBucketData, SegmentId } from "./volume_annotation_types";
+import type {
+  BoundingBox,
+  BucketAddress,
+  MagIndex,
+  SegmentBucketData,
+  SegmentId,
+} from "./volume_annotation_types";
 
 /**
  * What can be done with a bucket right now. Two of the three states have no
@@ -14,8 +20,8 @@ import type { BucketAddress, SegmentBucketData, SegmentId } from "./volume_annot
  * *fetch* is rather than what the array is good for:
  *   - `absent`  — nothing allocated, and writes against the address are still
  *     fine (they live in the write set / journal). The real DataCube cannot do
- *     this: `applyVoxelMap` calls `getOrCreateData()` first thing, so writing
- *     always materializes.
+ *     this: `WkDataCubeAdapter.applyWrites` calls `getOrCreateData()` first
+ *     thing, so writing always materializes.
  *   - `pending` — an array exists but does not hold backend content yet. Covers
  *     `REQUESTED`, and `UNREQUESTED` after a failed request (which leaves
  *     pendingOperations queued).
@@ -41,6 +47,12 @@ export interface TransactionCube {
     address: BucketAddress,
     overwritableValue: SegmentId,
   ): ((index: number) => boolean) | null;
+  /**
+   * The region of a mag that may be written to (e.g., a task bounding box), in
+   * that mag's voxels. The rasterizer and the flood fill traversal stay within
+   * it at the source mag, and the transaction clips every mag's writes to it.
+   */
+  getEditableBoundingBox(magIndex: MagIndex): BoundingBox;
 }
 
 /**

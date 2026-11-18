@@ -6,9 +6,9 @@ This feature works well with automated machine-learning segmentation workflows. 
 
 ![youtube-video](https://www.youtube.com/embed/ZmUqyIoA9Gw)
 
-Mapping files are automatically detected when placed in an `agglomerates` folder inside the [segmentation folder](../data/wkw.md#wkw-folder-structure). All available mappings can be activated from the dropdown of each `Segmentation` layer. You can switch between mappings at any time, and WEBKNOSSOS updates the rendered result accordingly.
+HDF5 mapping files are automatically detected when placed in an `agglomerates` folder inside the [segmentation folder](../data/wkw.md#wkw-folder-structure). Mappings in the zarr3-based format or on remote object storage need to be registered as `attachments` in the dataset's `datasource-properties.json`. All available mappings can be activated from the dropdown of each `Segmentation` layer. You can switch between mappings at any time, and WEBKNOSSOS updates the rendered result accordingly.
 
-Mapping files are stored as HDF5 files. [Read the section on data formats for more information on the file formats](../data/concepts.md#id-mapping-files).
+Mapping files are stored as HDF5 files or in a zarr3-based format. [Read the section on data formats for more information on the file formats](../data/concepts.md#id-mapping-files).
 
 ## Mapping Locking
 In the context of an annotation, as soon as you modify a volume layer that has an active mapping — whether by proofreading or simply by brushing — that mapping becomes *locked* in the annotation. A locked mapping can no longer be substituted or disabled, which guarantees that the stored annotation always refers to a consistent agglomeration. This can only be reverted by restoring an older version of the annotation.

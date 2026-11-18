@@ -46,20 +46,21 @@ export function* performMinCut(
     editableMappingId: volumeTracingId,
   };
 
-  let edgesToRemove: MinCutTargetEdge[] = [];
-  try {
-    edgesToRemove = yield* call(
-      getEdgesForAgglomerateMinCut,
-      tracingStoreUrl,
-      volumeTracingId,
-      version,
-      segmentsInfo,
-    );
-  } catch (exception) {
-    console.error(exception);
+  const edgesResult = yield* call(
+    getEdgesForAgglomerateMinCut,
+    tracingStoreUrl,
+    volumeTracingId,
+    version,
+    segmentsInfo,
+    // The toast below is shown instead.
+    { showErrorToast: false },
+  );
+  if (!edgesResult.ok) {
+    console.error(edgesResult.error.cause);
     Toast.error("Could not determine which edges to delete for cut. Please try again.");
     return [true, []];
   }
+  const edgesToRemove = edgesResult.value;
 
   // Use untransformedPosition below because agglomerate trees should not have
   // any transforms, anyway.
@@ -114,20 +115,21 @@ export function* performCutFromNeighbors(
     editableMappingId: volumeTracingId,
   };
 
-  let neighborInfo;
-  try {
-    neighborInfo = yield* call(
-      getNeighborsForAgglomerateNode,
-      tracingStoreUrl,
-      volumeTracingId,
-      annotationVersion,
-      segmentsInfo,
-    );
-  } catch (exception) {
-    console.error(exception);
+  const neighborResult = yield* call(
+    getNeighborsForAgglomerateNode,
+    tracingStoreUrl,
+    volumeTracingId,
+    annotationVersion,
+    segmentsInfo,
+    // The toast below is shown instead.
+    { showErrorToast: false },
+  );
+  if (!neighborResult.ok) {
+    console.error(neighborResult.error.cause);
     Toast.error("Could not load neighbors of agglomerate node. Please try again.");
     return { didCancel: true };
   }
+  const neighborInfo = neighborResult.value;
 
   const edgesToRemove: Array<
     | {

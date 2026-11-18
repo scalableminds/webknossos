@@ -2,7 +2,6 @@ import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
-import { zeroPad } from "libs/utils";
 import clamp from "lodash-es/clamp";
 import identity from "lodash-es/identity";
 import orderBy from "lodash-es/orderBy";
@@ -45,10 +44,13 @@ import {
   deleteComment,
   deleteEdge,
   deleteNode,
+  deleteNodeAndReconnectNeighbors,
   deleteTrees,
   ensureTreeNames,
+  generateTreeName,
   getMaximumNodeId,
   getOrCreateTree,
+  insertNodeOnEdge,
   mergeTrees,
   removeMissingGroupsFromTrees,
   setExpandedTreeGroups,
@@ -634,6 +636,9 @@ function SkeletonTracingReducer(
             $set: action.tracing,
           },
         },
+        localSkeletonState: {
+          $merge: action.localSkeletonState ?? {},
+        },
       });
     }
 
@@ -918,6 +923,109 @@ function SkeletonTracingReducer(
       });
     }
 
+    case "DELETE_NODE_AND_RECONNECT_NEIGHBORS": {
+      const { nodeId, treeId } = action;
+      const treeAndNode = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        nodeId,
+        treeId,
+        TreeTypeEnum.DEFAULT,
+      );
+      if (treeAndNode == null) {
+        return state;
+      }
+
+      const [tree, node] = treeAndNode;
+      const deleteResult = deleteNodeAndReconnectNeighbors(state, tree, node);
+      if (deleteResult == null) {
+        return state;
+      }
+
+      const [trees, newActiveNodeId, newMaxNodeId] = deleteResult;
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: trees,
+            },
+            activeNodeId: {
+              $set: newActiveNodeId,
+            },
+            cachedMaxNodeId: {
+              $set: newMaxNodeId,
+            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: tree.treeId,
+          },
+          activeGroupId: {
+            $set: null,
+          },
+        },
+      });
+    }
+
+    case "INSERT_NODE_ON_EDGE": {
+      if (areGeometriesTransformed(state)) {
+        // Don't create nodes if the skeleton layer is rendered with transforms.
+        return state;
+      }
+      const { timestamp, sourceNodeId, targetNodeId } = action;
+      if (sourceNodeId === targetNodeId) {
+        // Guard explicitly: the edge lookup in insertNodeOnEdge would match any edge of the node.
+        return state;
+      }
+      const tree = findTreeByNodeId(skeletonTracing.trees, sourceNodeId);
+      if (tree == null || tree.type !== TreeTypeEnum.DEFAULT) {
+        return state;
+      }
+      const sourceNode = tree.nodes.getNullable(sourceNodeId);
+      const targetNode = tree.nodes.getNullable(targetNodeId);
+      if (sourceNode == null || targetNode == null) {
+        return state;
+      }
+
+      const insertResult = insertNodeOnEdge(
+        state,
+        skeletonTracing,
+        tree,
+        sourceNode,
+        targetNode,
+        timestamp,
+      );
+      if (insertResult == null) {
+        return state;
+      }
+
+      const [trees, newNode] = insertResult;
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: trees,
+            },
+            activeNodeId: {
+              $set: newNode.id,
+            },
+            cachedMaxNodeId: {
+              $set: newNode.id,
+            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: tree.treeId,
+          },
+          activeGroupId: {
+            $set: null,
+          },
+        },
+      });
+    }
+
     case "DELETE_EDGE": {
       const { timestamp, sourceNodeId, targetNodeId } = action;
 
@@ -1157,7 +1265,7 @@ function SkeletonTracingReducer(
 
     case "ADD_TREES_AND_GROUPS": {
       const { trees, treeGroups, assignNewGroupId, targetGroupId } = action;
-      const treesWithNames = ensureTreeNames(state, trees);
+      const treesWithNames = ensureTreeNames(trees);
       const treesResult = addTreesAndGroups(
         skeletonTracing,
         treesWithNames,
@@ -1335,7 +1443,7 @@ function SkeletonTracingReducer(
         return state;
       }
 
-      const defaultName = `Tree${zeroPad(tree.treeId, 3)}`;
+      const defaultName = generateTreeName(tree.treeId);
       const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         name: action.name || defaultName,

@@ -141,6 +141,14 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
     }
   }
 
+  private def logQLString(value: String): String =
+    "\"" + value
+      .replace("\\", "\\\\")
+      .replace("\"", "\\\"")
+      .replace("\n", "\\n")
+      .replace("\r", "\\r")
+      .replace("\t", "\\t") + "\""
+
   private def queryLogs(
       runName: String,
       organizationId: String,
@@ -154,11 +162,11 @@ class LokiClient @Inject() (wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyst
       val levels = VoxelyticsLogLevel.sortedValues.drop(VoxelyticsLogLevel.sortedValues.indexOf(minLevel))
 
       val logQLFilter = List(
-        taskName.map(t => s"""vx_task_name="$t""""),
+        taskName.map(t => s"vx_task_name=${logQLString(t)}"),
         Some(s"""level=~"(${levels.mkString("|")})"""")
       ).flatten.mkString(" | ")
       val logQL =
-        s"""{vx_run_name="$runName",wk_org=~"$organizationId",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
+        s"{vx_run_name=${logQLString(runName)},wk_org=${logQLString(organizationId)},wk_url=${logQLString(wkConf.Http.uri)}} | json vx_task_name,level | $logQLFilter"
 
       val queryString =
         List(

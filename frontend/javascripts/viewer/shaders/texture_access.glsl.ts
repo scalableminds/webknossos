@@ -30,15 +30,12 @@ const linearizeVec3ToIndexWithMod: ShaderModule = {
 
 const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    // Define this function for each segmentation and color layer, since iOS cannot handle
-    // sampler2D textures[dataTextureCountPerLayer]
-    // as a function parameter properly
+    // One function per layer, so that the pool and the dtype handling are
+    // constants for the compiler.
 
     <% each(layerNamesWithSegmentation, (name) => { %>
+      // textureIdx is the slice within the layer's pool texture.
       vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
-        // Since WebGL 1 doesn't allow dynamic texture indexing, we use an exhaustive if-else-construct
-        // here which checks for each case individually. The else-if-branches are constructed via
-        // lodash templates.
 
         <%
           const textureLayerInfo = textureLayerInfos[name];
@@ -60,28 +57,12 @@ const getRgbaAtXYIndex: ShaderModule = {
           })())
         %>;
 
-        <% if (textureLayerInfo.dataTextureCount === 1) { %>
-            // Don't use if-else when there is only one data texture anyway
-            val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
-
-            <% if (elementClass.endsWith("int16")) { %>
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else { %>
-              return dtype_normalizer * vec4(val);
-            <% }%>
+        val = texelFetch(<%= getPoolSamplerName(elementClass) %>, ivec3(x, y, textureIdx), 0);
+        <% if (elementClass.endsWith("int16")) { %>
+          return vec4(val.x, 0., val.y, 0.);
         <% } else { %>
-          <% range(0, textureLayerInfo.dataTextureCount).forEach(textureIndex => { %>
-          <%= textureIndex > 0 ? "else" : "" %> if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            val = texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0);
-            <% if (elementClass.endsWith("int16")) { %>
-              return vec4(val.x, 0., val.y, 0.);
-            <% } else { %>
-              return dtype_normalizer * vec4(val);
-            <% }%>
-          }
-          <% }) %>
-          return vec4(0.5, 0.0, 0.0, 0.0);
-        <% } %>
+          return dtype_normalizer * vec4(val);
+        <% }%>
       }
     <% }); %>
 
@@ -217,11 +198,18 @@ export const getColorForCoords: ShaderModule = {
 
       float bucketAddress;
       vec3 offsetInBucket;
+<% if (isVertexAlignmentCapped) { %>
+      // Layers at or above VERTEX_ALIGNMENT_LAYER_CAP have no precomputed
+      // bucket address.
+      uint renderedMagIdx = activeMagIdx;
+      bool beSafe = globalLayerIndex >= VERTEX_ALIGNMENT_LAYER_CAP || useBucketBorderVertexOptimization < 0.5;
+      if (!beSafe) {
+<% } else { %>
       uint renderedMagIdx;
-
+      bool beSafe = useBucketBorderVertexOptimization < 0.5;
+<% } %>
       // To avoid rare rendering artifacts, don't use the precomputed
       // bucket address when being at the border of buckets.
-      bool beSafe = useBucketBorderVertexOptimization < 0.5;
       renderedMagIdx = outputMagIdx[globalLayerIndex];
       vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);
@@ -234,7 +222,9 @@ export const getColorForCoords: ShaderModule = {
         ) {
         beSafe = true;
       }
-
+<% if (isVertexAlignmentCapped) { %>
+      }
+<% } %>
 
       if (beSafe || !supportsPrecomputedBucketAddress) {
         for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {

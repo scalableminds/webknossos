@@ -1,6 +1,7 @@
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { document } from "libs/window";
+import { readGpuInfo } from "viewer/controller/renderer";
 import type { GpuSpecs } from "./data_rendering_logic";
 
 // Probing the GPU requires a WebGL context and reports problems via Toast/Airbrake, so this
@@ -16,12 +17,18 @@ export function getSupportedTextureSpecs(): GpuSpecs {
       : (ctxName: string) => ({
           MAX_TEXTURE_SIZE: 0,
           MAX_TEXTURE_IMAGE_UNITS: 1,
+          MAX_ARRAY_TEXTURE_LAYERS: 2,
+          MAX_FRAGMENT_UNIFORM_VECTORS: 3,
+          MAX_VERTEX_UNIFORM_VECTORS: 5,
 
           getParameter(param: number) {
             if (ctxName === "webgl2") {
               const dummyValues: Record<string, any> = {
                 "0": 4096,
                 "1": 16,
+                "2": 2048,
+                "3": 1024,
+                "5": 1024,
                 "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
                 "7937": "Radeon R9 200 Series",
               };
@@ -62,6 +69,8 @@ export function getSupportedTextureSpecs(): GpuSpecs {
 
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
+  // Remember the GPU vendor, so that analytics events don't need to create yet another context.
+  readGpuInfo(gl as WebGL2RenderingContext);
 
   if (import.meta.env.MODE !== "test") {
     console.log("maxTextureImageUnits", maxTextureImageUnits);
@@ -70,6 +79,11 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   return {
     supportedTextureSize,
     maxTextureCount: guardAgainstMesaLimit(maxTextureImageUnits, gl),
+    maxArrayTextureLayers: gl.getParameter(gl.MAX_ARRAY_TEXTURE_LAYERS),
+    maxUniformVectors: Math.min(
+      gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
+      gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS),
+    ),
   };
 }
 

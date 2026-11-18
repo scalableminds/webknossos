@@ -90,7 +90,7 @@ describe("Proofreading (With Agglomerate Tree interactions)", () => {
 
       // Restore original parsing of tracings to make the mocked agglomerate tree implementation work.
       // Load agglomerate tree for agglomerate id 1.
-      yield call(loadAgglomerateTrees, context, [1n, 4n], false, false);
+      yield call(loadAgglomerateTrees, context, [1n, 4n], false);
       const skeletonWithAgglomerateTrees = yield* select(
         (state: WebknossosState) => state.annotation.skeleton,
       );

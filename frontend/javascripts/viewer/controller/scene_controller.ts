@@ -55,6 +55,7 @@ import {
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getGlobalVoxelSizeFromState,
   getTransformedDatasetBoundingBox,
   getTransformsForLayer,
   getTransformsForLayerOrNull,
@@ -76,7 +77,7 @@ import {
   getTaskBoundingBoxes,
   type MipEnabledBBox,
 } from "viewer/model/accessors/tracing_accessor";
-import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
+import { getPlaneExtentInUnitFromStore } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
 import {
   loadMipAction,
@@ -129,6 +130,7 @@ class SceneController {
   public renderer!: WebGLRenderer;
   public scene!: Scene;
   public rootGroup!: Group;
+  private planeGroup!: Group;
   public segmentMeshController: SegmentMeshController;
   private storePropertyUnsubscribers: Array<() => void>;
   private splitBoundaryMesh: Mesh | null = null;
@@ -182,10 +184,15 @@ class SceneController {
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
     // The dimension(s) with the highest resolution will not be distorted.
-    this.rootGroup.scale.copy(
-      new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
-    );
+    this.setGlobalVoxelSize(getGlobalVoxelSizeFromState(Store.getState()).factor);
     this.setupDebuggingMethods();
+  }
+
+  setGlobalVoxelSize(voxelSizeFactor: Vector3): void {
+    this.rootGroup.scale.copy(new ThreeVector3(...voxelSizeFactor));
+    // Apply the inverse voxel size to all planes to remove the scaling of the root group
+    // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
+    this.planeGroup.scale.copy(new ThreeVector3(1, 1, 1).divide(this.rootGroup.scale));
   }
 
   setupDebuggingMethods() {
@@ -283,6 +290,7 @@ class SceneController {
       color: CUBE_COLOR,
       showCrossSections: true,
       isHighlighted: false,
+      isActive: false,
     });
 
     this.contour = new ContourGeometry();
@@ -299,17 +307,10 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
-    const planeGroup = new Group();
+    this.planeGroup = new Group();
     for (const plane of Object.values(this.planes)) {
-      planeGroup.add(...plane.getMeshes());
+      this.planeGroup.add(...plane.getMeshes());
     }
-    // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
-    // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
-    planeGroup.scale.copy(
-      new ThreeVector3(1, 1, 1).divide(
-        new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
-      ),
-    );
 
     this.rootNode = new Group().add(
       this.userBoundingBoxGroup,
@@ -321,7 +322,7 @@ class SceneController {
         ...this.areaMeasurementGeometry.getMeshes(),
       ),
       ...this.datasetBoundingBox.getMeshes(),
-      planeGroup,
+      this.planeGroup,
     );
 
     if (state.annotation.skeleton != null) {
@@ -504,6 +505,7 @@ class SceneController {
         color: 0x00ff00,
         showCrossSections: true,
         isHighlighted: false,
+        isActive: false,
       });
       taskCube.getMeshes().forEach((mesh) => {
         this.rootNode.add(mesh);
@@ -530,7 +532,7 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
     const state = Store.getState();
-    const { dataset, userConfiguration, flycam } = state;
+    const { userConfiguration, flycam } = state;
     const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = userConfiguration;
 
     // Section clipping renders only the skeleton on the currently visible section.
@@ -590,7 +592,10 @@ class SceneController {
           // perpendicular voxel so that the (precise) shader-side clipping is never
           // overruled by the data plane occluding on-section nodes/edges.
           const effectiveClippingDistanceInUnit = isSectionClippingActive
-            ? Math.max(this.clippingDistanceInUnit, dataset.dataSource.scale.factor[ind[2]])
+            ? Math.max(
+                this.clippingDistanceInUnit,
+                getGlobalVoxelSizeFromState(state).factor[ind[2]],
+              )
             : this.clippingDistanceInUnit;
           const unrotatedPositionOffset = [0, 0, 0] as Vector3;
           unrotatedPositionOffset[ind[2]] =
@@ -638,7 +643,12 @@ class SceneController {
 
     if (!optFlightModePlane) {
       for (const currentPlane of Object.values(this.planes)) {
-        const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
+        // The plane geometry has a width of 1, so its scale is the viewport extent.
+        const [scaleX, scaleY] = getPlaneExtentInUnitFromStore(
+          state,
+          flycam.zoomStep,
+          currentPlane.planeID,
+        );
         const isVisible = scaleX > 0 && scaleY > 0;
 
         if (isVisible) {
@@ -684,6 +694,7 @@ class SceneController {
       this.deferUntilCompileReady(() => cube.destroy());
     }
     const newUserBoundingBoxGroup = new Group();
+    const { activeUserBoundingBoxId } = Store.getState().uiInformation;
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor: Vector3 = [color[0] * 255, color[1] * 255, color[2] * 255];
@@ -694,6 +705,8 @@ class SceneController {
         showCrossSections: true,
         id,
         isHighlighted: this.highlightedBBoxId === id,
+        isActive: activeUserBoundingBoxId === id,
+        deferDisposal: (dispose) => this.deferUntilCompileReady(dispose),
       });
       bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach((mesh) => {
@@ -794,6 +807,7 @@ class SceneController {
           // is visible where users usually work and the visibility/color controls have a visible effect.
           showCrossSections: true,
           isHighlighted: false,
+          isActive: false,
         });
         bbCube.setVisibility(layerBoundingBoxVisibilities[layer.name] ?? false);
         bbCube.getMeshes().forEach((mesh) => {
@@ -858,6 +872,17 @@ class SceneController {
     }
 
     this.highlightedBBoxId = bboxId;
+  }
+
+  // Briefly fills the given user bounding box, e.g. to point out a newly created box.
+  flashUserBoundingBox(bboxId: number): void {
+    this.userBoundingBoxes.find((bbCube) => bbCube.id === bboxId)?.flashFill();
+  }
+
+  setActiveUserBoundingBox(bboxId: number | null | undefined): void {
+    for (const bbCube of this.userBoundingBoxes) {
+      bbCube.setIsActive(bbCube.id === bboxId);
+    }
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {
@@ -929,6 +954,15 @@ class SceneController {
   }
 
   async destroy(): Promise<void> {
+    // Stop listening to the store synchronously, before the await below. The caller resets the
+    // store right after calling destroy(). Listeners that are still active would then rebuild
+    // the scene objects from the empty default state.
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+    this.debouncedUpdateMipVolumes.cancel();
+
     // See waitForPendingCompiles(); must happen before any disposal below, including
     // skeleton removal.
     await this.waitForPendingCompiles();
@@ -948,12 +982,6 @@ class SceneController {
       this.removeSkeleton(Number.parseInt(skeletonId, 10));
     }
 
-    for (const fn of this.storePropertyUnsubscribers) {
-      fn();
-    }
-    this.storePropertyUnsubscribers = [];
-
-    this.debouncedUpdateMipVolumes.cancel();
     for (const { volume } of this.mipVolumes.values()) {
       this.rootNode.remove(volume.mesh);
       volume.dispose();
@@ -992,6 +1020,13 @@ class SceneController {
   bindToEvents(): void {
     this.storePropertyUnsubscribers = [
       listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState).factor,
+        (voxelSizeFactor) => {
+          this.setGlobalVoxelSize(voxelSizeFactor);
+          app.vent.emit("rerender");
+        },
+      ),
+      listenToStoreProperty(
         (storeState) => storeState.userConfiguration.clippingDistance,
         (clippingDistance) => this.setClippingDistance(clippingDistance),
       ),
@@ -1006,6 +1041,10 @@ class SceneController {
       listenToStoreProperty(
         (storeState) => getSomeTracing(storeState.annotation).userBoundingBoxes,
         (bboxes) => this.setUserBoundingBoxes(bboxes),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.uiInformation.activeUserBoundingBoxId,
+        (activeBBoxId) => this.setActiveUserBoundingBox(activeBBoxId),
       ),
       listenToStoreProperty(
         (storeState) => getDataLayers(storeState.dataset),

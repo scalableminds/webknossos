@@ -14,6 +14,7 @@ const dummyOrga: APIOrganization = {
   includedStorageBytes: 1200000,
   usedStorageBytes: 1000,
   milliCreditBalance: 0,
+  partner: null,
   ownerName: undefined,
 };
 
@@ -31,6 +32,7 @@ export const powerOrga: APIOrganization = {
   usedStorageBytes: 0,
   ownerName: undefined,
   milliCreditBalance: undefined,
+  partner: null,
 };
 
 export default dummyOrga;

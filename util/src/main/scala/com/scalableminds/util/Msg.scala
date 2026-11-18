@@ -13,7 +13,6 @@ object Msg {
   val zipFileNotFound: String = "No or invalid zip file specified."
   val notAllowed: String = "You are not authorized to view or edit this resource."
   val notFound: String = "Could not find or access the requested resource."
-  val invalidJson: String = "Invalid json format."
   object AgglomerateGraph {
     val failed: String = "Could not look up an agglomerate graph for requested agglomerate."
   }
@@ -46,6 +45,48 @@ object Msg {
       val zeroAnnotations: String = "Need at least one training annotation for model training."
     }
   }
+  object AlignmentProject {
+    val notFound: String = "Could not find the requested alignment project."
+    val noAdminOrDatasetManager: String =
+      "Alignment projects are only available to administrators and dataset managers."
+    def nameTaken(name: String): String =
+      s"An alignment project with the name “$name” already exists. Please choose a different name."
+    val emptyName: String = "The name of an alignment project must not be empty."
+    val notUploading: String = "The upload of this alignment project has already been finished."
+    val uploadUnfinished: String = "The upload of this alignment project has not finished yet."
+    val uploadValidationFailed: String = "Could not validate alignment project information for upload."
+    val finishUploadFailed: String = "Could not finish the alignment project upload."
+    val reportUploadFailed: String = "Could not report the alignment project upload to WEBKNOSSOS."
+    val unzipFailed: String = "Could not unzip the uploaded file."
+    def directoryExists(directory: String): String = s"Alignment project directory $directory already exists."
+    def directoryMissing(directory: String): String = s"Alignment project directory $directory does not exist."
+    object Csv {
+      val notFound: String = "No CSV file was found among the uploaded files."
+      def multipleFound(paths: Seq[String]): String =
+        s"Expected exactly one CSV file, found ${paths.length}: ${paths.mkString(", ")}."
+      val unreadable: String = "The CSV file could not be read."
+      val notAttached: String = "No CSV file was attached."
+      val invalidCurrentPath: String = "Invalid path of the current CSV."
+      val storeFailed: String = "Could not store the new CSV file."
+      val noTiles: String = "The CSV file contains no tiles."
+      def sectionsNotContinuous(missing: Int, first: Int, last: Int): String =
+        s"Section numbers are not continuous: section $missing is missing between $first and $last."
+      def invalidRow(rowNumber: Int, problem: String): String = s"Row $rowNumber: $problem"
+      // The following describe the problem of a single row, see invalidRow.
+      def sectionNotInteger(section: String): String = s"""section number "$section" is not an integer."""
+      def positionNotNumeric(x: String, y: String): String = s"""position "$x,$y" is not numeric."""
+      val emptyPath: String = "the path is empty."
+      def pathNotRelative(path: String): String = s"""path "$path" must be relative to the CSV file."""
+      def tooFewColumns(minColumnCount: Int, found: Int): String =
+        s"expected at least $minColumnCount columns (section,x,y,path), found $found."
+    }
+    val notReady: String = "Alignments can only be started for alignment projects with a valid, fully uploaded CSV."
+    val inputDataDeleted: String = "The input data of this alignment project has been deleted."
+    val invalidSectionRange: String = "The selected section range is not within the sections of the alignment project."
+    val invalidVoxelSize: String = "Each component of the voxel size must be larger than 0."
+    val deleteFailed: String = "Could not delete the alignment project."
+  }
+
   object Annotation {
     val fetchOldPrecedenceLayerNeedsAnnotationId: String =
       "Annotation id is required to fetch old precedence layer."
@@ -57,7 +98,6 @@ object Msg {
     val publicWritesFailed: String = "Could not convert annotation to json."
     val sandboxSkeletonOnly: String = "Sandbox annotations are currently available as skeleton only."
     val createFailed: String = "Could not create annotation."
-    val createForbidden: String = "You do not have permission to create annotations for this dataset."
     val createTracingsFailed: String = "Could not set up annotation layers."
     val finishFailed: String = "Could not finish/archive the annotation."
     val finished: String = "Annotation is archived."
@@ -124,6 +164,8 @@ object Msg {
       val editableMappingDataFailed: String = "Could not revert editable mapping data."
       val getSourceFailed: String = "Could not get source version for annotation revert."
       val revertDistributedElementsFailed: String = "Could not revert distributed annotation elements."
+      def sourceVersionNotEarlier(sourceVersion: Long, newVersion: Long): String =
+        s"Trying to revert to v$sourceVersion in v$newVersion, but can only revert to earlier versions."
       val volumeDataFailed: String = "Could not revert volume data."
     }
     object Reopen {
@@ -186,6 +228,7 @@ object Msg {
         "An annotation layer with this name already exists in this annotation. Please change it to prevent duplicates."
       val onlyOneSkeletonAllowed: String = "Only one skeleton layer is allowed per annotation."
       val mappingIsLocked: String = "Cannot modify mapping in a locked annotation."
+      val authorIdMismatch: String = "Annotation updates can only be stored with the requesting user as author."
     }
     object Download {
       val failed: String = "Could not download annotation."
@@ -204,8 +247,10 @@ object Msg {
       val writeToFileFailed: String = "Could not write annotation to temporary file for download."
     }
     object Volume {
-      def largestSegmentIdExceedsRange(id: Long, ec: String): String =
-        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$ec”."
+      def largestSegmentIdExceedsRange(id: Long, elementClass: String): String =
+        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$elementClass”."
+      def invalidSegmentationElementClass(elementClass: String): String =
+        s"The data type “$elementClass” is not a valid segmentation data type."
       def wrongMag(tracingId: String, mag: String): String =
         s"Annotation layer “$tracingId” does not have mag “$mag”."
       val fallbackDataSplitFailed: String =
@@ -239,7 +284,10 @@ object Msg {
       }
     }
     object EditableMapping {
-      val numEdgesExceedsInt: String = "Edge count for editable mapping exceeds int32 range."
+      def numEdgesExceedsLimit(numEdges: Long, limit: Int): String =
+        s"Edge count $numEdges for editable mapping exceeds the limit of $limit."
+      def edgeIsAdditionShapeMismatch(numEdges: Long, edgeIsAdditionShape: Seq[Long]): String =
+        s"Shape of edgeIsAddition (${edgeIsAdditionShape.mkString(", ")}) does not match edge count $numEdges."
       val getAgglomerateGraphFailed: String =
         "Could not look up an agglomerate graph for requested agglomerate."
       val getAgglomerateIdsForSegmentsFailed: String =
@@ -262,6 +310,10 @@ object Msg {
     val requiresHttps: String = "Passkeys are only supported with HTTPS."
     val unauthorized: String = "Passkey authentication failed."
   }
+  object Partner {
+    val notFound: String = "Partner could not be found."
+  }
+
   object Organization {
     def notFound(id: String): String = s"Organization “$id” could not be found or accessed."
     def notFoundWrongHost(orgaId: String, gotHost: String, thisHost: String): String =
@@ -272,7 +324,13 @@ object Msg {
     val listPlanUpdatesOnlyAdmin: String = "Only organization admins can list plan updates."
     val creditOrdersOnlyOwner: String =
       "You do not have permission to order WEBKNOSSOS credits for your organization. Please contact the organization owner."
-    val creditOrdersNotPositive: String = "Cannot order a negative number of WEBKNOSSOS credits."
+    val upgradeRequestEmpty: String = "The upgrade request does not contain any changes."
+    val upgradeRequestInvalidAmount: String = "All requested amounts must be positive."
+    val upgradeRequestInvalidPlan: String = "Only an upgrade to the Team or Power plan can be requested."
+    val upgradeRequestAiAddonNotAvailable: String =
+      "The AI Add-on is already active or requires at least the Team plan."
+    def upgradeRequestNoteTooLong(maxLength: Int): String =
+      s"The note of the upgrade request must not be longer than $maxLength characters."
     val alreadyJoined: String = "Your account is already associated with the selected organization."
     val ambiguous: String = "Registration without invite is not allowed for instances with multiple organizations."
     val organizationCreationNotEnabled: String = "Organization creation is not enabled for this WEBKNOSSOS instance."
@@ -347,6 +405,7 @@ object Msg {
       "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help."
     val cleanupFailed: String = "Could not clean up failed job."
     val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
+    val notAvailableInPlan: String = "Long-running jobs are not available in the pricing plan of your organization."
     val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
     val volumeExceeded: String = "The volume of the selected bounding box is too large."
     val invalidBoundingBoxOrMag: String =
@@ -391,7 +450,8 @@ object Msg {
       val submitFailed: String = "Could not start segment index file computation job."
     }
     object ExportTiff {
-      val submitFailed: String = "Could not start Tiff export job."
+      val submitFailed: String = "Could not start data export job."
+      val invalidFormat: String = "Invalid export format. Must be one of ome_tiff, tiff_stack, ozx."
     }
     object ConvertToWkw {
       val submitFailed: String = "Could not start image conversion/import job."
@@ -431,11 +491,11 @@ object Msg {
     val loadingDataFailed: String = "Could not load data for the requested dataset."
     val noLayers: String = "Dataset has no data layers."
     val noMags: String = "Data layer does not contain any mags."
+    val noLayersRenderableAtZoom: String = "No data layer has mags coarse enough to render a thumbnail at this zoom."
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
     val findByImportURLFailed = "Could not look up whether a dataset with the import url already exists."
-    val deleteFromDbFailed = "Could not delete dataset from the database."
     object Compose {
       val failed: String = "Could not compose dataset."
       val addAttachmentFailed: String = "Could not add attachment to composed dataset."
@@ -453,8 +513,6 @@ object Msg {
         "Dataset is marked as usable but has no voxel size."
       val noBoundingBox: String =
         "Dataset has no bounding box. Please make sure this dataset is imported correctly."
-      val alreadyPresent: String =
-        "A datasource-properties.json file already exists at the target location."
       val updateFileFailed: String = "Could not update datasource-properties.json file."
       val addPathsNotAllowed: String =
         "Cannot directly add a data source with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths."
@@ -561,7 +619,6 @@ object Msg {
       val setUploaderForbidden: String = "No permission to set uploader for this dataset."
       val validationFailed: String = "Could not validate dataset information for upload."
       val magUploadOnlyVirtual: String = "Adding mags to existing datasets is only allowed for virtual datasets."
-      val magAlreadyPending: String = "This mag is already pending."
       val magNotPending: String = "This mag is not marked as pending."
       val attachmentNotPending: String = "This attachment is not marked as pending."
       val magPathNotSet: String = "Mag path is required in upload."
@@ -754,7 +811,6 @@ object Msg {
     def notFound(id: ObjectId): String = s"Team “$id” could not be found or accessed."
     def inUseByProjects(count: Int): String = s"Team is referenced by $count projects."
     def inUseByTaskTypes(count: Int): String = s"Team is referenced by $count task types."
-    def inUseByAnnotations(count: Int): String = s"Team is referenced by $count annotations."
     def adminNotPossibleBy(teamName: String, userName: String): String =
       s"User “$userName” cannot be assigned administrative rights in team “$teamName” because they are not in the same organization."
     val deleteSuccess: String = "Team was successfully deleted."
@@ -773,6 +829,9 @@ object Msg {
     val loadFullFailed: String = "Could not load full segment mesh."
     val magNeededForAdHoc: String = "A mag needs to be provided for ad-hoc mesh computation."
     val seedPosNeededForAdHoc: String = "A seed position needs to be provided for ad-hoc mesh computation."
+    val segmentIdZeroForAdHoc: String = "Cannot compute an ad-hoc mesh for segment id 0."
+    def tooManyAdHocMeshRequests(max: Int): String =
+      s"Segment is too large for ad-hoc full mesh computation (more than $max meshing requests). Consider computing a mesh file."
     object File {
       val meshFileNameRequired: String =
         "Trying to load mesh from mesh file, but no mesh file name was supplied."
@@ -845,6 +904,7 @@ object Msg {
   }
   object SegmentAnything {
     val notEnabled: String = "AI-based quick select is not enabled for this WEBKNOSSOS instance."
+    val notAvailableInPlan: String = "AI-based quick select is not available in the pricing plan of your organization."
     val noUri: String = "No URI for SAM server configured."
     val getDataFailed: String = "Could not get image data to send to SAM server."
     val getMaskFailed: String = "Could not get image mask from SAM server."
@@ -865,7 +925,6 @@ object Msg {
   }
   object Image {
     val createFailed: String = "Could not create 2d image from underlying image data."
-    val pageFailed: String = "Could not get page from 2d image sprite sheet."
   }
   object TimeTracking {
     val invalidTeamIds: String = "Invalid team ids."

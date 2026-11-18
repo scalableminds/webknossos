@@ -2,9 +2,20 @@ import { UnitsMap } from "libs/format_utils";
 import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type UnitShort, type Vector3 } from "viewer/constants";
 
-export function getBaseVoxelInUnit(voxelSizeFactor: Vector3): number {
-  // base voxel should be a cube with highest resolution
-  return Math.min(...voxelSizeFactor);
+// The zoom step is defined so that, at zoom step 1, one screen pixel covers the smallest
+// voxel extent of the dataset. The brush size is measured in such "pixels at zoom step 1", too.
+export function getUnitPerPixel(voxelSize: VoxelSize, zoomStep: number = 1): number {
+  return zoomStep * Math.min(...voxelSize.factor);
+}
+
+// Returns how many voxels one screen pixel covers per axis.
+export function getVoxelPerPixel(voxelSize: VoxelSize, zoomStep: number = 1): Vector3 {
+  const unitPerPixel = getUnitPerPixel(voxelSize, zoomStep);
+  return [
+    unitPerPixel / voxelSize.factor[0],
+    unitPerPixel / voxelSize.factor[1],
+    unitPerPixel / voxelSize.factor[2],
+  ];
 }
 
 export function voxelToVolumeInUnit(
@@ -21,15 +32,6 @@ export function voxelToVolumeInUnit(
     voxelSize.factor[2] *
     volumeInVx
   );
-}
-
-export function getBaseVoxelFactorsInUnit(voxelSize: VoxelSize): Vector3 {
-  const scaleFactor = voxelSize.factor;
-  // base voxel should be a cube with highest mag
-  const baseVoxel = getBaseVoxelInUnit(scaleFactor);
-  // scale factor to calculate the voxels in a certain
-  // dimension from baseVoxels
-  return [baseVoxel / scaleFactor[0], baseVoxel / scaleFactor[1], baseVoxel / scaleFactor[2]];
 }
 
 export function voxelToUnit(voxelSize: VoxelSize, posArray: Vector3): Vector3 {

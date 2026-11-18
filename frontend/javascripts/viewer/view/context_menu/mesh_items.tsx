@@ -4,6 +4,7 @@ import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { useDispatch } from "react-redux";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -21,6 +22,8 @@ import type { ContextMenuInfo } from "viewer/store";
 import { useMultiCutToolOptions } from "./min_cut_item";
 import { useContextMenuActions } from "./use_context_menu_actions";
 
+const NO_SEGMENT_ID = 0n;
+
 export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const {
     meshId: clickedMeshId,
@@ -30,7 +33,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
 
   const volumeTracing = useWkSelector(getActiveSegmentationTracing);
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
-  const voxelSizeFactor = useWkSelector((state) => state.dataset.dataSource.scale.factor);
+  const voxelSizeFactor = useWkSelector((state) => getGlobalVoxelSizeFromState(state).factor);
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
 
   const currentMeshFile = useWkSelector((state) =>
@@ -51,7 +54,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const activeUnmappedSegmentId = useWkSelector((state) =>
     getActiveUnmappedSegmentId(state, volumeTracing),
   );
-  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : 0n;
+  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : NO_SEGMENT_ID;
 
   const segments = useWkSelector((state) =>
     volumeTracing != null ? getSegmentsForLayer(state, volumeTracing.tracingId) : null,
@@ -67,14 +70,14 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
 
   const segmentIdLabel =
     isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${clickedMeshId ?? 0n}`
-      : (clickedMeshId ?? 0n);
+      ? `within Segment ${clickedMeshId ?? NO_SEGMENT_ID}`
+      : (clickedMeshId ?? NO_SEGMENT_ID);
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
-    maybeUnmappedSegmentId ?? 0n,
-    clickedMeshId ?? 0n,
+    maybeUnmappedSegmentId ?? NO_SEGMENT_ID,
+    clickedMeshId ?? NO_SEGMENT_ID,
     segmentOrSuperVoxel,
     segmentIdLabel,
   );
@@ -104,7 +107,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
       : maybeUnmappedSegmentId == null
         ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
         : meshFileMappingName != null
-          ? "This mesh was created for a mapping. Please use a mesh file that is based on unmapped oversegmentation data."
+          ? 'This mesh was loaded from a mesh file that was computed for a mapping. Proofreading requires a mesh file that was computed without a mapping. Select one in the mesh settings of the Segments tab or precompute one with the mapping "None".'
           : actionNeedsActiveSegment && activeSegmentMissing
             ? "Select a segment first."
             : null;

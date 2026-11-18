@@ -1,6 +1,7 @@
 import { UploadOutlined } from "@ant-design/icons";
 import { Button, Input, Space } from "antd";
 import type { SearchProps } from "antd/es/input";
+import { isPrimaryPointerFine } from "libs/utils";
 import { useContext } from "react";
 import { useDispatch } from "react-redux";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
@@ -14,7 +15,6 @@ export function DashboardTopBar({
   handleOnSearch,
   handleSearchChanged,
   searchQuery,
-  toggleShowArchived,
   shouldShowArchivedAnnotations,
   archiveAll,
 }: {
@@ -22,7 +22,6 @@ export function DashboardTopBar({
   handleOnSearch: SearchProps["onSearch"];
   handleSearchChanged: (event: React.ChangeEvent<HTMLInputElement>) => void;
   searchQuery: string;
-  toggleShowArchived: () => void;
   shouldShowArchivedAnnotations: boolean;
   archiveAll: () => void;
 }) {
@@ -32,6 +31,8 @@ export function DashboardTopBar({
 
   const search = (
     <Search
+      // Autofocusing on touch devices would pop up the on-screen keyboard.
+      autoFocus={isPrimaryPointerFine()}
       style={{
         width: 200,
       }}
@@ -44,15 +45,12 @@ export function DashboardTopBar({
   const content = isAdminView ? (
     search
   ) : (
-    <Space>
+    <Space wrap>
       <Button
         icon={<UploadOutlined />}
         onClick={() => dispatch(setDropzoneModalVisibilityAction(true))}
       >
         Upload Annotation(s)
-      </Button>
-      <Button onClick={toggleShowArchived}>
-        Show {shouldShowArchivedAnnotations ? "Open" : "Archived"} Annotations
       </Button>
       {!shouldShowArchivedAnnotations ? <Button onClick={archiveAll}>Archive All</Button> : null}
       {search}

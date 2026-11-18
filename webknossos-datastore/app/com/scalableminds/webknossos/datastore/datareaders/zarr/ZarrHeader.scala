@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayDataType,
   ArrayOrder,
@@ -15,7 +16,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json.*
 
@@ -51,31 +52,41 @@ case class ZarrHeader(
   lazy val voxelOffset: Array[Int] = Array.fill(rank)(0)
 }
 
-object ZarrHeader extends JsonImplicits {
+object ZarrHeader extends JsonImplicits with Zarr3OutputHelper {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
   /** * This function is used for exposing webknossos layers as zarr layers via the API. It therefore defaults to the
     * necessary defaults for webknossos data layers.
     */
-  def fromLayer(dataLayer: DataLayer, mag: Vec3Int): ZarrHeader = {
+  def fromLayer(dataLayer: DataLayer, mag: Vec3Int): ZarrHeader =
+    forArray(dataLayer.elementClass, dataLayer.boundingBox, dataLayer.additionalAxes.getOrElse(Seq.empty), mag)
+
+  def forArray(
+      elementClass: ElementClass.Value,
+      boundingBox: BoundingBox,
+      additionalAxes: Seq[AdditionalAxis],
+      mag: Vec3Int
+  ): ZarrHeader = {
     val cubeLength = DataLayer.bucketLength
-    val (channels, dtype) = ElementClass.toChannelAndZarrString(dataLayer.elementClass)
+    val (channels, dtype) = ElementClass.toChannelAndZarrString(elementClass)
     // data request method always decompresses before sending
     val compressor = None
 
-    val additionalAxesShapeEntries =
-      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty[Int])
-    val additionalAxesChunksEntries =
-      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty[Int])
+    // Same order as expected by ZarrCoordinatesParser for chunk keys
+    val reorderedAdditionalAxes = reorderAdditionalAxes(additionalAxes)
 
-    val shape = Array(channels) ++ additionalAxesShapeEntries ++ Array(
+    val shape = Array(channels) ++ reorderedAdditionalAxes.map(_.upperBound).toArray ++ Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
-      (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / mag.x,
-      (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / mag.y,
-      (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / mag.z
+      (boundingBox.width + boundingBox.topLeft.x) / mag.x,
+      (boundingBox.height + boundingBox.topLeft.y) / mag.y,
+      (boundingBox.depth + boundingBox.topLeft.z) / mag.z
     )
 
-    val chunks = Array(channels) ++ additionalAxesChunksEntries ++ Array(cubeLength, cubeLength, cubeLength)
+    val chunks = Array(channels) ++ Array.fill(reorderedAdditionalAxes.length)(1) ++ Array(
+      cubeLength,
+      cubeLength,
+      cubeLength
+    )
 
     ZarrHeader(
       zarr_format = 2,

@@ -1,7 +1,7 @@
 import { InputKeyboard } from "libs/input";
 import { useWkSelector } from "libs/react_hooks";
 import { mod } from "libs/utils";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useEffectEvent } from "react";
 import { useDispatch } from "react-redux";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
@@ -46,20 +46,18 @@ export function useCommentNavigation(sortedComments: CommentType[]) {
 export function useCommentKeyboardShortcuts(nextComment: () => void, previousComment: () => void) {
   const shortcutsConfig = useWkSelector((state) => state.keyboardConfiguration.shortcutsConfig);
 
-  // Refs keep the handlers fresh without re-creating the keyboard on every render.
-  const nextCommentRef = useRef(nextComment);
-  nextCommentRef.current = nextComment;
-  const previousCommentRef = useRef(previousComment);
-  previousCommentRef.current = previousComment;
+  // Effect events keep the handlers fresh without re-creating the keyboard on every render.
+  const onNextComment = useEffectEvent(nextComment);
+  const onPreviousComment = useEffectEvent(previousComment);
 
   useEffect(() => {
     const keyboardHandlers: Partial<KeyboardShortcutHandlerMap> = {
       NEXT_COMMENT: {
-        onPressedWithRepeat: () => nextCommentRef.current(),
+        onPressedWithRepeat: () => onNextComment(),
         delayed: true,
       },
       PREVIOUS_COMMENT: {
-        onPressedWithRepeat: () => previousCommentRef.current(),
+        onPressedWithRepeat: () => onPreviousComment(),
         delayed: true,
       },
     };

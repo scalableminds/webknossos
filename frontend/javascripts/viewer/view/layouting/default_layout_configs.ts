@@ -75,6 +75,7 @@ function Tab(
   id: string,
   component: string,
   enableRenderOnDemand: boolean = true,
+  enableClose?: boolean,
 ): TabNode {
   return {
     type: "tab",
@@ -82,6 +83,7 @@ function Tab(
     component,
     id,
     enableRenderOnDemand,
+    ...(enableClose != null ? { enableClose } : {}),
   };
 }
 
@@ -105,8 +107,8 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
 }
 
 export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode {
-  const { name, id, enableRenderOnDemand = true } = borderTab;
-  return Tab(name, id, "border-tab", enableRenderOnDemand);
+  const { name, id, enableRenderOnDemand = true, enableClose } = borderTab;
+  return Tab(name, id, "border-tab", enableRenderOnDemand, enableClose);
 }
 const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 
@@ -202,20 +204,19 @@ function buildLayout(settings, borders, mainLayout): ModelConfig {
   };
 }
 
-// As long as the content of the left border is not responsive, this border needs a fixed width.
-// As soon as the content is responsive the normal DEFAULT_BORDER_WIDTH should be used.
-const leftBorderWidth = 365;
+// The left border can't be resized by the user (see hide_first_splitter_border). Its content fills
+// this width minus the vertical scrollbar, if the OS renders a space-taking one.
+// The right border uses the same width for symmetry in the default layout.
+const sidebarWidth = 365;
 
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
-  const defaultBorderWidth = isInIframe
-    ? Constants.DEFAULT_BORDER_WIDTH_IN_IFRAME
-    : Constants.DEFAULT_BORDER_WIDTH;
+  const rightBorderWidth = isInIframe ? Constants.DEFAULT_BORDER_WIDTH_IN_IFRAME : sidebarWidth;
   const borderIsOpenByDefault = !isInIframe;
   const leftBorder = buildBorder(
     "left",
     [borderTabs.LayerSettingsTab, borderTabs.ControlsAndRenderingSettingsTab],
-    leftBorderWidth,
+    sidebarWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithSkeleton = buildBorder(
@@ -226,10 +227,9 @@ const _getDefaultLayouts = () => {
       borderTabs.CommentTabView,
       borderTabs.SegmentsView,
       borderTabs.BoundingBoxTab,
-      borderTabs.AbstractTreeTab,
       borderTabs.ConnectomeView,
     ],
-    defaultBorderWidth,
+    rightBorderWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithoutSkeleton = buildBorder(
@@ -240,7 +240,7 @@ const _getDefaultLayouts = () => {
       borderTabs.SegmentsView,
       borderTabs.ConnectomeView,
     ],
-    defaultBorderWidth,
+    rightBorderWidth,
     borderIsOpenByDefault,
   );
   const OrthoMainLayout = buildMainLayout([

@@ -15,6 +15,8 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 import java.awt.image.{BufferedImage, DataBufferByte}
 import java.io.*
+import java.nio.ByteBuffer
+import java.nio.ByteOrder.LITTLE_ENDIAN
 import java.util.zip.*
 import javax.imageio.ImageIO
 import javax.imageio.ImageIO.createImageInputStream
@@ -44,6 +46,11 @@ object CompressionSetting {
   }
 }
 
+object Compressor {
+  // Guards against decompression bombs: crafted chunks that expand to a huge output
+  val maxDecompressedBytes: Int = 1024 * 1024 * 1024
+}
+
 abstract class Compressor {
 
   def getId: String
@@ -56,16 +63,31 @@ abstract class Compressor {
   @throws[IOException]
   def decompress(input: Array[Byte]): Array[Byte]
 
+  // For encodings that need the (possibly clipped) shape of the chunk to decode it
   @throws[IOException]
-  protected def passThrough(is: InputStream, os: OutputStream): Unit = {
+  def decompress(input: Array[Byte], chunkShape: Array[Int]): Array[Byte] = decompress(input)
+
+  @throws[IOException]
+  protected def passThrough(is: InputStream, os: OutputStream, maxBytes: Long = Long.MaxValue): Unit = {
     val bytes = new Array[Byte](4096)
+    var total = 0L
     var read = is.read(bytes)
     while (read >= 0) {
+      total += read
+      if (total > maxBytes)
+        throw new IOException(s"$getId: decompressed size exceeds limit of $maxBytes bytes")
       if (read > 0)
         os.write(bytes, 0, read)
       read = is.read(bytes)
     }
   }
+
+  @throws[IOException]
+  protected def assertDecompressedSizeWithinLimit(decompressedSize: Long): Unit =
+    if (decompressedSize > Compressor.maxDecompressedBytes)
+      throw new IOException(
+        s"$getId: decompressed size $decompressedSize exceeds limit of ${Compressor.maxDecompressedBytes} bytes"
+      )
 
 }
 
@@ -95,7 +117,7 @@ class Lz4Compressor extends Compressor {
     val is = new BufferedInputStream(new ByteArrayInputStream(input));
     val os = new ByteArrayOutputStream()
     val cis = new BlockLZ4CompressorInputStream(is)
-    try passThrough(cis, os)
+    try passThrough(cis, os, Compressor.maxDecompressedBytes)
     finally if (cis != null) cis.close()
     os.toByteArray
   }
@@ -135,7 +157,7 @@ class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Co
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
     val iis = new InflaterInputStream(is, new Inflater)
-    try passThrough(iis, os)
+    try passThrough(iis, os, Compressor.maxDecompressedBytes)
     finally if (iis != null) iis.close()
     os.toByteArray
   }
@@ -175,7 +197,7 @@ class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Co
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
     val iis = new GZIPInputStream(is)
-    try passThrough(iis, os)
+    try passThrough(iis, os, Compressor.maxDecompressedBytes)
     finally if (iis != null) iis.close()
     os.toByteArray
   }
@@ -287,8 +309,19 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     Blosc.compress(input, typesize, cname, clevel, shuffle, blocksize, 1)
 
   @throws[IOException]
-  override def decompress(input: Array[Byte]): Array[Byte] =
+  override def decompress(input: Array[Byte]): Array[Byte] = {
+    // Blosc header: version, versionlz, flags, typesize (1 byte each),
+    // then nbytes (uncompressed size), blocksize, cbytes (compressed size) as uint32 LE each
+    if (input.length < 16)
+      throw new IOException(s"blosc: input of ${input.length} bytes is too short for the header")
+    val header = ByteBuffer.wrap(input).order(LITTLE_ENDIAN)
+    assertDecompressedSizeWithinLimit(Integer.toUnsignedLong(header.getInt(4)))
+    // c-blosc trusts cbytes, so a larger value than the actual input would make it read past the buffer
+    val compressedSize = Integer.toUnsignedLong(header.getInt(12))
+    if (compressedSize > input.length)
+      throw new IOException(s"blosc: header claims $compressedSize compressed bytes, but input has ${input.length}")
     Blosc.decompress(input, 1)
+  }
 
 }
 
@@ -301,11 +334,23 @@ class JpegCompressor() extends Compressor {
   @throws[IOException]
   override def compress(input: Array[Byte]): Array[Byte] = ???
 
+  // Upper bound for the number of bytes per pixel of a decoded JPEG (CMYK)
+  private val maxBytesPerPixel = 4
+
   @throws[IOException]
   override def decompress(input: Array[Byte]): Array[Byte] = {
-    val is = new ByteArrayInputStream(input)
-    val iis: ImageInputStream = createImageInputStream(is)
-    val bi: BufferedImage = ImageIO.read(iis: ImageInputStream)
+    val iis: ImageInputStream = createImageInputStream(new ByteArrayInputStream(input))
+    val bi: BufferedImage =
+      try {
+        val readers = ImageIO.getImageReaders(iis)
+        if (!readers.hasNext) throw new IOException("jpeg: no image reader found for input")
+        val reader = readers.next()
+        try {
+          reader.setInput(iis)
+          assertDecompressedSizeWithinLimit(reader.getWidth(0).toLong * reader.getHeight(0) * maxBytesPerPixel)
+          reader.read(0)
+        } finally reader.dispose()
+      } finally iis.close()
     val raster = bi.getRaster
     val dbb: DataBufferByte = raster.getDataBuffer.asInstanceOf[DataBufferByte]
     dbb.getData
@@ -322,22 +367,26 @@ class CompressoCompressor extends Compressor {
 
   @throws[IOException]
   override def decompress(input: Array[Byte]): Array[Byte] =
-    new NativeCompressoCompressor().decompress(input)
+    new NativeCompressoCompressor().decompress(input, Compressor.maxDecompressedBytes)
 
 }
 
-class CompressedSegmentationCompressor(dataType: ArrayDataType, volumeSize: Array[Int], blockSize: Vec3Int)
-    extends Compressor {
+class CompressedSegmentationCompressor(dataType: ArrayDataType, blockSize: Vec3Int) extends Compressor {
   override def getId: String = "compressedsegmentation"
 
   override def toString: String = s"compressor=$getId/dataType=${dataType.toString}"
 
   override def decompress(input: Array[Byte]): Array[Byte] =
+    throw new UnsupportedOperationException(
+      "Compressed segmentation can only be decompressed with a known chunk shape."
+    )
+
+  override def decompress(input: Array[Byte], chunkShape: Array[Int]): Array[Byte] =
     dataType match {
       case ArrayDataType.u4 =>
-        CompressedSegmentation32.decompress(input, volumeSize, blockSize)
+        CompressedSegmentation32.decompress(input, chunkShape, blockSize)
       case ArrayDataType.u8 =>
-        CompressedSegmentation64.decompress(input, volumeSize, blockSize)
+        CompressedSegmentation64.decompress(input, chunkShape, blockSize)
       case _ =>
         throw new UnsupportedOperationException("Can not use compressed segmentation for datatypes other than u4, u8.")
     }
@@ -368,7 +417,7 @@ class ZstdCompressor(level: Int, checksum: Boolean) extends Compressor {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
     val zstd = new ZstdCompressorInputStream(is)
-    try passThrough(zstd, os)
+    try passThrough(zstd, os, Compressor.maxDecompressedBytes)
     finally if (zstd != null) zstd.close()
     os.toByteArray
   }
@@ -384,5 +433,8 @@ class ChainedCompressor(compressors: Seq[Compressor]) extends Compressor {
 
   override def decompress(input: Array[Byte]): Array[Byte] =
     compressors.foldRight(input)((c, bytes) => c.decompress(bytes))
+
+  override def decompress(input: Array[Byte], chunkShape: Array[Int]): Array[Byte] =
+    compressors.foldRight(input)((c, bytes) => c.decompress(bytes, chunkShape))
 
 }

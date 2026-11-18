@@ -4,7 +4,7 @@ import { location } from "libs/window";
 
 const MAX_TOKEN_RETRY_ATTEMPTS = 3;
 
-let tokenPromise: Promise<string>;
+let tokenPromise: Promise<string> | null = null;
 
 let tokenRequestPromise: Promise<string> | null;
 let shouldUseURLToken: boolean = true;
@@ -20,12 +20,24 @@ function getOrCreateNewTokenPromise(): Promise<string> {
     return tokenRequestPromise;
   }
 
-  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate", {
+  const newTokenRequestPromise: Promise<string> = Request.receiveJSON("/api/userToken/generate", {
     method: "POST",
-  }).then((tokenObj) => {
-    tokenRequestPromise = null;
-    return tokenObj.token as string;
-  });
+  }).then(
+    (tokenObj) => {
+      tokenRequestPromise = null;
+      return tokenObj.token as string;
+    },
+    (error) => {
+      // Don't cache the failed request (e.g., because the server was offline). Otherwise,
+      // all subsequent doWithToken calls would fail, too, until the page is reloaded.
+      tokenRequestPromise = null;
+      if (tokenPromise === newTokenRequestPromise) {
+        tokenPromise = null;
+      }
+      throw error;
+    },
+  );
+  tokenRequestPromise = newTokenRequestPromise;
 
   return tokenRequestPromise;
 }

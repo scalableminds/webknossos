@@ -13,6 +13,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import { getTasks } from "admin/api/tasks";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import {
@@ -25,9 +26,10 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/rest_api";
-import { App, Button, Input, Spin, Table, Tooltip } from "antd";
+import { App, Button, Input, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedDuration from "components/formatted_duration";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
@@ -36,8 +38,7 @@ import {
   compareBy,
   filterWithSearchQueryAND,
   localeCompareBy,
-  millisecondsToHours,
-  scrollToTop,
+  minutesToMilliseconds,
 } from "libs/utils";
 import partial from "lodash-es/partial";
 import uniqBy from "lodash-es/uniqBy";
@@ -245,10 +246,7 @@ function ProjectListView() {
         <Table
           dataSource={filteredProjects}
           rowKey="id"
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination()}
           locale={{
             emptyText: renderPlaceholder(),
           }}
@@ -279,16 +277,12 @@ function ProjectListView() {
             }}
           />
           <Column
-            title={<Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>}
+            title={<Tooltip title="Total annotating time spent on this project">Time</Tooltip>}
             dataIndex="tracingTime"
             align="right"
             key="tracingTime"
             sorter={compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
-            render={(tracingTimeMs) =>
-              millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
-                maximumFractionDigits: 1,
-              })
-            }
+            render={(tracingTimeMs) => <FormattedDuration durationMs={tracingTimeMs} />}
             filters={greaterThanZeroFilters}
             onFilter={(value, project: APIProjectWithStatus) => {
               if (value === "0") {
@@ -320,7 +314,9 @@ function ProjectListView() {
             render={(owner: APIUserBase) => (
               <>
                 <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
-                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                {owner.email ? (
+                  <Typography.Text type="secondary">{owner.email}</Typography.Text>
+                ) : null}
               </>
             )}
             filters={uniqBy(
@@ -364,7 +360,9 @@ function ProjectListView() {
             align="right"
             key="expectedTime"
             sorter={compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
-            render={(expectedTime) => `${expectedTime}m`}
+            render={(expectedTime) => (
+              <FormattedDuration durationMs={minutesToMilliseconds(expectedTime)} />
+            )}
           />
           <Column
             title="Action"

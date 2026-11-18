@@ -10,6 +10,7 @@ import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import { setMappingEnabledAction } from "viewer/model/actions/settings_actions";
 import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
+import { mapId } from "viewer/model/helpers/mapped_id_lookup";
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
@@ -97,6 +98,29 @@ describe("API Skeleton", () => {
     expect(comment).toBe(COMMENT);
   });
 
+  it<WebknossosTestContext>("setCommentForNode should delete the comment when given an empty string", ({
+    api,
+  }) => {
+    api.tracing.setCommentForNode("", 3);
+    expect(api.tracing.getCommentForNode(3)).toBeNull();
+  });
+
+  it<WebknossosTestContext>("deleteCommentForNode should delete the comment of a node", ({
+    api,
+  }) => {
+    api.tracing.deleteCommentForNode(3);
+    expect(api.tracing.getCommentForNode(3)).toBeNull();
+  });
+
+  it<WebknossosTestContext>("deleteCommentForNode should not change the state if the node has no comment", ({
+    api,
+  }) => {
+    expect(api.tracing.getCommentForNode(2)).toBeNull();
+    const stateBefore = Store.getState();
+    api.tracing.deleteCommentForNode(2);
+    expect(Store.getState()).toBe(stateBefore);
+  });
+
   it<WebknossosTestContext>("setCommentForNode should throw an error if the supplied nodeId doesn't exist", ({
     api,
   }) => {
@@ -132,11 +156,7 @@ describe("API Skeleton", () => {
     expect(() => api.data.setMapping("nonExistingLayer", [1, 3])).toThrow();
   });
 
-  it<WebknossosTestContext>("Data Api: setMapping should set a mapping of a layer", ({
-    api,
-    model,
-  }) => {
-    const cube = model.getCubeByLayerName("segmentation");
+  it<WebknossosTestContext>("Data Api: setMapping should set a mapping of a layer", ({ api }) => {
     expect(Store.getState().temporaryConfiguration.activeMappingByLayer.segmentation.mapping).toBe(
       null,
     );
@@ -147,7 +167,9 @@ describe("API Skeleton", () => {
     // Workaround: This is usually called after the mapping textures were created successfully
     // and can be rendered, which doesn't happen in this test scenario
     Store.dispatch(setMappingEnabledAction("segmentation", true));
-    expect(cube.mapId(1n)).toBe(3n);
+    expect(mapId(Store.getState(), "segmentation", 1n)).toBe(3n);
+    // JSON mappings don't need to contain all ids. Ids without an entry keep their id.
+    expect(mapId(Store.getState(), "segmentation", 2n)).toBe(2n);
   });
 
   it<WebknossosTestContext>("Data Api: getBoundingBox should throw an error if the layer name is not valid", ({

@@ -3,13 +3,14 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
+import models.alignmentproject.{AlignmentProjectDAO, AlignmentProjectService}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.*
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
-import models.user.{MultiUserDAO, UserService}
+import models.user.{MultiUserDAO, User, UserService}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
@@ -57,7 +58,8 @@ case class AlignSectionsJobOptions(
     layerName: String,
     newDatasetName: String,
     annotationId: Option[ObjectId],
-    customConfiguration: Option[JsObject]
+    customConfiguration: Option[JsObject],
+    fineAlignmentMaxJumpSize: Option[Int]
 ) derives JsonAutoFormat
 
 class JobController @Inject() (
@@ -77,7 +79,9 @@ class JobController @Inject() (
     creditTransactionService: CreditTransactionService,
     creditTransactionDAO: CreditTransactionDAO,
     dataStoreDAO: DataStoreDAO,
-    userService: UserService
+    userService: UserService,
+    alignmentProjectDAO: AlignmentProjectDAO,
+    alignmentProjectService: AlignmentProjectService
 )(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
@@ -95,12 +99,29 @@ class JobController @Inject() (
     } yield Ok(jsStatus)
   }
 
-  def list(command: Option[String], skipForDeletedDatasets: Option[Boolean]): Action[AnyContent] =
+  def list(
+      command: Option[String],
+      skipForDeletedDatasets: Option[Boolean],
+      alignmentProjectId: Option[ObjectId]
+  ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
         commandValidatedOpt <- Fox.runOptional(command)(JobCommand.fromString(_).toFox)
-        jobsCompact <- jobDAO.findAllCompact(commandValidatedOpt, skipForDeletedDatasets.getOrElse(false))
+        jobsCompact <- alignmentProjectId match {
+          // Everyone who may access the alignment project sees all of its jobs, regardless of their owner.
+          case Some(projectId) =>
+            for {
+              _ <- alignmentProjectService.assertMayAccessAlignmentProjects(request.identity)
+              _ <- alignmentProjectDAO.findOne(projectId) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
+              jobs <- jobDAO.findAllCompact(
+                commandValidatedOpt,
+                skipForDeletedDatasets.getOrElse(false),
+                Some(projectId)
+              )(using GlobalAccessContext)
+            } yield jobs
+          case None => jobDAO.findAllCompact(commandValidatedOpt, skipForDeletedDatasets.getOrElse(false))
+        }
       } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
     }
 
@@ -121,15 +142,27 @@ class JobController @Inject() (
   def cancel(id: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
-      job <- jobDAO.findOne(id)
-      _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
-      _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
-        creditTransactionService.refundTransactionForJob(job._id, isCancelled = true)(using
-          GlobalAccessContext
-        ) ?~> Msg.Job.Credits.refundFailed
-      }
-      js <- jobService.publicWrites(job)
+      job <- jobDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Job.notFound
+      _ <- assertMayCancel(job, request.identity)
+      // The job was authorized above, either directly or via its alignment project.
+      _ <- jobService.cancelJob(job)(using GlobalAccessContext)
+      js <- jobService.publicWrites(job)(using GlobalAccessContext)
     } yield Ok(js)
+  }
+
+  // Users may cancel the jobs they have update access to, e.g., their own (even if the alignment project of the job
+  // was deleted in the meantime). Additionally, everyone who may access an alignment project may cancel all of its
+  // jobs, regardless of their owner.
+  private def assertMayCancel(job: Job, user: User): Fox[Unit] = {
+    val viaJobAccess = jobDAO.assertUpdateAccess(job._id)(using AuthorizedAccessContext(user))
+    (job._alignmentProject match {
+      case Some(alignmentProjectId) =>
+        viaJobAccess.orElse(for {
+          _ <- alignmentProjectService.assertMayAccessAlignmentProjects(user)
+          _ <- alignmentProjectDAO.findOne(alignmentProjectId)(using AuthorizedAccessContext(user))
+        } yield ())
+      case None => viaJobAccess
+    }) ?~> Msg.Job.notFound
   }
 
   /*
@@ -142,6 +175,13 @@ class JobController @Inject() (
       job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.fromBool(multiUser.isSuperUser || job.lastRetry.isEmpty) ?~> Msg.Job.alreadyRetried ~> FORBIDDEN
+      _ <- Fox.runOptional(job._alignmentProject) { alignmentProjectId =>
+        for {
+          project <- alignmentProjectDAO.findOne(alignmentProjectId)(using GlobalAccessContext)
+          _ <- Fox.fromBool(!project.isInputDataDeleted) ?~> Msg.AlignmentProject.inputDataDeleted
+        } yield ()
+      }
+      _ <- jobService.assertJobCanBeRetriedByPricingPlan(job)
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
       _ <- jobDAO.retryOne(id, retriedBySuperUser = multiUser.isSuperUser)
       js <- jobService.publicWrites(job)
@@ -268,6 +308,7 @@ class JobController @Inject() (
           ) ?~> Msg.Job.AlignSections.wrongOrga ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(request.body.layerName)
+          _ <- jobService.assertCustomConfigurationAllowed(request.body.customConfiguration, request.identity)
           (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(
             dataset,
             request.body.layerName
@@ -283,7 +324,8 @@ class JobController @Inject() (
             "new_dataset_name" -> request.body.newDatasetName,
             "layer_name" -> request.body.layerName,
             "annotation_id" -> request.body.annotationId,
-            "custom_configuration" -> request.body.customConfiguration
+            "custom_configuration" -> request.body.customConfiguration,
+            "fine_alignment_max_jump_size" -> request.body.fineAlignmentMaxJumpSize
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
           job <- jobService.submitPaidJob(
@@ -299,6 +341,13 @@ class JobController @Inject() (
       }
     }
 
+  private def exportFileExtensionFor(exportFormat: String): Option[String] = exportFormat match {
+    case "ome_tiff"   => Some("ome.tif")
+    case "tiff_stack" => Some("zip")
+    case "ozx"        => Some("ozx")
+    case _            => None
+  }
+
   def runExportTiffJob(
       datasetId: ObjectId,
       bbox: String,
@@ -307,7 +356,7 @@ class JobController @Inject() (
       mag: Option[String],
       annotationLayerName: Option[String],
       annotationId: Option[ObjectId],
-      asOmeTiff: Boolean
+      exportFormat: String
   ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -318,6 +367,7 @@ class JobController @Inject() (
           ) ?~> Msg.Organization.notFound(dataset._organization)
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
+          fileExtension <- exportFileExtensionFor(exportFormat).toFox ?~> Msg.Job.ExportTiff.invalidFormat
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
           additionalAxesOpt <- Fox.runOptional(layerName)(layerName =>
             datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(dataset._id, layerName)
@@ -345,10 +395,9 @@ class JobController @Inject() (
             requireLocal = true
           )
           exportFileName =
-            if (asOmeTiff)
-              s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
-            else
-              s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
+            s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName
+                .map(_ => "volume")
+                .getOrElse(layerName.getOrElse(""))}.$fileExtension"
 
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
@@ -358,6 +407,7 @@ class JobController @Inject() (
             "dataset_name" -> dataset.name,
             "nd_bbox" -> ndBoundingBox.toWkLibsDict,
             "export_file_name" -> exportFileName,
+            "export_format" -> exportFormat,
             "layer_name" -> layerName,
             "mag" -> mag,
             "annotation_layer_name" -> annotationLayerName,

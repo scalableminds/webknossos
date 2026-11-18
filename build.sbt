@@ -1,13 +1,16 @@
+import com.github.sbt.jni.build.Cargo
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "3.8.4"
+ThisBuild / scalaVersion := "3.10.0"
 ThisBuild / semanticdbEnabled := false
 
 // fix jni for scala version 3
 sbtJniCoreScope := Compile
 
-val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Werror") else Seq()
+// An env var (unlike -D flags) reliably reaches a server started by `sbt --client`.
+// CI sets it for every sbt job, so all jobs share identical scalacOptions and thus zinc's incremental compile cache.
+val failOnWarning = if (sys.env.contains("WK_FAIL_ON_WARNING")) Seq("-Werror") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-explain", // More detailed compiler output
   "-explain-types", // Explain type errors in detail
@@ -18,7 +21,9 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:postfixOps",
   "-Wconf:src=target/.*:s",
   "-Wconf:src=webknossos-datastore/target/.*:s",
-  "-Wconf:src=webknossos-tracingstore/target/.*:s"
+  "-Wconf:src=webknossos-tracingstore/target/.*:s",
+  // play-json's Json.format macro expands to Predef.ArrowAssoc, deprecated since Scala 3.10
+  "-Wconf:cat=deprecation&msg=ArrowAssoc:s"
 ) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
@@ -63,17 +68,20 @@ lazy val webknossosSlickCodegen = (project in file("webknossos-slick-codegen")).
   libraryDependencies ++= Dependencies.slickCodegenDependencies
 )
 
-lazy val webknossosJni = (project in file("webknossos-jni"))
-  .settings(nativeCompile / sourceDirectory := sourceDirectory.value)
+// Native functions (JNI) in Rust, built with cargo by sbt-jni.
+lazy val webknossosNative = (project in file("webknossos-native"))
+  .settings(
+    nativeCompile / sourceDirectory := baseDirectory.value,
+    nativeBuildTool := Cargo.make(Seq("--release", "--locked"))
+  )
   .enablePlugins(JniNative)
 
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
-  .dependsOn(webknossosJni)
+  .dependsOn(webknossosNative)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
-  .settings(javah / target := (webknossosJni / nativeCompile / sourceDirectory).value / "include")
   .settings(
     name := "webknossos-datastore",
     commonSettings,

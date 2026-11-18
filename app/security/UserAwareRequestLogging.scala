@@ -23,10 +23,12 @@ trait UserAwareRequestLogging extends AbstractRequestLogging {
       _ = logRequestFormatted(request, result, notifier, requesterIdOpt.id)
     } yield result)
 
-  implicit def userAwareRequestToRequesterIdOpt(implicit request: UserAwareRequest[WkEnv, ?]): RequesterIdOpt =
+  implicit protected def userAwareRequestToRequesterIdOpt(implicit
+      request: UserAwareRequest[WkEnv, ?]
+  ): RequesterIdOpt =
     RequesterIdOpt(request.identity.map(_._id.toString))
 
-  implicit def securedRequestToRequesterIdOpt(implicit request: SecuredRequest[WkEnv, ?]): RequesterIdOpt =
+  implicit protected def securedRequestToRequesterIdOpt(implicit request: SecuredRequest[WkEnv, ?]): RequesterIdOpt =
     RequesterIdOpt(Some(request.identity._id.toString))
 
 }

@@ -36,7 +36,7 @@ class TaskInformationHandler @Inject() (
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> Msg.Task.noAnnotations
       user <- userOpt.toFox ?~> Msg.User.notAuthenticated
-      project <- projectDAO.findOne(task._project)
+      _ <- projectDAO.findOne(task._project) ?~> Msg.Project.notFound(task._project)
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       _ <- registerDataSourceInTemporaryStore(taskId, datasetId)
       taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
@@ -55,7 +55,7 @@ class TaskInformationHandler @Inject() (
   def restrictionsFor(taskId: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
-      project <- projectDAO.findOne(task._project)
+      project <- projectDAO.findOne(task._project) ?~> Msg.Project.notFound(task._project)
     } yield new AnnotationRestrictions {
       override def allowAccess(userOption: Option[User]): Fox[Boolean] =
         (for {

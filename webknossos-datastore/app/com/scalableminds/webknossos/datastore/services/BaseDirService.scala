@@ -19,6 +19,23 @@ class BaseDirService @Inject() (config: DataStoreConfig) extends LazyLogging {
       requireAllowsUpload: Boolean = false,
       requireLocal: Boolean = false,
       requireS3: Boolean = false
+  ): Box[UPath] =
+    for {
+      _ <- assertSafePathSegment(organizationId)
+      path <- getOneForOrgaUnchecked(organizationId, requireAllowsUpload, requireLocal, requireS3)
+    } yield path
+
+  private def assertSafePathSegment(organizationId: String): Box[Unit] =
+    Box.fromBool(
+      organizationId.nonEmpty && organizationId != "." && !organizationId.contains("..") &&
+        !organizationId.contains("/") && !organizationId.contains("\\")
+    ) ?~> s"Invalid organization id: $organizationId"
+
+  private def getOneForOrgaUnchecked(
+      organizationId: String,
+      requireAllowsUpload: Boolean,
+      requireLocal: Boolean,
+      requireS3: Boolean
   ): Box[UPath] = {
     val orgaSpecificPath: Option[UPath] =
       baseDirectories

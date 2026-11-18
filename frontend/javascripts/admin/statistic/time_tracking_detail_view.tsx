@@ -1,7 +1,7 @@
 import { getTimeTrackingForUserSummedPerAnnotation } from "admin/rest_api";
 import { Col, Divider, Row } from "antd";
+import FormattedDuration from "components/formatted_duration";
 import dayjs from "dayjs";
-import { formatMilliseconds } from "libs/format_utils";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import groupBy from "lodash-es/groupBy";
 import type { ReactElement } from "react";
@@ -34,16 +34,18 @@ const renderRow = (
 
   for (const [project, loggedTimes] of Object.entries(groupedByProject)) {
     if (project === "null") {
-      // explorative annotations
+      // annotations (as opposed to tasks)
       const tableRows = loggedTimes.map((timeEntry, i) => (
         <Row key={`time_row_${i}`}>
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
             <a href={`annotations/${timeEntry.annotation}`}>Annotation: {timeEntry.annotation} </a>
           </Col>
           <Col span={STATISTICS_SPAN}>
-            <AnnotationStats stats={timeEntry.annotationLayerStats} withMargin={false} />
+            <AnnotationStats stats={timeEntry.annotationLayerStats} />
           </Col>
-          <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
+          <Col span={TIMESPAN_SPAN}>
+            <FormattedDuration durationMs={timeEntry.timeMillis} />
+          </Col>
         </Row>
       ));
       annotationRows = annotationRows.concat(tableRows);
@@ -60,9 +62,11 @@ const renderRow = (
             <a href={`annotations/${timeEntry.annotation}`}>Task: {timeEntry.task}</a>
           </Col>
           <Col span={STATISTICS_SPAN}>
-            <AnnotationStats stats={timeEntry.annotationLayerStats} withMargin={false} />
+            <AnnotationStats stats={timeEntry.annotationLayerStats} />
           </Col>
-          <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
+          <Col span={TIMESPAN_SPAN}>
+            <FormattedDuration durationMs={timeEntry.timeMillis} />
+          </Col>
         </Row>
       ));
       taskRows = taskRows.concat(tableRows);

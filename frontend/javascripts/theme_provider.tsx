@@ -3,7 +3,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import type React from "react";
 import { useEffect } from "react";
-import { ColorBlack, ColorWhite, getAntdTheme, getThemeFromUser } from "theme";
+import { getActiveTheme, getAntdTheme, getLayoutBackgroundColor, getScrollbarColors } from "theme";
 
 export default function GlobalThemeProvider({
   children,
@@ -12,27 +12,34 @@ export default function GlobalThemeProvider({
   children?: React.ReactNode;
   isMainProvider?: boolean;
 }) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const userTheme = getThemeFromUser(activeUser);
+  const userTheme = useWkSelector(getActiveTheme);
   const antdTheme = getAntdTheme(userTheme);
   const isDarkMode = userTheme === "dark";
 
   useEffect(() => {
-    // body is outside of the ReactDOM, so we have to manually update it
-    if (isDarkMode) {
-      document.body.style.backgroundColor = ColorBlack;
-    } else {
-      document.body.style.backgroundColor = ColorWhite;
-    }
-  }, [isDarkMode]);
+    // html and body are outside of the ReactDOM, so we have to manually update them.
+    const backgroundColor = getLayoutBackgroundColor(userTheme);
+    document.body.style.backgroundColor = backgroundColor;
+    // Before React mounts, the backend paints html black for dark themes to avoid a white flash.
+    // Override that, too: a background on html stops the body background from covering the whole
+    // page, so content taller than the viewport would otherwise end on a black background.
+    document.documentElement.style.backgroundColor = backgroundColor;
+    // Lets the browser render native UI (most notably scrollbars) in the matching scheme.
+    document.documentElement.style.colorScheme = userTheme;
+    const { thumb, track } = getScrollbarColors(userTheme);
+    document.documentElement.style.scrollbarColor = `${thumb} ${track}`;
+  }, [userTheme]);
 
   return (
-    <ConfigProvider theme={{ ...antdTheme, cssVar: { key: "antd-app-theme" } }}>
+    <ConfigProvider
+      theme={{ ...antdTheme, cssVar: { key: "antd-app-theme" } }}
+      wave={{ disabled: true }}
+    >
       <App>
         <div
           className={isDarkMode ? "dark-theme" : undefined}
           style={{
-            background: "var(--ant-color-bg-base)",
+            background: "var(--ant-color-bg-layout)",
             height: isMainProvider ? "calc(100vh - var(--navbar-height))" : "auto",
           }}
         >
@@ -50,8 +57,6 @@ export default function GlobalThemeProvider({
  * modals would otherwise inherit that theme.
  */
 export function UserThemeConfigProvider({ children }: { children: React.ReactNode }) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  return (
-    <ConfigProvider theme={getAntdTheme(getThemeFromUser(activeUser))}>{children}</ConfigProvider>
-  );
+  const userTheme = useWkSelector(getActiveTheme);
+  return <ConfigProvider theme={getAntdTheme(userTheme)}>{children}</ConfigProvider>;
 }

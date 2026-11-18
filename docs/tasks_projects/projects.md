@@ -7,7 +7,7 @@ To create a project, follow these steps:
 1. Open `Task Management > Annotation Projects` and click on `Add Project`.
 2. Fill out the form to create the _Project_.
    - Note that you can assign a `Priority` to the Project. A higher value means that Tasks from this Project will be more likely to be assigned to users.
-   - With the `Time Limit` property, you can specify the expected completion time of a Task Instance. There will be an email notification if users exceed this limit.
+   - With the `Time Limit per Task Instance` property, you can specify the expected completion time of a Task Instance. The project owner gets an email notification if an annotator exceeds this limit.
 
 ![Create a Project](../images/tasks_project.jpeg)
 /// caption

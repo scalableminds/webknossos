@@ -3,10 +3,9 @@ package controllers
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.config.ConfigRenderOptions
-import mail.{DefaultMails, Send}
+import mail.OrganizationEmailService
 import models.organization.OrganizationDAO
 import models.user.MultiUserDAO
-import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
@@ -23,19 +22,15 @@ case class HelpEmailParameters(
 ) derives JsonAutoFormat
 
 class Application @Inject() (
-    actorSystem: ActorSystem,
     multiUserDAO: MultiUserDAO,
     buildInfoService: BuildInfoService,
     organizationDAO: OrganizationDAO,
     conf: WkConf,
-    defaultMails: DefaultMails,
+    organizationEmailService: OrganizationEmailService,
     sil: Silhouette[WkEnv],
     certificateValidationService: CertificateValidationService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
-
-  private lazy val Mailer =
-    actorSystem.actorSelection("/user/mailActor")
 
   // Note: This route is used by external applications, keep stable
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {
@@ -59,8 +54,9 @@ class Application @Inject() (
 
   def checkCertificate: Action[AnyContent] = Action.fox { _ =>
     certificateValidationService.checkCertificateCached().map {
-      case (true, expiresAt)  => Ok(Json.obj("isValid" -> true, "expiresAt" -> expiresAt))
-      case (false, expiresAt) => BadRequest(Json.obj("isValid" -> false, "expiresAt" -> expiresAt))
+      case (true, expiresAt)  => addRemoteOriginHeaders(Ok(Json.obj("isValid" -> true, "expiresAt" -> expiresAt)))
+      case (false, expiresAt) =>
+        addRemoteOriginHeaders(BadRequest(Json.obj("isValid" -> false, "expiresAt" -> expiresAt)))
     }
   }
 
@@ -69,8 +65,11 @@ class Application @Inject() (
       for {
         organization <- organizationDAO.findOne(request.identity._organization)
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-        _ = Mailer ! Send(
-          defaultMails.helpMail(multiUser, organization.name, request.body.message, request.body.currentUrl)
+        _ = organizationEmailService.sendHelpEmail(
+          multiUser,
+          organization,
+          request.body.message,
+          request.body.currentUrl
         )
       } yield Ok
   }

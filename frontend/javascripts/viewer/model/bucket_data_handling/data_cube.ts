@@ -1,4 +1,3 @@
-import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3, V4 } from "libs/mjs";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
@@ -8,20 +7,12 @@ import keyBy from "lodash-es/keyBy";
 import once from "lodash-es/once";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
-import type {
-  AdditionalAxis,
-  AdditionalCoordinate,
-  BucketDataArray,
-  ElementClass,
-} from "types/api_types";
+import type { AdditionalAxis, AdditionalCoordinate, ElementClass } from "types/api_types";
 import type { BucketAddress, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
-import constants, {
-  getEffectiveBucketDepth,
-  MappingStatusEnum,
-  usesTRecycling,
-} from "viewer/constants";
+import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type {
@@ -30,6 +21,7 @@ import type {
   SomeContainment,
 } from "viewer/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "viewer/model/bucket_data_handling/bucket";
+import { getBucketCountSoftLimitPerLayer } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
@@ -39,7 +31,6 @@ import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
-import { getMappedIdAsBigInt } from "../sagas/volume/proofreading/preparation_sagas";
 
 const warnAboutTooManyAllocations = once(() => {
   const msg =
@@ -82,7 +73,7 @@ const makeLocalMax = (max: Vector3, mag: Vector3): Vector3 => {
 };
 
 class DataCube {
-  BUCKET_COUNT_SOFT_LIMIT: number = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
+  BUCKET_COUNT_SOFT_LIMIT: number;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
@@ -106,6 +97,18 @@ class DataCube {
   emitter: Emitter;
   lastRequestForValueSet: number | null = null;
   storePropertyUnsubscribers: Array<() => void> = [];
+  // The tick of the bucket-picking round whose results are currently in use. Needed
+  // to determine which buckets are still needed. The cube counts the consumed rounds
+  // itself (instead of using the LayerRenderingManager's tick) because several picking
+  // results can be consumed while the view stays at the same tick.
+  currentBucketPickerTick: number = 0;
+  // Used to detect whether a bucket was already needed during the previous round
+  // (see onBucketMarkedAsNeeded).
+  previousBucketPickerTick: number = 0;
+  private neededBucketCount: number = 0;
+  private neededBucketCountInPreviousTick: number = 0;
+  private didNeedNewBucket: boolean = false;
+  private isBucketPickingInProgress: boolean = false;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -115,14 +118,6 @@ class DataCube {
   // in a volume annotation layer are dirty), the array grows further.
   // If the array grows beyond 2 * BUCKET_COUNT_SOFT_LIMIT, the user is warned about
   // this.
-  //
-  // Each bucket consists of an access-value, the zoomStep and the actual data.
-  // The access-values are used for garbage collection. When a bucket is accessed, its
-  // access-flag is set to true.
-  // When buckets have to be collected, an iterator will loop through the queue and the buckets at
-  // the beginning of the queue will be removed from the queue and the access-value will
-  // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
-  // access-queue and is least recently used. It is then removed from the cube.
   constructor(
     layerBBox: BoundingBox,
     additionalAxes: AdditionalAxis[],
@@ -130,10 +125,14 @@ class DataCube {
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
+    // Number of layers in the dataset; scales BUCKET_COUNT_SOFT_LIMIT down
+    // (see getBucketCountSoftLimitPerLayer).
+    totalLayerCount: number,
     // Whether this layer is backed by a volume tracing, i.e. can be edited. Only relevant
     // for the t-recycling check below (see usesTRecycling).
     isEditableVolumeLayer: boolean = false,
   ) {
+    this.BUCKET_COUNT_SOFT_LIMIT = getBucketCountSoftLimitPerLayer(totalLayerCount);
     this.elementClass = elementClass;
     this.channelCount = getConstructorForElementClass(this.elementClass)[1];
     this.isSegmentation = isSegmentation;
@@ -193,48 +192,12 @@ class DataCube {
     return constants.BUCKET_WIDTH * constants.BUCKET_WIDTH * this.effectiveBucketDepth;
   }
 
-  isMappingEnabled(): boolean {
-    const activeMapping = getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMappingByLayer,
-      this.layerName,
-    );
-    return this.isSegmentation ? activeMapping.mappingStatus === MappingStatusEnum.ENABLED : false;
-  }
-
   getMapping(): Mapping | null | undefined {
     const activeMapping = getMappingInfo(
       Store.getState().temporaryConfiguration.activeMappingByLayer,
       this.layerName,
     );
     return this.isSegmentation ? activeMapping.mapping : null;
-  }
-
-  shouldHideUnmappedIds(): boolean {
-    const activeMapping = getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMappingByLayer,
-      this.layerName,
-    );
-    return this.isSegmentation && activeMapping.mappingStatus === MappingStatusEnum.ENABLED
-      ? activeMapping.hideUnmappedIds
-      : false;
-  }
-
-  mapId(unmappedId: bigint): bigint {
-    // Note that the return value can be an unmapped id even when
-    // a mapping is active, if it is a HDF5 mapping that is partially loaded
-    // and no entry exists yet for the input id.
-    let mappedId: bigint | number | null | undefined = null;
-    const mapping = this.getMapping();
-
-    if (mapping != null && this.isMappingEnabled()) {
-      mappedId = getMappedIdAsBigInt(mapping, unmappedId);
-    }
-    if (mappedId == null || (typeof mappedId === "number" && Number.isNaN(mappedId))) {
-      // The id couldn't be mapped.
-      return this.shouldHideUnmappedIds() ? 0n : unmappedId;
-    }
-
-    return toBigInt(mappedId);
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
@@ -336,6 +299,12 @@ class DataCube {
   // Either returns the existing bucket or creates a new one. Only returns
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
+  // Whether getOrCreateBucket returns a real bucket for the address, i.e., its mag
+  // exists in the layer and it intersects the layer's bounding box.
+  isBucketWithinLayer(address: BucketAddress): boolean {
+    return this.checkContainment(address).type !== "no";
+  }
+
   getOrCreateBucket(address: BucketAddress): Bucket {
     let bucket = this.getBucket(address);
 
@@ -392,9 +361,49 @@ class DataCube {
     return bucket;
   }
 
-  markBucketsAsUnneeded(): void {
-    for (let i = 0; i < this.buckets.length; i++) {
-      this.buckets[i].markAsUnneeded();
+  startBucketPicking(): void {
+    /*
+     * Announces that the buckets of a finished bucket-picking round are about to be marked as
+     * needed. Marks of unneeded buckets simply "expire" because the current tick changes.
+     */
+    this.previousBucketPickerTick = this.currentBucketPickerTick;
+    this.currentBucketPickerTick++;
+    this.neededBucketCountInPreviousTick = this.neededBucketCount;
+    this.neededBucketCount = 0;
+    this.didNeedNewBucket = false;
+    this.isBucketPickingInProgress = true;
+  }
+
+  finishBucketPicking(): void {
+    this.isBucketPickingInProgress = false;
+    // The set of needed buckets is changed if:
+    // - a "new" bucket was marked as needed (that wasn't marked as such before)
+    // OR:
+    // - the number of needed buckets changed.
+    // The second condition is responsible for catching the case where
+    // fewer buckets were marked as needed (compared to before) and new new buckets
+    // were needed.
+    if (this.didNeedNewBucket || this.neededBucketCount !== this.neededBucketCountInPreviousTick) {
+      this.triggerNeededBucketDataChanged();
+    }
+  }
+
+  onBucketMarkedAsNeeded(wasNeededInPreviousTick: boolean): void {
+    // Only called by DataBucket.markAsNeeded and only for buckets that were not already
+    // marked during the current tick.
+    this.neededBucketCount++;
+    if (this.isBucketPickingInProgress) {
+      // Don't trigger triggerNeededBucketDataChanged, because we can do that once
+      // in `finishBucketPicking`.
+      if (!wasNeededInPreviousTick) {
+        this.didNeedNewBucket = true;
+      }
+    } else {
+      // The bucket became relevant outside of a picking round (e.g. because getData was called
+      // for it while hovering). No finishBucketPicking will follow, so emit right away.
+      // This is also necessary if the bucket was needed in the previous tick, because the
+      // current tick's set of needed buckets didn't contain it so far.
+      this.triggerNeededBucketDataChanged();
     }
   }
 
@@ -407,8 +416,8 @@ class DataCube {
 
         if (
           this.buckets[this.bucketIterator].mayBeGarbageCollected(
-            // respectAccessedFlag=true because we don't want to GC buckets
-            // that were used for rendering.
+            // respectNeededFlag=true because we don't want to GC buckets
+            // that are needed for the current tick.
             true,
           )
         ) {
@@ -483,7 +492,7 @@ class DataCube {
         // collecting unsaved buckets (that should never occur, though, because of the saved state
         // as explained above).
         bucket.mayBeGarbageCollected(
-          // respectAccessedFlag=false because we don't care whether the bucket
+          // respectNeededFlag=false because we don't care whether the bucket
           // was just used for rendering, as we reload data anyway.
           false,
         )
@@ -498,8 +507,12 @@ class DataCube {
     this.bucketIterator = notCollectedBuckets.length;
   }
 
-  triggerRenderedBucketDataChanged(): void {
-    this.emitter.emit("renderedBucketDataChanged");
+  triggerNeededBucketDataChanged(): void {
+    // Signals that the set of needed buckets or the data of a needed bucket changed.
+    // Note that needed buckets include buckets that were only accessed (see DataBucket.markAsNeeded)
+    // and not only the rendered ones. Consumers use this to keep the value set
+    // (see getValueSetForAllNeededBuckets) up to date.
+    this.emitter.emit("neededBucketDataChanged");
   }
 
   shouldEagerlyMaintainUsedValueSet() {
@@ -508,14 +521,14 @@ class DataCube {
     return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
   }
 
-  getValueSetForAllAccessedBuckets(): Set<number> | Set<bigint> {
+  getValueSetForAllNeededBuckets(): Set<number> | Set<bigint> {
     this.lastRequestForValueSet = Date.now();
 
     // Theoretically, we could ignore coarser buckets for which we know that
     // finer buckets are already loaded. However, the current performance
     // is acceptable which is why this optimization isn't implemented.
     const valueSets = this.buckets
-      .filter((bucket) => bucket.state === "LOADED" && bucket.accessed)
+      .filter((bucket) => bucket.state === "LOADED" && bucket.isNeeded())
       .map((bucket) => bucket.getValueSet());
     // @ts-expect-error The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);
@@ -529,43 +542,6 @@ class DataCube {
     if (bucketIndex != null && cube != null) {
       bucket.destroy();
       cube.data.delete(bucketIndex);
-    }
-  }
-
-  async _labelVoxelInResolution_DEPRECATED(
-    voxel: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    label: number,
-    zoomStep: number,
-    activeSegmentId: bigint | null | undefined,
-  ): Promise<void> {
-    // This function is only provided for testing purposes and should not be used internally,
-    // since it only operates on one voxel and therefore is not performance-optimized. It should
-    // be refactored away.
-    // Please make use of a LabeledVoxelsMap instead.
-    const voxelInCube = this.boundingBox.containsPoint(voxel);
-
-    if (voxelInCube) {
-      const address = this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep);
-      const bucket = this.getOrCreateBucket(address);
-
-      if (bucket instanceof DataBucket) {
-        const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
-        let shouldUpdateVoxel = true;
-
-        if (activeSegmentId != null) {
-          const voxelValue = this.getMappedDataValue(voxel, additionalCoordinates, zoomStep);
-          shouldUpdateVoxel = activeSegmentId === voxelValue;
-        }
-
-        if (shouldUpdateVoxel) {
-          const labelFunc = (data: BucketDataArray): void => {
-            data[voxelIndex] = label;
-          };
-
-          await bucket.label_DEPRECATED(labelFunc);
-        }
-      }
     }
   }
 
@@ -701,19 +677,6 @@ class DataCube {
     return 0;
   }
 
-  getMappedDataValue(
-    voxel: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    zoomStep: number = 0,
-  ): NumberLike {
-    return this.getDataValue(
-      voxel,
-      additionalCoordinates,
-      this.isMappingEnabled() ? this.getMapping() : null,
-      zoomStep,
-    );
-  }
-
   getVoxelIndexByVoxelOffset([x, y, z]: Vector3 | Float32Array): number {
     return x + y * constants.BUCKET_WIDTH + z * constants.BUCKET_WIDTH ** 2;
   }
@@ -787,7 +750,7 @@ export function checkLineIntersection(bentMesh: Mesh, pointAVec3: Vector3, point
   if (!geometry.boundsTree) {
     geometry.computeBoundsTree();
   }
-  const scale = Store.getState().dataset.dataSource.scale.factor;
+  const scale = getGlobalVoxelSizeFromState(Store.getState()).factor;
   const pointA = new ThreeVector3(...V3.scale3(pointAVec3, scale));
   const pointB = new ThreeVector3(...V3.scale3(pointBVec3, scale));
 

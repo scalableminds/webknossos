@@ -35,6 +35,9 @@ export type Matrix4x4 = Vector16;
       ): Matrix4x4 {},
       scale1: function (s: number, m: Matrix4x4, r?: number[] | null | undefined): Matrix4x4 {},
       mul: function (a: Matrix4x4, b: Matrix4x4, r?: Matrix4x4 | null | undefined): Matrix4x4 {},
+      makeRotate: function (angle: number, axis: Vector3, r?: Matrix4x4 | null | undefined): Matrix4x4 {},
+      makeScale3: function (x: number, y: number, z: number, r?: Matrix4x4 | null | undefined): Matrix4x4 {},
+      makeTranslate3: function (x: number, y: number, z: number, r?: Matrix4x4 | null | undefined): Matrix4x4 {},
       rotate: function (
         angle: number,
         axis: Vector3,

@@ -51,7 +51,10 @@ trait NeuroglancerPrecomputedShardingUtils {
       )
       .toSeq
 
-  private def getMinishardIndexRange(minishardNumber: Int, parsedShardIndex: Seq[(Long, Long)]): ByteRange = {
+  private def getMinishardIndexRange(
+      minishardNumber: Int,
+      parsedShardIndex: Seq[(Long, Long)]
+  ): StartEndExclusiveByteRange = {
     val miniShardIndexStart: Long = (shardIndexRange.end) + parsedShardIndex(minishardNumber)._1
     val miniShardIndexEnd: Long = (shardIndexRange.end) + parsedShardIndex(minishardNumber)._2
     ByteRange.startEndExclusive(miniShardIndexStart, miniShardIndexEnd)
@@ -133,7 +136,14 @@ trait NeuroglancerPrecomputedShardingUtils {
       index <- getShardIndex(vaultPath)
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
-      indexRaw <- vaultPath.readBytes(minishardIndexRange)
+      _ <- Fox.fromBool(minishardIndexRange.end >= minishardIndexRange.start) ?~>
+        s"Invalid minishard index range $minishardIndexRange in shard index of $vaultPath"
+      // An empty minishard index has an empty range. It is not read: "bytes=x-(x-1)" is no valid Range header, and
+      // servers that ignore it (e.g. S3) answer with the complete shard. The shard index was just read from the same
+      // object, so its existence and the credentials are already checked.
+      indexRaw <-
+        if (minishardIndexRange.isEmpty) Fox.successful(Array.emptyByteArray)
+        else vaultPath.readBytes(minishardIndexRange)
       minishardIndex <- parseMinishardIndex(indexRaw).toFox
     } yield minishardIndex
   }

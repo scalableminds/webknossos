@@ -3,13 +3,13 @@ import { Button, Upload } from "antd";
 import type { UploadChangeParam, UploadFile } from "antd/es/upload";
 import { AsyncButton } from "components/async_clickables";
 import ErrorHandling from "libs/error_handling";
+import importDynamic from "libs/import_dynamic";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
 import compact from "lodash-es/compact";
 import zip from "lodash-es/zip";
 import type { Vector3 } from "viewer/constants";
-import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   type FileList,
   tryToFetchDatasetsByNameOrId,
@@ -174,6 +174,9 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("NML files should not be empty.");
   }
 
+  // The NML parser depends on the viewer's skeleton code (and thereby on three.js), which is
+  // why it's only loaded when it's needed.
+  const { parseNml } = await importDynamic(() => import("viewer/model/helpers/nml_helpers"));
   const {
     trees: trees1,
     datasetName: datasetDirectoryName1,

@@ -5,6 +5,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.{Failure, Full}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
+import mail.AccessChangeEmailService
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team.*
@@ -44,6 +45,7 @@ case class UpdateLastTaskTypeIdParameters(lastTaskTypeId: Option[ObjectId]) deri
 
 class UserController @Inject() (
     userService: UserService,
+    accessChangeEmailService: AccessChangeEmailService,
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     credentialsProvider: CredentialsProvider,
@@ -230,9 +232,15 @@ class UserController @Inject() (
       teams: List[TeamMembership],
       oldTeams: List[TeamMembership]
   )(issuingUser: User): Fox[Boolean] =
-    if (experiences == oldExperiences && teams == oldTeams)
+    if (experiences == oldExperiences && teams.toSet == oldTeams.toSet)
       Fox.successful(true)
-    else userService.isEditableBy(user, issuingUser)
+    else
+      for {
+        isTeamManagerOrAdminOfUser <- userService.isTeamManagerOrAdminOf(issuingUser, user)
+        // Users without teams may be edited by any team manager, e.g. to add them to a team
+        userHasNoTeams = oldTeams.isEmpty
+        isTeamManagerOrAdminOfOrg <- userService.isTeamManagerOrAdminOfOrg(issuingUser, user._organization)
+      } yield isTeamManagerOrAdminOfUser || (userHasNoTeams && isTeamManagerOrAdminOfOrg)
 
   private def checkPasswordIfEmailChanged(user: User, passwordOpt: Option[String], oldEmail: String, email: String)(
       issuingUser: User
@@ -336,8 +344,10 @@ class UserController @Inject() (
         _ <- Fox.runIf(user._id != request.identity._id)(
           Fox.assertTrue(userService.isEditableBy(user, request.identity))
         ) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- checkTeamManagerOnlyUpdates(user, experiences, oldExperience, teamMemberships, oldTeamMemberships)(
-          request.identity
+        _ <- Fox.assertTrue(
+          checkTeamManagerOnlyUpdates(user, experiences, oldExperience, teamMemberships, oldTeamMemberships)(
+            request.identity
+          )
         ) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.fromBool(
           checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(request.identity)
@@ -389,6 +399,13 @@ class UserController @Inject() (
           lastTaskTypeId
         )
         updatedUser <- userDAO.findOne(userId)
+        _ = accessChangeEmailService.sendAccessChangedEmail(
+          user,
+          oldTeamMemberships,
+          updatedUser,
+          updatedTeams,
+          request.identity
+        )
         updatedJs <- userService.publicWrites(updatedUser, request.identity)
       } yield Ok(updatedJs)
     }

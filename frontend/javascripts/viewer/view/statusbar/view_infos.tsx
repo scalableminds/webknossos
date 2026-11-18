@@ -30,8 +30,8 @@ import {
   setActiveTreeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
-import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
+import { getSegmentIdRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "../left_border_tabs/components/number_input_popover_setting";
 

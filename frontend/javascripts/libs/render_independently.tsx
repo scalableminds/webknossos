@@ -1,3 +1,5 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { reactQueryClient } from "libs/react_query_client";
 import { document } from "libs/window";
 import type React from "react";
 import { createRoot } from "react-dom/client";
@@ -33,7 +35,9 @@ export default function renderIndependently(
 
     react_root.render(
       <Provider store={Store}>
-        <GlobalThemeProvider isMainProvider={false}>{getComponent(destroy)}</GlobalThemeProvider>
+        <QueryClientProvider client={reactQueryClient}>
+          <GlobalThemeProvider isMainProvider={false}>{getComponent(destroy)}</GlobalThemeProvider>
+        </QueryClientProvider>
       </Provider>,
     );
   });

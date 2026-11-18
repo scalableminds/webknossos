@@ -5,5 +5,11 @@ import { Button, type ButtonProps } from "antd";
 // up (which would happen with <a ... /> if not handled otherwise)
 
 export default function LinkButton(props: ButtonProps) {
-  return <Button type="link" {...props} className="link-button" />;
+  return (
+    <Button
+      type="link"
+      {...props}
+      className={props.className ? `link-button ${props.className}` : "link-button"}
+    />
+  );
 }

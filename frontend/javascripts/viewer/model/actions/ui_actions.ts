@@ -13,7 +13,7 @@ type SetIsInAnnotationViewAction = ReturnType<typeof setIsInAnnotationViewAction
 type SetHasOrganizationsAction = ReturnType<typeof setHasOrganizationsAction>;
 export type SetToolAction = ReturnType<typeof setToolAction>;
 export type CycleToolAction = ReturnType<typeof cycleToolAction>;
-type SetThemeAction = ReturnType<typeof setThemeAction>;
+type SetSystemThemeAction = ReturnType<typeof setSystemThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetIsWkInitializedAction = ReturnType<typeof setIsWkInitializedAction>;
@@ -59,7 +59,7 @@ export type UiAction =
   | SetHasOrganizationsAction
   | SetToolAction
   | CycleToolAction
-  | SetThemeAction
+  | SetSystemThemeAction
   | SetDownloadModalVisibilityAction
   | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
@@ -135,10 +135,10 @@ export const cycleToolAction = (backwards: boolean = false) =>
     type: "CYCLE_TOOL",
     backwards,
   }) as const;
-export const setThemeAction = (value: Theme) =>
+export const setSystemThemeAction = (systemTheme: Theme) =>
   ({
-    type: "SET_THEME",
-    value,
+    type: "SET_SYSTEM_THEME",
+    systemTheme,
   }) as const;
 export const setDownloadModalVisibilityAction = (visible: boolean) =>
   ({

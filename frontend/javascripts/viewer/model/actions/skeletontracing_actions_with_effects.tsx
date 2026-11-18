@@ -8,8 +8,10 @@ import Store from "viewer/store";
 import RemoveTreeModal from "viewer/view/remove_tree_modal";
 import {
   type DeleteNodeAction,
+  type DeleteNodeAndReconnectNeighborsAction,
   type DeleteTreeAction,
   deleteNodeAction,
+  deleteNodeAndReconnectNeighborsAction,
   deleteTreeAction,
   type NoAction,
   noAction,
@@ -58,6 +60,24 @@ export const deleteNodeAsUserAction = (
   }
 
   return deleteNodeAction(node.id, tree.treeId);
+};
+
+export const deleteNodeAndReconnectNeighborsAsUserAction = (
+  state: WebknossosState,
+  nodeId: number,
+  treeId: number,
+): DeleteNodeAndReconnectNeighborsAction | NoAction => {
+  if (state.task != null && nodeId === 1) {
+    // Let the user confirm the deletion of the initial node (node with id 1) of a task
+    Modal.confirm({
+      title: messages["tracing.delete_initial_node"],
+      onOk: () => {
+        Store.dispatch(deleteNodeAndReconnectNeighborsAction(nodeId, treeId));
+      },
+    });
+    return noAction();
+  }
+  return deleteNodeAndReconnectNeighborsAction(nodeId, treeId);
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task

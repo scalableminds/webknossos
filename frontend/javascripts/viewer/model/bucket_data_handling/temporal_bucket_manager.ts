@@ -10,6 +10,8 @@ class TemporalBucketManager {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   loadedPromises: Array<Promise<void>>;
+  // The buckets whose backend data is still awaited.
+  pendingBuckets: Set<DataBucket> = new Set();
 
   constructor(pullQueue: PullQueue, pushQueue: PushQueue) {
     this.pullQueue = pullQueue;
@@ -18,10 +20,16 @@ class TemporalBucketManager {
   }
 
   getCount(): number {
-    return this.loadedPromises.length;
+    // Counts the buckets whose saving waits for their backend data. Only buckets edited
+    // as whole buckets are added (see DataBucket.startDataMutationForFullBucket).
+    return this.pendingBuckets.size;
   }
 
   addBucket(bucket: DataBucket): void {
+    // A bucket is added at the start of each of its mutations (see
+    // DataBucket.startDataMutationForFullBucket), but only waited for once.
+    if (this.pendingBuckets.has(bucket)) return;
+    this.pendingBuckets.add(bucket);
     this.pullBucket(bucket);
     this.loadedPromises.push(this.makeLoadedPromise(bucket));
   }
@@ -34,7 +42,8 @@ class TemporalBucketManager {
   makeLoadedPromise(bucket: DataBucket): Promise<void> {
     const loadedPromise: Promise<void> = new Promise((resolve, _reject) => {
       const onLoadedOrMissingHandler = () => {
-        if (bucket.dirty) {
+        this.pendingBuckets.delete(bucket);
+        if (bucket.fullBucketSaveState.dirty) {
           this.pushQueue.insert(bucket);
         }
 

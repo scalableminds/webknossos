@@ -31,6 +31,34 @@ describe("API Volume", () => {
     expect(api.tracing.getActiveCellId()).toBe(27n);
   });
 
+  it<WebknossosTestContext>("setActiveCell should accept a number as segment id", ({ api }) => {
+    api.tracing.setActiveCell(28);
+    expect(api.tracing.getActiveCellId()).toBe(28n);
+  });
+
+  it<WebknossosTestContext>("setActiveCell should throw for a non-integer segment id", ({
+    api,
+  }) => {
+    expect(() => api.tracing.setActiveCell(1.5)).toThrow(RangeError);
+  });
+
+  it<WebknossosTestContext>("Segment functions should accept numbers as segment ids", ({ api }) => {
+    const volumeTracingId = api.data.getVolumeTracingLayerIds()[0];
+    api.tracing.registerSegment(5, [1, 2, 3], undefined, volumeTracingId);
+    api.tracing.updateSegment(5, { name: "A name" }, volumeTracingId);
+
+    const segment = api.tracing.getSegment(5, volumeTracingId);
+    expect(segment.id).toBe(5n);
+    expect(segment.name).toBe("A name");
+    expect(api.tracing.getSegment(5n, volumeTracingId)).toEqual(segment);
+
+    api.data.setSegmentColor(5, [0, 1, 1], volumeTracingId);
+    expect(api.data.getSegmentColor(5, volumeTracingId)).toEqual([0, 1, 1]);
+
+    api.tracing.removeSegment(5, volumeTracingId);
+    expect(() => api.tracing.getSegment(5n, volumeTracingId)).toThrow();
+  });
+
   it<WebknossosTestContext>("getAnnotationTool should get the current tool", ({ api }) => {
     expect(api.tracing.getAnnotationTool()).toBe(AnnotationTool.MOVE.id);
   });
@@ -73,6 +101,19 @@ describe("API Volume", () => {
 
     // Some other voxel should not
     expect(await api.data.getDataValue(volumeTracingId, [11, 12, 13])).not.toBe(34);
+  });
+
+  it<WebknossosTestContext>("Data API: labelVoxels should accept a number as segment id", async ({
+    api,
+    mocks,
+  }) => {
+    vi.mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders).mockImplementation(
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 0),
+    );
+    const volumeTracingId = api.data.getVolumeTracingLayerIds()[0];
+    api.data.labelVoxels([[1, 2, 3]], 7);
+
+    expect(await api.data.getDataValue(volumeTracingId, [1, 2, 3])).toBe(7);
   });
 
   it<WebknossosTestContext>("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", ({

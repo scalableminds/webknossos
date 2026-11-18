@@ -50,7 +50,6 @@ export type Rect = {
   width: number;
   height: number;
 };
-export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
 export const Vector2Indices = [0, 1] as const;
 export const Vector3Indices = [0, 1, 2] as const;
 export enum OrthoViews {
@@ -134,6 +133,7 @@ export type BorderTabType = {
   name: string;
   description: string;
   enableRenderOnDemand?: boolean;
+  enableClose?: boolean;
 };
 export const BorderTabs: Record<string, BorderTabType> = {
   DatasetInfoTabView: {
@@ -160,6 +160,8 @@ export const BorderTabs: Record<string, BorderTabType> = {
     id: "AbstractTreeTab",
     name: "AbsTree",
     description: "Abstract Tree - Shows an abstract version of the active skeleton",
+    // Not part of the default layout. It is opened on demand from the skeleton tab and can be closed again.
+    enableClose: true,
   },
   ControlsAndRenderingSettingsTab: {
     id: "ControlsAndRenderingSettingsTab",
@@ -248,12 +250,16 @@ export enum TreeTypeEnum {
 export type TreeType = keyof typeof TreeTypeEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
-const VIEWPORT_WIDTH = 376;
+// Width of the flight mode plane in the flycam's local coordinates (multiples of the
+// smallest voxel extent). Since the plane always fills the viewport, this defines how
+// many voxels are visible at zoom step 1. The spherical cap radius, the flight clipping
+// distance and the camera's near/far values are measured relative to it.
+export const FLIGHT_PLANE_WIDTH = 376;
 
 // FLIGHT_CAM_DISTANCE has to be calculated such that with cam
-// angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
+// angle 45°, the plane of width FLIGHT_PLANE_WIDTH fits exactly in the
 // viewport.
-export const FLIGHT_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+export const FLIGHT_CAM_DISTANCE = FLIGHT_PLANE_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
 // A subdivision of 100 means that there will be 100 segments per axis
 // and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
@@ -275,21 +281,8 @@ export const Unicode = {
   NonBreakingSpace: "\u00a0",
   MultiplicationSymbol: "×",
 };
-// A LabeledVoxelsMap maps from a bucket address
-// to a 2D slice of labeled voxels within a bucket.
-// These labeled voxels are stored in a Uint8Array in a binary way (which
-// segment id the voxels should be changed to is not encoded).
-// The array should have BUCKET_WIDTH**2 entries.
-export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
-
-// LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference
-// that it can hold multiple slices per bucket (keyed by the W component,
-// e.g., z in XY viewport).
-export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
-
 const Constants = {
   FLIGHT_VIEW: 4,
-  DEFAULT_BORDER_WIDTH: 400,
   DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
   MODE_PLANE_TRACING: "orthogonal" as ViewMode,
   MODE_FLIGHT: "flight" as ViewMode,
@@ -300,7 +293,8 @@ const Constants = {
   BUCKET_SIZE: 32 ** 3,
   BUCKET_SIZE_2D: 32 ** 2,
   BUCKET_SHAPE: [32, 32, 32] as Vector3,
-  VIEWPORT_WIDTH,
+  // Used for the viewports until their actual size is measured.
+  DEFAULT_VIEWPORT_SIZE_IN_PX: 376,
   DEFAULT_NAVBAR_HEIGHT: 48,
   BANNER_HEIGHT: 38,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to
@@ -364,6 +358,8 @@ const Constants = {
   compare https://github.com/scalableminds/webknossos/issues/5223.
  */
 export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+
+export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / Constants.FPS;
 
 export default Constants;
 

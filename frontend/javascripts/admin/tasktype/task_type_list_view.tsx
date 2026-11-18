@@ -10,6 +10,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import {
   deleteTaskType as deleteTaskTypeAPI,
   downloadAnnotation,
@@ -23,7 +24,7 @@ import { handleGenericError } from "libs/error_handling";
 import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
-import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
@@ -126,10 +127,7 @@ function TaskTypeListView() {
             searchQuery,
           )}
           rowKey="id"
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination()}
           locale={{
             emptyText: renderPlaceholder(),
           }}
@@ -180,12 +178,12 @@ function TaskTypeListView() {
               return (
                 <Space wrap>
                   {taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
-                    <Tag color="green" key={`${taskType.id}_skeleton`} variant="outlined">
+                    <Tag color="success" key={`${taskType.id}_skeleton`} variant="outlined">
                       skeleton
                     </Tag>
                   ) : null}
                   {taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
-                    <Tag color="orange" key={`${taskType.id}_volume`} variant="outlined">
+                    <Tag color="warning" key={`${taskType.id}_volume`} variant="outlined">
                       volume
                     </Tag>
                   ) : null}

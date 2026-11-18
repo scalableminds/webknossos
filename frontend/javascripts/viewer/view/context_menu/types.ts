@@ -1,5 +1,4 @@
 import type { ItemType } from "antd/es/menu/interface";
-import type React from "react";
 import type {
   AdditionalCoordinate,
   APIConnectomeFile,
@@ -19,7 +18,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
-export type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
+export type ContextMenuContextValue = HTMLElement | null;
 
 export type Props = {
   contextInfo: ContextMenuInfo;

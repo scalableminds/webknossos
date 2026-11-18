@@ -3,7 +3,7 @@ import ColorGenerator from "libs/color_generator";
 import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import { point3ToVector3, zeroPad } from "libs/utils";
+import { point3ToVector3 } from "libs/utils";
 import compact from "lodash-es/compact";
 import first from "lodash-es/first";
 import isEmpty from "lodash-es/isEmpty";
@@ -32,6 +32,7 @@ import {
   getActiveNodeFromTree,
   getActiveTree,
   getActiveTreeGroup,
+  getEdgeForReconnectingNeighbors,
   getSkeletonTracing,
   getTree,
   mapGroupsToGenerator,
@@ -61,25 +62,8 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
-export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
-  let user = "";
-
-  if (state.activeUser) {
-    user = `${state.activeUser.firstName}_${state.activeUser.lastName}`;
-    user = user.replace(/ /g, "_"); // Replace spaces in user names
-  }
-
-  let prefix = "Tree";
-
-  if (state.annotation.annotationType === "Explorational") {
-    // Get YYYY-MM-DD string
-    const creationDate = new Date(timestamp).toJSON().slice(0, 10);
-    prefix = `explorative_${creationDate}_${user}_`;
-  } else if (state.task) {
-    prefix = `task_${state.task.id}_${user}_`;
-  }
-
-  return `${prefix}${zeroPad(treeId, 3)}`;
+export function generateTreeName(treeId: number) {
+  return `Tree ${treeId}`;
 }
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
   const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
@@ -231,6 +215,95 @@ export function deleteNode(
   }
   const newActiveTreeId = newActiveTree.treeId;
   return [newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId];
+}
+
+// Deletes a node that has exactly two neighbors and connects these neighbors with a new edge,
+// so that the tree is not split. Returns null if the node does not have exactly two neighbors.
+export function deleteNodeAndReconnectNeighbors(
+  state: WebknossosState,
+  tree: Tree,
+  node: Node,
+): [TreeMap, number, number] | null {
+  const skeletonTracing = getSkeletonTracing(state.annotation);
+  if (skeletonTracing == null) {
+    return null;
+  }
+  const edgeToCreate = getEdgeForReconnectingNeighbors(tree, node.id);
+  if (edgeToCreate == null) {
+    return null;
+  }
+
+  let edges = tree.edges;
+  for (const edge of tree.edges.getEdgesForNode(node.id)) {
+    edges = edges.removeEdge(edge);
+  }
+  // In case of a cycle, the neighbors might already be connected (in either direction).
+  const areNeighborsConnected = edges
+    .getEdgesForNode(edgeToCreate.source)
+    .some((edge) => edge.source === edgeToCreate.target || edge.target === edgeToCreate.target);
+  if (!areNeighborsConnected) {
+    edges = edges.addEdge(edgeToCreate);
+  }
+
+  const newTree: Tree = {
+    ...tree,
+    nodes: tree.nodes.delete(node.id),
+    edges,
+    comments: tree.comments.filter((comment) => comment.nodeId !== node.id),
+    branchPoints: tree.branchPoints.filter((branchPoint) => branchPoint.nodeId !== node.id),
+  };
+  const newTrees = skeletonTracing.trees.set(tree.treeId, newTree);
+
+  let newMaxNodeId = skeletonTracing.cachedMaxNodeId;
+  if (node.id === newMaxNodeId) {
+    newMaxNodeId = getMaximumNodeId(newTrees);
+  }
+
+  // Activate the neighbor that preceded the deleted node.
+  return [newTrees, edgeToCreate.source, newMaxNodeId];
+}
+
+// Inserts a new node at the midpoint of the edge between the two given nodes. The edge is
+// replaced by two edges which keep its direction (A -> B becomes A -> N -> B), so that the
+// tree is not split. Returns null if the two nodes are not connected by an edge.
+export function insertNodeOnEdge(
+  state: WebknossosState,
+  skeletonTracing: SkeletonTracing,
+  tree: Tree,
+  nodeA: Node,
+  nodeB: Node,
+  timestamp: number,
+): [TreeMap, Node] | null {
+  const edgeToSplit = tree.edges
+    .getEdgesForNode(nodeA.id)
+    .find((edge) => edge.source === nodeB.id || edge.target === nodeB.id);
+  if (edgeToSplit == null) {
+    return null;
+  }
+
+  const sourceNode = edgeToSplit.source === nodeA.id ? nodeA : nodeB;
+  const sourcePosition = sourceNode.untransformedPosition;
+  const targetPosition = (sourceNode === nodeA ? nodeB : nodeA).untransformedPosition;
+  const newNode: Node = {
+    ...sourceNode,
+    id: skeletonTracing.cachedMaxNodeId + 1,
+    untransformedPosition: V3.trunc(V3.scale(V3.add(sourcePosition, targetPosition), 0.5)),
+    timestamp,
+    bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
+    interpolation: state.datasetConfiguration.interpolation,
+  };
+
+  const edges = tree.edges
+    .removeEdge(edgeToSplit)
+    .addEdge({ source: edgeToSplit.source, target: newNode.id })
+    .addEdge({ source: newNode.id, target: edgeToSplit.target });
+
+  const newTree: Tree = {
+    ...tree,
+    nodes: tree.nodes.set(newNode.id, newNode),
+    edges,
+  };
+  return [skeletonTracing.trees.set(tree.treeId, newTree), newNode];
 }
 
 export function deleteEdge(
@@ -512,7 +585,7 @@ export function createTree(
   }
   // Create a new tree id and name
   const newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
-  const newTreeName = name || generateTreeName(state, timestamp, newTreeId);
+  const newTreeName = name || generateTreeName(newTreeId);
   let groupId = null;
 
   if (addToActiveGroup) {
@@ -563,11 +636,11 @@ export function getOrCreateTree(
   return null;
 }
 
-export function ensureTreeNames(state: WebknossosState, trees: MutableTreeMap) {
+export function ensureTreeNames(trees: MutableTreeMap) {
   // Assign a new tree name for trees without a name
   for (const tree of trees.values()) {
     if (tree.name === "") {
-      tree.name = generateTreeName(state, tree.timestamp, tree.treeId);
+      tree.name = generateTreeName(tree.treeId);
     }
   }
 
@@ -785,9 +858,12 @@ export function deleteComment(
   _skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
-): CommentType[] {
+): CommentType[] | null {
   const { comments } = tree;
   const commentsWithoutActiveNodeComment = comments.filter((comment) => comment.nodeId !== node.id);
+  if (commentsWithoutActiveNodeComment.length === comments.length) {
+    return null;
+  }
 
   return commentsWithoutActiveNodeComment;
 }

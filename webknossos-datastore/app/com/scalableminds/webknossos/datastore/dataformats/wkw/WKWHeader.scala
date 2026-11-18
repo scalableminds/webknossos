@@ -96,6 +96,8 @@ case class WKWHeader(
 
   override def order: ArrayOrder = ArrayOrder.F
 
+  override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
+
   override def resolvedDataType: ArrayDataType = dataType
 
   override def compressorImpl: Compressor = blockType match {
@@ -146,7 +148,7 @@ object WKWHeader {
         "[0, 1024)"
       )
       // We only support blockSideLengths < 1024, so that the total number of voxels per block fits in an Int.
-      _ <- Box.fromBool(numChunksPerShardDimension < 1024) ?~> error(
+      _ <- Box.fromBool(numVoxelsPerChunkDimension < 1024) ?~> error(
         "Specified blockSideLength not supported",
         numVoxelsPerChunkDimension,
         "[0, 1024)"

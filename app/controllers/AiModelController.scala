@@ -64,6 +64,7 @@ case class RunInferenceParameters(
     evalMaxEdgeLength: Option[Double],
     evalSparseTubeThresholdNm: Option[Double],
     evalMinMergerPathLengthNm: Option[Double],
+    absoluteAffinityThreshold: Option[Double],
     customConfiguration: Option[JsObject]
 ) derives JsonAutoFormat
 
@@ -141,6 +142,7 @@ class AiModelController @Inject() (
           GlobalAccessContext
         ) ?~> Msg.Organization.notFound(request.identity._organization)
         _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
+        _ <- jobService.assertCustomConfigurationAllowed(request.body.customConfiguration, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
         _ <- Fox.fromBool(
           trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined
@@ -208,6 +210,7 @@ class AiModelController @Inject() (
           GlobalAccessContext
         ) ?~> Msg.Organization.notFound(request.identity._organization)
         _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
+        _ <- jobService.assertCustomConfigurationAllowed(request.body.customConfiguration, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
         _ <- Fox.fromBool(
           trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined
@@ -284,6 +287,7 @@ class AiModelController @Inject() (
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
+        _ <- jobService.assertCustomConfigurationAllowed(request.body.customConfiguration, request.identity)
         jobCommand = JobCommand.infer_instances
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
@@ -348,6 +352,7 @@ class AiModelController @Inject() (
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
+        _ <- jobService.assertCustomConfigurationAllowed(request.body.customConfiguration, request.identity)
         jobCommand = JobCommand.infer_neurons
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(
@@ -358,6 +363,13 @@ class AiModelController @Inject() (
           dataStore
         )
         doSplitMergerEvaluation: Boolean = request.body.doSplitMergerEvaluation.getOrElse(false)
+        // The affinity threshold is passed to the worker as a regular config override. Explicit
+        // (super user) overrides of the same key take precedence.
+        affinityThresholdOverride = request.body.absoluteAffinityThreshold.map(threshold =>
+          Json.obj("tasks.segment.config.segmenter.absolute_affinity_threshold" -> threshold)
+        )
+        customConfiguration = (affinityThresholdOverride.toList ++ request.body.customConfiguration.toList)
+          .reduceOption(_ ++ _)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> dataset._organization,
@@ -374,7 +386,7 @@ class AiModelController @Inject() (
           "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
           "eval_sparse_tube_threshold_nm" -> request.body.evalSparseTubeThresholdNm,
           "eval_min_merger_path_length_nm" -> request.body.evalMinMergerPathLengthNm,
-          "custom_configuration" -> request.body.customConfiguration
+          "custom_configuration" -> customConfiguration
         )
         modelLabel = request.body.aiModelId.map(m => s" with model $m").getOrElse("")
         creditTransactionComment = s"AI custom neuron segmentation$modelLabel for dataset ${dataset.name}"

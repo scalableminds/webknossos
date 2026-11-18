@@ -187,6 +187,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       GENERAL_EDITING: [],
       GENERAL_LAYOUT: [],
       GENERAL_COMMENT_TAB: [],
+      GENERAL_SEGMENTS_TAB: [],
       FLIGHT_NAVIGATION: [],
       FLIGHT_EDITING: [],
       PLANE_NAVIGATION: [],
@@ -397,6 +398,11 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           <KeyboardShortcutDomainTable
             domainName={"GENERAL_COMMENT_TAB"}
             tableData={keyboardShortcutsTableDataMap["GENERAL_COMMENT_TAB"]}
+            columns={keyboardShortcutsColumns}
+          />
+          <KeyboardShortcutDomainTable
+            domainName={"GENERAL_SEGMENTS_TAB"}
+            tableData={keyboardShortcutsTableDataMap["GENERAL_SEGMENTS_TAB"]}
             columns={keyboardShortcutsColumns}
           />
         </>

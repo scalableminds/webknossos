@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.box.{Box, Full}
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{JsonAutoFormat, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
@@ -135,7 +136,7 @@ case class StorageTransformerSpecification(
     configuration: Option[Map[String, String]] // Should be specified once storage transformers are implemented
 ) derives JsonAutoFormat
 
-object Zarr3ArrayHeader extends JsonImplicits {
+object Zarr3ArrayHeader extends JsonImplicits with Zarr3OutputHelper {
 
   val FILENAME_ZARR_JSON = "zarr.json"
   implicit object Zarr3ArrayHeaderFormat extends Format[Zarr3ArrayHeader] {
@@ -257,26 +258,42 @@ object Zarr3ArrayHeader extends JsonImplicits {
       dataLayer: DataLayer,
       mag: Vec3Int,
       additionalCodecs: Seq[CodecConfiguration] = Seq.empty
+  ): Zarr3ArrayHeader =
+    forArray(
+      dataLayer.elementClass,
+      dataLayer.boundingBox,
+      dataLayer.additionalAxes.getOrElse(Seq.empty),
+      mag,
+      additionalCodecs
+    )
+
+  def forArray(
+      elementClass: ElementClass.Value,
+      boundingBox: BoundingBox,
+      additionalAxes: Seq[AdditionalAxis],
+      mag: Vec3Int,
+      additionalCodecs: Seq[CodecConfiguration] = Seq.empty
   ): Zarr3ArrayHeader = {
-    val additionalAxes = reorderAdditionalAxes(dataLayer.additionalAxes.getOrElse(Seq.empty))
-    val (channels, dtype) = ElementClass.toChannelAndZarr3String(dataLayer.elementClass)
+    // Same order as expected by ZarrCoordinatesParser for chunk keys
+    val reorderedAdditionalAxes = reorderAdditionalAxes(additionalAxes)
+    val (channels, dtype) = ElementClass.toChannelAndZarr3String(elementClass)
     val xyzBBounds = Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
-      (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / mag.x,
-      (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / mag.y,
-      (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / mag.z
+      (boundingBox.width + boundingBox.topLeft.x) / mag.x,
+      (boundingBox.height + boundingBox.topLeft.y) / mag.y,
+      (boundingBox.depth + boundingBox.topLeft.z) / mag.z
     )
     Zarr3ArrayHeader(
       zarr_format = 3,
       node_type = "array",
       // channel, additional axes, XYZ
-      shape = (Array(channels) ++ additionalAxes.map(_.highestValue).toArray ++ xyzBBounds).map(_.toLong),
+      shape = (Array(channels) ++ reorderedAdditionalAxes.map(_.upperBound).toArray ++ xyzBBounds).map(_.toLong),
       data_type = Left(dtype),
       chunk_grid = Left(
         ChunkGridSpecification(
           "regular",
           ChunkGridConfiguration(
-            chunk_shape = Array(channels) ++ Array.fill(additionalAxes.length)(1) ++ Array(
+            chunk_shape = Array(channels) ++ Array.fill(reorderedAdditionalAxes.length)(1) ++ Array(
               DataLayer.bucketLength,
               DataLayer.bucketLength,
               DataLayer.bucketLength
@@ -289,19 +306,12 @@ object Zarr3ArrayHeader extends JsonImplicits {
       fill_value = Right(0),
       attributes = None,
       codecs = Seq(
-        TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(additionalAxes.length + 4)),
+        TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(reorderedAdditionalAxes.length + 4)),
         BytesCodecConfiguration(Some("little"))
       ) ++ additionalCodecs,
       storage_transformers = None,
-      dimension_names = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
+      dimension_names = Some(Array("c") ++ reorderedAdditionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
     )
-  }
-  private def reorderAdditionalAxes(additionalAxes: Seq[AdditionalAxis]): Seq[AdditionalAxis] = {
-    val additionalAxesStartIndex = 1 // channel comes first
-    val sorted = additionalAxes.sortBy(_.index)
-    sorted.zipWithIndex.map { case (axis, index) =>
-      axis.copy(index = index + additionalAxesStartIndex)
-    }
   }
 
   def dummy: Zarr3ArrayHeader = {

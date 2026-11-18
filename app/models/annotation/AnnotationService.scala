@@ -43,7 +43,6 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.WkConf
@@ -100,8 +99,6 @@ class AnnotationService @Inject() (
     extends ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
-
-  implicit val actorSystem: ActorSystem = ActorSystem()
 
   val DefaultAnnotationListLimit = 1000
 
@@ -177,12 +174,7 @@ class AnnotationService @Inject() (
           }
           .headOption
           .toFox
-        _ <- Fox.fromBool(
-          ElementClass.largestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)
-        ) ?~> Msg.Annotation.Volume.largestSegmentIdExceedsRange(
-          fallbackLayer.largestSegmentId.getOrElse(-1),
-          fallbackLayer.elementClass.toString
-        )
+        _ <- ElementClass.assertLargestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)
       } yield fallbackLayer
 
     for {
@@ -364,9 +356,8 @@ class AnnotationService @Inject() (
     for {
       annotationBaseId <- annotationDAO.findBaseIdForTask(taskId) ?~> "Failed to retrieve annotation base id."
       annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
-      datasetName <- datasetDAO.getNameById(annotationBase._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
+      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset
         .notFoundForAnnotation(annotationBase._dataset, annotationBase._id)
-      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset.notFound(annotationBase._dataset)
       _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ = logger.info(
@@ -490,7 +481,7 @@ class AnnotationService @Inject() (
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- Fox.fromBool(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
-      project <- projectDAO.findOne(task._project)
+      _ <- projectDAO.findOne(task._project) ?~> Msg.Project.notFound(task._project)
       annotationLayers <- AnnotationLayer.layersFromIds(skeletonIdOpt, volumeIdOpt)
       annotationBase = Annotation(
         ObjectId.generate,
@@ -789,6 +780,7 @@ class AnnotationService @Inject() (
       contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
     } yield Json.obj(
       "modified" -> annotation.modified,
+      "created" -> annotation.created,
       "state" -> annotation.state,
       "isLockedByOwner" -> annotation.isLockedByOwner,
       "id" -> annotation.id,
@@ -809,7 +801,7 @@ class AnnotationService @Inject() (
       "settings" -> settings,
       "tracingTime" -> annotation.tracingTime,
       "teams" -> teamsJson,
-      "tags" -> (annotation.tags ++ Set(dataset.name, annotation.tracingType.toString)),
+      "tags" -> (annotation.tags ++ Set(dataset.name)),
       "user" -> userJson,
       "owner" -> userJson,
       "contributors" -> contributorsJs,
@@ -888,9 +880,9 @@ class AnnotationService @Inject() (
         "stats" -> annotationInfo.annotationLayerStatistics(idx)
       )
     )
-    val tracingType: String = getAnnotationTypeForTag(annotationInfo)
     Json.obj(
       "modified" -> annotationInfo.modified,
+      "created" -> annotationInfo.created,
       "state" -> annotationInfo.state,
       "id" -> annotationInfo.id,
       "name" -> annotationInfo.name,
@@ -900,12 +892,12 @@ class AnnotationService @Inject() (
       "isLockedByOwner" -> annotationInfo.isLockedByOwner,
       "annotationLayers" -> annotationLayerJson,
       "dataSetName" -> annotationInfo.dataSetName,
-      "dataSetId" -> annotationInfo.dataSetId,
+      "datasetId" -> annotationInfo.dataSetId,
       "organization" -> annotationInfo.organization,
       "visibility" -> annotationInfo.visibility,
       "tracingTime" -> annotationInfo.tracingTime,
       "teams" -> teamsJson,
-      "tags" -> (annotationInfo.tags ++ Set(annotationInfo.dataSetName, tracingType)),
+      "tags" -> (annotationInfo.tags ++ Set(annotationInfo.dataSetName)),
       "owner" -> Json.obj(
         "id" -> annotationInfo.ownerId.toString,
         "firstName" -> annotationInfo.ownerFirstName,
@@ -913,18 +905,6 @@ class AnnotationService @Inject() (
       ),
       "collaborationMode" -> annotationInfo.collaborationMode
     )
-  }
-
-  private def getAnnotationTypeForTag(annotationInfo: AnnotationCompactInfo): String = {
-    val skeletonPresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Skeleton.toString)
-    val volumePresent = annotationInfo.annotationLayerTypes.contains(AnnotationLayerType.Volume.toString)
-    if (skeletonPresent && volumePresent) {
-      "hybrid"
-    } else if (skeletonPresent) {
-      "skeleton"
-    } else {
-      "volume"
-    }
   }
 
   def updateStatistics(annotationId: ObjectId, statistics: JsObject): Unit =

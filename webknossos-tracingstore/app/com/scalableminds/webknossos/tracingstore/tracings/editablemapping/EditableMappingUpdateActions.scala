@@ -24,9 +24,10 @@ case class SplitAgglomerateUpdateAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends EditableMappingUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withTimestamp(timestamp: Long): EditableMappingUpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction =
     this.copy(actionTracingId = newTracingId)
@@ -47,9 +48,10 @@ case class MergeAgglomerateUpdateAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends EditableMappingUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withTimestamp(timestamp: Long): EditableMappingUpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction =
     this.copy(actionTracingId = newTracingId)

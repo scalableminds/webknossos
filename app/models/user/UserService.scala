@@ -12,19 +12,18 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
-import mail.{DefaultMails, Send}
+import mail.AccountEmailService
 import models.dataset.DatasetDAO
 import models.organization.OrganizationDAO
 import models.team.*
 import com.scalableminds.util.box.Box.tryo
 import models.project.ProjectDAO
 import models.task.TaskDAO
-import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.*
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.services.IdentityService
 import play.silhouette.api.util.PasswordInfo
-import security.{LoginInfoAdapter, PasswordHasher, TokenDAO}
+import security.{LoginInfoAdapter, PasswordHasher}
 import utils.sql.SqlEscaping
 import utils.WkConf
 
@@ -44,19 +43,14 @@ class UserService @Inject() (
     projectDAO: ProjectDAO,
     teamMembershipService: TeamMembershipService,
     datasetDAO: DatasetDAO,
-    tokenDAO: TokenDAO,
     inviteDAO: InviteDAO,
     emailVerificationService: EmailVerificationService,
-    defaultMails: DefaultMails,
-    passwordHasher: PasswordHasher,
-    actorSystem: ActorSystem
+    accountEmailService: AccountEmailService,
+    passwordHasher: PasswordHasher
 )(implicit ec: ExecutionContext)
     extends LazyLogging
     with SqlEscaping
     with IdentityService[User] {
-
-  private lazy val Mailer =
-    actorSystem.actorSelection("/user/mailActor")
 
   private val userCache: AlfuCache[(ObjectId, String), User] =
     AlfuCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
@@ -223,7 +217,7 @@ class UserService @Inject() (
 
     if (user.isDeactivated && activated) {
       logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
-      Mailer ! Send(defaultMails.activatedMail(multiUser.fullName, email))
+      accountEmailService.sendActivatedEmail(multiUser.fullName, email)
     }
     val oldEmail = multiUser.email
     for {
@@ -298,7 +292,8 @@ class UserService @Inject() (
     }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    findOneCached(LoginInfoAdapter.userIdFromLoginInfo(loginInfo))(using GlobalAccessContext).futureBox.map(_.toOption)
+    findOneCached(LoginInfoAdapter.userIdFromLoginInfo(loginInfo))(using GlobalAccessContext).futureBox
+      .map(_.toOption.filterNot(_.isDeactivated))
 
   def createPasswordInfo(pw: String): PasswordInfo =
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))
@@ -466,6 +461,7 @@ class UserService @Inject() (
       "lastName" -> multiUser.lastName,
       "isAdmin" -> user.isAdmin,
       "isDatasetManager" -> user.isDatasetManager,
+      "isActive" -> !user.isDeactivated,
       "isAnonymous" -> false,
       "teams" -> teamMembershipsJs
     )

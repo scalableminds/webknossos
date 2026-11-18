@@ -30,7 +30,6 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import Constants, { type Vector3 } from "viewer/constants";
 import {
-  getMappingInfo,
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
@@ -63,10 +62,8 @@ import type { SegmentGroupOperations } from "./hooks/use_segment_group_operation
 import type { SegmentSelection } from "./hooks/use_segment_selection";
 import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
-import {
-  mayEditVisibleSegmentation,
-  withMappingActivationConfirmation,
-} from "./segments_view_helper";
+import { withMeshFileCompatibilityCheck } from "./mesh_file_compatibility_modal";
+import { mayEditVisibleSegmentation, removeSegmentsFromList } from "./segments_view_helper";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
@@ -89,7 +86,8 @@ export type ContextMenuDependencies = {
   meshFiles: MeshFiles;
   openStatisticsModal: (target: SegmentStatisticsTarget) => void;
   hideContextMenu: () => void;
-  // Puts the row with this node key into rename mode. The context menu is the discoverable way to rename (besides double-click).
+  // Puts the row with this node key into rename mode. The rows no longer carry an edit
+  // pencil, so the context menu is the discoverable way to rename (besides double-click).
   startRenaming: (nodeKey: string) => void;
 };
 
@@ -149,10 +147,13 @@ function useSegmentListMenuItems({
 
       const loadPrecomputedItem: ItemType = {
         key: "loadByFile",
-        disabled: meshFiles.currentMeshFile == null,
         icon: <Icon component={MeshIcon} />,
         label: "Load Meshes (precomputed)",
-        onClick: runAndHide(() => meshOperations.loadPrecomputedMeshes(segments)),
+        onClick: withMeshFileCompatibilityCheck(
+          (meshFileName) =>
+            runAndHide(() => meshOperations.loadPrecomputedMeshes(segments, meshFileName))(),
+          visibleSegmentationLayer?.name,
+        ),
       };
 
       const computeAdHocItem: ItemType = {
@@ -233,9 +234,11 @@ function useSegmentListMenuItems({
           if (visibleSegmentationLayer == null) {
             return;
           }
-          for (const segment of segments) {
-            dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name));
-          }
+          removeSegmentsFromList(
+            dispatch,
+            visibleSegmentationLayer.name,
+            segments.map((segment) => segment.id),
+          );
         }),
       };
 
@@ -275,12 +278,6 @@ export function useSegmentContextMenuBuilder(
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const activeVolumeTracing = useWkSelector(getActiveSegmentationTracing);
-  const mappingInfo = useWkSelector((state) =>
-    getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer?.name,
-    ),
-  );
   const getSegmentListMenuItems = useSegmentListMenuItems(dependencies);
 
   const buildMultiSelectMenu = useCallback((): MenuProps => {
@@ -311,15 +308,17 @@ export function useSegmentContextMenuBuilder(
         hideContextMenu();
       };
 
-      const withKnownPosition = (action: () => void) => () => {
-        if (segment.anchorPosition == null) {
-          Toast.info("Cannot load a mesh for this segment, because its position is unknown.");
+      const withKnownPosition =
+        <Args extends unknown[]>(action: (...args: Args) => void) =>
+        (...args: Args) => {
+          if (segment.anchorPosition == null) {
+            Toast.info("Cannot load a mesh for this segment, because its position is unknown.");
+            hideContextMenu();
+            return;
+          }
+          action(...args);
           hideContextMenu();
-          return;
-        }
-        action();
-        hideContextMenu();
-      };
+        };
 
       const updateThisSegment = (updates: Partial<Segment>, createsNewUndoState: boolean) => {
         if (layerName != null) {
@@ -464,18 +463,18 @@ export function useSegmentContextMenuBuilder(
             label: "Delete Segment's Data",
           },
           listItems.segmentStatisticsItem,
-          // The mesh actions close the menu.
+          // The mesh actions close the menu: they are the least frequent entries, and the
+          // mesh of a single segment used to be managed from its own child row in the tree,
+          // which is gone. Everything it offered lives here (and on the mesh chip).
           { key: "meshActionDivider", type: "divider" },
           {
             key: "loadPrecomputedMesh",
-            disabled: currentMeshFile == null,
             icon: <Icon component={MeshIcon} />,
-            onClick: withMappingActivationConfirmation(
-              withKnownPosition(() => meshOperations.loadPrecomputedMeshes([segment])),
-              currentMeshFile?.mappingName,
-              "mesh file",
+            onClick: withMeshFileCompatibilityCheck(
+              withKnownPosition((meshFileName: string) =>
+                meshOperations.loadPrecomputedMeshes([segment], meshFileName),
+              ),
               layerName,
-              mappingInfo,
             ),
             label: (
               <LoadMeshMenuItemLabel
@@ -506,7 +505,6 @@ export function useSegmentContextMenuBuilder(
       allowUpdate,
       visibleSegmentationLayer,
       activeVolumeTracing,
-      mappingInfo,
       meshOperations,
       meshFiles,
       hideContextMenu,

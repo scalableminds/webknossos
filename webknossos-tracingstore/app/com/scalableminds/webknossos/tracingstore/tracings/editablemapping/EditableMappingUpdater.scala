@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Empty, Failure, Full}
-import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
@@ -18,8 +17,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBPutBuffer,
   KeyValueStoreConversions,
   RemoteFallbackLayer,
-  ReversionAwareVersionedFossilDbIterator,
-  TracingDataStore
+  TracingDataStore,
+  VersionedFossilDbIterator
 }
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.box.Box.tryo
@@ -35,7 +34,6 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 // this results in only one version increment in the db per update group
 
 class EditableMappingUpdater(
-    annotationId: ObjectId,
     tracingId: String,
     baseMappingName: String,
     oldVersion: Long,
@@ -425,7 +423,9 @@ class EditableMappingUpdater(
     val newEdgeAffinity = 255.0f
     val newEdge = AgglomerateEdge(segmentId1, segmentId2)
     val newEdgeInverted = AgglomerateEdge(segmentId2, segmentId1)
-    if (agglomerateGraph1 == agglomerateGraph2) {
+    if (segmentId1 == segmentId2) {
+      None
+    } else if (agglomerateGraph1 == agglomerateGraph2) {
       // Agglomerate is merged with itself. Insert new edge anyway, if it does not exist yet
       if (agglomerateGraph1.edges.contains(newEdge) || agglomerateGraph1.edges.contains(newEdgeInverted)) {
         Some(agglomerateGraph1)
@@ -456,33 +456,29 @@ class EditableMappingUpdater(
       ) ?~> "trying to revert editable mapping to a version not yet present in the database"
       _ = segmentToAgglomerateBuffer.clear()
       _ = agglomerateToGraphBuffer.clear()
-      segmentToAgglomerateChunkNewestStream = new ReversionAwareVersionedFossilDbIterator[
-        (String, SegmentToAgglomerateChunkProto, Long)
-      ](tracingId, tracingDataStore.editableMappingsSegmentToAgglomerate)(keyValuePair =>
-        fromProtoBytes[SegmentToAgglomerateChunkProto](keyValuePair.value).toOption.map(chunk =>
-          (keyValuePair.key, chunk, keyValuePair.version)
-        )
+      segmentToAgglomerateChunkNewestStream = new VersionedFossilDbIterator(
+        tracingId,
+        tracingDataStore.editableMappingsSegmentToAgglomerate
       )
-      _ <- Fox.serialCombined(segmentToAgglomerateChunkNewestStream) { case (chunkKey, _, version) =>
-        if (version > sourceVersion) {
+      _ <- Fox.serialCombined(segmentToAgglomerateChunkNewestStream) { keyValuePair =>
+        val chunkKey = keyValuePair.key
+        if (keyValuePair.version > sourceVersion) {
           editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).shiftBox.flatMap {
             case Full(chunkData) => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false)))
-            case Empty           => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true)))
+            case Empty if isRevertedElement(keyValuePair) => Fox.successful(()) // Already reverted, leave it alone
+            case Empty => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true)))
             case Failure(msg, _, chain) =>
               Fox.failure(msg, Empty, chain)
           }
         } else Fox.successful(())
       }
-      agglomerateToGraphNewestStream = new ReversionAwareVersionedFossilDbIterator[(String, AgglomerateGraph, Long)](
+      agglomerateToGraphNewestStream = new VersionedFossilDbIterator(
         tracingId,
         tracingDataStore.editableMappingsAgglomerateToGraph
-      )(keyValuePair =>
-        fromProtoBytes[AgglomerateGraph](keyValuePair.value).toOption.map(graph =>
-          (keyValuePair.key, graph, keyValuePair.version)
-        )
       )
-      _ <- Fox.serialCombined(agglomerateToGraphNewestStream) { case (graphKey, _, version) =>
-        if (version > sourceVersion) {
+      _ <- Fox.serialCombined(agglomerateToGraphNewestStream) { keyValuePair =>
+        val graphKey = keyValuePair.key
+        if (keyValuePair.version > sourceVersion) {
           for {
             agglomerateId <- agglomerateIdFromAgglomerateGraphKey(graphKey).toFox
             _ <- editableMappingService
@@ -490,6 +486,7 @@ class EditableMappingUpdater(
               .shiftBox
               .flatMap {
                 case Full(graphData) => Fox.successful(agglomerateToGraphBuffer.put(graphKey, (graphData, false)))
+                case Empty if isRevertedElement(keyValuePair) => Fox.successful(())
                 case Empty => Fox.successful(agglomerateToGraphBuffer.put(graphKey, (emptyAgglomerateGraph, true)))
                 case Failure(msg, _, chain) =>
                   Fox.failure(msg, Empty, chain)
@@ -499,9 +496,8 @@ class EditableMappingUpdater(
       }
     } yield ()
 
-  def newWithTargetVersion(currentMaterializedVersion: Long, targetVersion: Long): EditableMappingUpdater =
+  def resetForNextUpdateGroup(currentMaterializedVersion: Long, targetVersion: Long): EditableMappingUpdater =
     new EditableMappingUpdater(
-      annotationId,
       tracingId,
       baseMappingName,
       currentMaterializedVersion,

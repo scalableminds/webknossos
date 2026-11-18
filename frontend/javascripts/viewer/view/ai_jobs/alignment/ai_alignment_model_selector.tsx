@@ -1,22 +1,22 @@
-import { ExperimentOutlined } from "@ant-design/icons";
 import alignExample from "@images/align-example.png";
 import alignStitchingExample from "@images/align-stitching-example.jpg";
-import { Avatar, Card, List, Space, Tag, Typography } from "antd";
+import { useWkSelector } from "libs/react_hooks";
+import { isUserAdminOrDatasetManager } from "libs/utils";
 import type React from "react";
 import { useCallback } from "react";
-import { ColorWKBlue } from "theme";
 import { APIJobCommand } from "types/api_types";
+import { JobSection } from "../components/job_section";
+import { SelectableTile, TileGrid } from "../components/selectable_tile";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
-
-const { Text } = Typography;
 
 export type AlignmentTask = {
   name: string;
-  comment: string;
+  comment: React.ReactNode;
   id: string;
   jobType: APIJobCommand | null;
   image: string;
-  disabled?: boolean;
+  // Tasks with an href are not run from this modal, but link to another page instead.
+  href?: string;
 };
 
 const alignmentTasks: AlignmentTask[] = [
@@ -31,20 +31,24 @@ const alignmentTasks: AlignmentTask[] = [
   {
     name: "Align & stitch multiple tiles",
     comment:
-      "For stitching and aligning datasets with multiple tiles per section, please contact us via email for a quote.",
+      "For datasets with multiple tiles per section. Upload the tiles together with their positions as an alignment project to align and stitch them.",
     id: "align-tiles",
-    disabled: true,
     jobType: null,
+    href: "/alignmentProjects",
     image: alignStitchingExample,
   },
 ];
 
 export const AiAlignmentModelSelector: React.FC = () => {
-  const { selectedTask, setSelectedTask } = useAlignmentJobContext();
+  const { selectedTask, setSelectedTask, stepStatuses } = useAlignmentJobContext();
+  // Alignment projects are only accessible to admins and dataset managers.
+  const canUseAlignmentProjects = useWkSelector((state) =>
+    isUserAdminOrDatasetManager(state.activeUser),
+  );
 
   const handleTaskSelection = useCallback(
     (item: AlignmentTask) => {
-      if (!item.disabled && item.jobType) {
+      if (item.jobType) {
         setSelectedTask(item);
       }
     },
@@ -52,40 +56,27 @@ export const AiAlignmentModelSelector: React.FC = () => {
   );
 
   return (
-    <Card
-      type="inner"
-      title={
-        <Space align="center">
-          <ExperimentOutlined style={{ color: ColorWKBlue }} />
-          Select AI Alignment Task
-        </Space>
-      }
+    <JobSection
+      step={1}
+      title="Select Alignment Task"
+      description="Choose based on how your sections were acquired."
+      status={stepStatuses.task}
     >
-      <List
-        itemLayout="horizontal"
-        dataSource={alignmentTasks}
-        renderItem={(item) => (
-          <List.Item
-            className={"hoverable-list-item " + (selectedTask?.id === item.id ? "selected" : "")}
-            style={{
-              opacity: item.disabled ? 0.5 : 1,
-              cursor: item.disabled ? "not-allowed" : "pointer",
-            }}
-            onClick={() => handleTaskSelection(item)}
-          >
-            <List.Item.Meta
-              avatar={<Avatar shape="square" size={64} src={item.image} alt={item.name} />}
-              title={
-                <Space>
-                  <Text strong>{item.name}</Text>
-                  {item.disabled && <Tag>Coming Soon</Tag>}
-                </Space>
-              }
-              description={item.comment}
-            />
-          </List.Item>
-        )}
-      />
-    </Card>
+      <TileGrid label="Alignment tasks">
+        {alignmentTasks.map((task) => (
+          <SelectableTile
+            key={task.id}
+            image={task.image}
+            title={task.name}
+            description={task.comment}
+            href={task.href}
+            isSelected={selectedTask?.id === task.id}
+            isDisabled={task.href != null && !canUseAlignmentProjects}
+            disabledLabel="Admins & dataset managers only"
+            onSelect={() => handleTaskSelection(task)}
+          />
+        ))}
+      </TileGrid>
+    </JobSection>
   );
 };

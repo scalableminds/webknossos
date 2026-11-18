@@ -19,8 +19,10 @@ import {
   deleteCommentAction,
   deleteEdgeAction,
   deleteNodeAction,
+  deleteNodeAndReconnectNeighborsAction,
   deleteTreeAction,
   deleteTreesAction,
+  insertNodeOnEdgeAction,
   mergeTreesAction,
   selectNextTreeAction,
   setActiveNodeAction,
@@ -366,6 +368,211 @@ describe("SkeletonTracing", () => {
     expect(newTrees.getOrThrow(1).nodes.getOrThrow(4).id).toBe(4);
     expect(newTrees.getOrThrow(3).nodes.getOrThrow(7).id).toBe(7);
     expect(newTrees.getOrThrow(3).branchPoints[0].nodeId).toBe(7);
+  });
+
+  describe("deleteNodeAndReconnectNeighborsAction", () => {
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const getEdges = (state: WebknossosState) =>
+      enforceSkeletonTracing(state.annotation)
+        .trees.getOrThrow(1)
+        .edges.toArray()
+        .map(({ source, target }) => ({ source, target }));
+
+    it("should delete a node with two neighbors and connect the neighbors", () => {
+      // Creates the chain 1 -> 2 -> 3 and adds a comment and branchpoint to node 2.
+      const testState = applyActions(initialState, [
+        createNode,
+        createNode,
+        createCommentAction("foo"),
+        createBranchPointAction(),
+        createNode,
+      ]);
+      const newState = SkeletonTracingReducer(
+        testState,
+        deleteNodeAndReconnectNeighborsAction(2, 1),
+      );
+
+      const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+      const tree = newSkeletonTracing.trees.getOrThrow(1);
+      expect(newSkeletonTracing.trees.size()).toBe(
+        enforceSkeletonTracing(testState.annotation).trees.size(),
+      );
+      expect(Array.from(tree.nodes.keys()).sort()).toEqual([1, 3]);
+      expect(getEdges(newState)).toEqual([{ source: 1, target: 3 }]);
+      expect(tree.edges.size()).toBe(1);
+      expect(tree.comments).toEqual([]);
+      expect(tree.branchPoints).toEqual([]);
+      expect(newSkeletonTracing.activeNodeId).toBe(1);
+      expect(newState.localSkeletonState.activeTreeId).toBe(1);
+      expect(newSkeletonTracing.cachedMaxNodeId).toBe(3);
+    });
+
+    it("should connect the neighbors from lower to higher id if both edges have the same direction", () => {
+      // Creates the edges 1 -> 2 and 1 -> 3, so that node 1 has two outgoing edges.
+      const testState = applyActions(initialState, [
+        createNode,
+        createNode,
+        setActiveNodeAction(1),
+        createNode,
+      ]);
+      const newState = SkeletonTracingReducer(
+        testState,
+        deleteNodeAndReconnectNeighborsAction(1, 1),
+      );
+
+      expect(getEdges(newState)).toEqual([{ source: 2, target: 3 }]);
+      expect(enforceSkeletonTracing(newState.annotation).activeNodeId).toBe(2);
+    });
+
+    it("should update the max node id when deleting the node with the highest id", () => {
+      // Creates three single-node trees and merges them so that node 3 connects nodes 1 and 2.
+      const testState = applyActions(initialState, [
+        createNode,
+        createTreeAction(),
+        createNode,
+        createTreeAction(),
+        createNode,
+        mergeTreesAction(1, 3),
+        mergeTreesAction(3, 2),
+      ]);
+      const tree = enforceSkeletonTracing(testState.annotation).trees.getOrThrow(1);
+      expect(tree.edges.getEdgesForNode(3).length).toBe(2);
+      expect(enforceSkeletonTracing(testState.annotation).cachedMaxNodeId).toBe(3);
+
+      const newState = SkeletonTracingReducer(
+        testState,
+        deleteNodeAndReconnectNeighborsAction(3, 1),
+      );
+      const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+      expect(Array.from(newSkeletonTracing.trees.getOrThrow(1).nodes.keys()).sort()).toEqual([
+        1, 2,
+      ]);
+      expect(getEdges(newState)).toEqual([{ source: 1, target: 2 }]);
+      expect(newSkeletonTracing.cachedMaxNodeId).toBe(2);
+    });
+
+    it("should not change the state if the node does not have exactly two neighbors", () => {
+      // Creates the chain 1 -> 2 -> 3 and the branch 2 -> 4.
+      const testState = applyActions(initialState, [
+        createNode,
+        createNode,
+        createNode,
+        setActiveNodeAction(2),
+        createNode,
+      ]);
+      // Node 1 has one neighbor, node 2 has three neighbors.
+      expect(SkeletonTracingReducer(testState, deleteNodeAndReconnectNeighborsAction(1, 1))).toBe(
+        testState,
+      );
+      expect(SkeletonTracingReducer(testState, deleteNodeAndReconnectNeighborsAction(2, 1))).toBe(
+        testState,
+      );
+      // Unknown node
+      expect(
+        SkeletonTracingReducer(testState, deleteNodeAndReconnectNeighborsAction(1234, 1)),
+      ).toBe(testState);
+    });
+
+    it("should not change the state if updating is not allowed", () => {
+      const testState = applyActions(initialState, [createNode, createNode, createNode]);
+      const readOnlyState = update(testState, {
+        annotation: { isUpdatingCurrentlyAllowed: { $set: false } },
+      });
+      expect(
+        SkeletonTracingReducer(readOnlyState, deleteNodeAndReconnectNeighborsAction(2, 1)),
+      ).toBe(readOnlyState);
+    });
+
+    it("should not change the state in concurrent collaboration mode", () => {
+      const testState = applyActions(initialState, [createNode, createNode, createNode]);
+      const concurrentState = update(testState, {
+        annotation: { collaborationMode: { $set: "Concurrent" } },
+      });
+      expect(
+        SkeletonTracingReducer(concurrentState, deleteNodeAndReconnectNeighborsAction(2, 1)),
+      ).toBe(concurrentState);
+    });
+  });
+
+  describe("insertNodeOnEdgeAction", () => {
+    const createNodeAt = (nodePosition: Vector3) =>
+      createNodeAction(nodePosition, null, rotation, viewport, mag);
+    const getEdges = (state: WebknossosState) =>
+      enforceSkeletonTracing(state.annotation)
+        .trees.getOrThrow(1)
+        .edges.toArray()
+        .map(({ source, target }) => ({ source, target }));
+
+    it("should insert a node at the midpoint of an edge without splitting the tree", () => {
+      // Creates the chain 1 -> 2 -> 3.
+      const testState = applyActions(initialState, [
+        createNodeAt([10, 10, 10]),
+        createNodeAt([20, 31, 10]),
+        createNodeAt([30, 30, 30]),
+      ]);
+      // The order of the passed node ids should not matter.
+      const newState = SkeletonTracingReducer(testState, insertNodeOnEdgeAction(2, 1));
+
+      const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+      const tree = newSkeletonTracing.trees.getOrThrow(1);
+      expect(newSkeletonTracing.trees.size()).toBe(
+        enforceSkeletonTracing(testState.annotation).trees.size(),
+      );
+      expect(Array.from(tree.nodes.keys()).sort()).toEqual([1, 2, 3, 4]);
+      expect(tree.nodes.getOrThrow(4).untransformedPosition).toEqual([15, 20, 10]);
+      expect(getEdges(newState)).toEqual(
+        expect.arrayContaining([
+          { source: 1, target: 4 },
+          { source: 4, target: 2 },
+          { source: 2, target: 3 },
+        ]),
+      );
+      expect(tree.edges.size()).toBe(3);
+      expect(newSkeletonTracing.activeNodeId).toBe(4);
+      expect(newState.localSkeletonState.activeTreeId).toBe(1);
+      expect(newSkeletonTracing.cachedMaxNodeId).toBe(4);
+    });
+
+    it("should not change the state if the nodes are not connected by an edge", () => {
+      // Creates the chain 1 -> 2 -> 3 and a second tree with node 4.
+      const testState = applyActions(initialState, [
+        createNodeAt(position),
+        createNodeAt(position),
+        createNodeAt(position),
+        createTreeAction(),
+        createNodeAt(position),
+      ]);
+      expect(SkeletonTracingReducer(testState, insertNodeOnEdgeAction(1, 3))).toBe(testState);
+      expect(SkeletonTracingReducer(testState, insertNodeOnEdgeAction(3, 4))).toBe(testState);
+      expect(SkeletonTracingReducer(testState, insertNodeOnEdgeAction(2, 2))).toBe(testState);
+      expect(SkeletonTracingReducer(testState, insertNodeOnEdgeAction(1234, 1))).toBe(testState);
+    });
+
+    it("should not change the state if updating is not allowed", () => {
+      const testState = applyActions(initialState, [
+        createNodeAt(position),
+        createNodeAt(position),
+      ]);
+      const readOnlyState = update(testState, {
+        annotation: { isUpdatingCurrentlyAllowed: { $set: false } },
+      });
+      expect(SkeletonTracingReducer(readOnlyState, insertNodeOnEdgeAction(1, 2))).toBe(
+        readOnlyState,
+      );
+    });
+
+    it("should not change the state in concurrent collaboration mode", () => {
+      const testState = applyActions(initialState, [
+        createNodeAt(position),
+        createNodeAt(position),
+      ]);
+      const concurrentState = update(testState, {
+        annotation: { collaborationMode: { $set: "Concurrent" } },
+      });
+      expect(SkeletonTracingReducer(concurrentState, insertNodeOnEdgeAction(1, 2))).toBe(
+        concurrentState,
+      );
+    });
   });
 
   it("should not delete an edge if the two nodes are not neighbors", () => {
@@ -1068,7 +1275,7 @@ describe("SkeletonTracing", () => {
     const newState = SkeletonTracingReducer(initialState, setTreeName);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe("Tree001");
+    expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe("Tree 1");
   });
 
   it("should increase the activeTreeId", () => {

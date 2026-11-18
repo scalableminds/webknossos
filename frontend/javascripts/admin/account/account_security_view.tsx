@@ -1,29 +1,25 @@
-import { EditOutlined, LockOutlined } from "@ant-design/icons";
-import { unwrapOrThrow } from "admin/api/api_result";
-import { changePassword, logoutUserEverywhere } from "admin/rest_api";
+import { EditOutlined, LockOutlined, LogoutOutlined } from "@ant-design/icons";
+import { useLogout } from "admin/auth/use_logout";
+import { changePassword } from "admin/rest_api";
 import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
 import features from "features";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { SettingsTitle } from "./helpers/settings_title";
 
 const FormItem = Form.Item;
 const { Password } = Input;
 
-import { useDispatch } from "react-redux";
 import PasskeysView from "../auth/passkeys_view";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 
 const MIN_PASSWORD_LENGTH = 8;
 
 function AccountSecurityView() {
-  const navigate = useNavigate();
   const [form] = Form.useForm();
   const { modal } = App.useApp();
-  const dispatch = useDispatch();
+  const logout = useLogout();
 
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
 
@@ -31,9 +27,7 @@ function AccountSecurityView() {
     try {
       await changePassword(formValues);
       Toast.success(messages["auth.reset_pw_confirmation"]);
-      unwrapOrThrow(await logoutUserEverywhere());
-      dispatch(logoutUserAction());
-      navigate("/auth/login");
+      await logout({ everywhere: true });
     } catch (error) {
       console.error("Password change failed:", error);
       Toast.error("Failed to change password. Please try again.");
@@ -153,9 +147,18 @@ function AccountSecurityView() {
           </Space>
         </FormItem>
       </Form>
-    ) : (
-      "***********"
-    );
+    ) : null;
+  }
+
+  function handleResetPassword() {
+    setResetPasswordVisible(!isResetPasswordVisible);
+  }
+
+  async function handleLogout() {
+    logout({ everywhere: true }).catch((error) => {
+      Toast.error("Failed to log out. See console for more details");
+      console.error("Logout failed:", error);
+    });
   }
 
   const handleLogoutEverywhere = () => {
@@ -168,7 +171,11 @@ function AccountSecurityView() {
   const securityItems: SettingsCardProps[] = [
     {
       title: "Password",
-      content: getPasswordComponent(),
+      icon: <LockOutlined />,
+      // While editing, the form replaces the value and already explains the logout.
+      content: isResetPasswordVisible ? null : "•••••••••••",
+      hint: isResetPasswordVisible ? null : "Changing it logs you out on all devices",
+      children: getPasswordComponent(),
       action: (
         <Button
           type="default"
@@ -181,6 +188,7 @@ function AccountSecurityView() {
     },
     {
       title: "Log out everywhere",
+      icon: <LogoutOutlined />,
       content: (
         <Button type="default" onClick={handleLogoutEverywhere}>
           Log out on all devices
@@ -188,23 +196,6 @@ function AccountSecurityView() {
       ),
     },
   ];
-
-  function handleResetPassword() {
-    setResetPasswordVisible(!isResetPasswordVisible);
-  }
-
-  async function handleLogout() {
-    logoutUserEverywhere()
-      .then((result) => unwrapOrThrow(result))
-      .then(() => {
-        dispatch(logoutUserAction());
-        navigate("/auth/login");
-      })
-      .catch((error) => {
-        Toast.error("Failed to log out. See console for more details");
-        console.error("Logout failed:", error);
-      });
-  }
 
   const { passkeysEnabled } = features();
 
@@ -217,7 +208,7 @@ function AccountSecurityView() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {securityItems.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard title={item.title} content={item.content} action={item.action} />
+            <SettingsCard {...item} />
           </Col>
         ))}
       </Row>

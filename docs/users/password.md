@@ -6,6 +6,8 @@ Users can manage their account settings by clicking on their user avatar in the 
 
 The profile page allows users to manage their personal information and preferences.
 
+![Profile tab of the account settings](../images/account_profile.jpeg)
+
 ### Name
 
 Users can update their displayed username from the `Profile` tab within `Account Settings`.
@@ -35,6 +37,8 @@ The theme can be set to:
 - **System Default**: Automatically matches your operating system's theme preference.
 - **Light**: Forces a light-mode user interface.
 - **Dark**: Forces a dark-mode user interface.
+
+The theme also affects the background of the 3D viewport: it is black in dark mode and white in light mode. With **System Default**, the background follows your operating system's current theme.
 
 ## Security
 

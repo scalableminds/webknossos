@@ -82,7 +82,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
   ): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
+      response <- Fox.fromFuture(buildRequest(uri).addHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
@@ -92,7 +92,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
   ): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
+      response <- Fox.fromFuture(buildRequest(uri).addHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 

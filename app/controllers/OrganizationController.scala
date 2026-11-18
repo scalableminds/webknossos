@@ -1,12 +1,12 @@
 package controllers
 
 import com.scalableminds.util.Msg
-import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
-import mail.{DefaultMails, Send}
+import com.scalableminds.util.objectid.ObjectId
+import mail.OrganizationEmailService
 
 import javax.inject.Inject
 import models.organization.{
@@ -16,7 +16,9 @@ import models.organization.{
   OrganizationDAO,
   OrganizationPlanUpdate,
   OrganizationService,
-  PricingPlan
+  PartnerDAO,
+  PricingPlan,
+  UpgradeRequest
 }
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
 import play.api.libs.json.{JsNull, Json}
@@ -30,24 +32,26 @@ import scala.concurrent.ExecutionContext
 
 case class OrganizationParameters(name: String, newUserMailingList: String) derives JsonAutoFormat
 
+// partnerId None removes the partner assignment.
+case class OrganizationPartnerParameters(partnerId: Option[ObjectId]) derives JsonAutoFormat
+
 class OrganizationController @Inject() (
     organizationDAO: OrganizationDAO,
     organizationService: OrganizationService,
+    partnerDAO: PartnerDAO,
     inviteDAO: InviteDAO,
     conf: WkConf,
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     userService: UserService,
-    defaultMails: DefaultMails,
+    organizationEmailService: OrganizationEmailService,
     freeCreditTransactionService: FreeCreditTransactionService,
-    actorSystem: ActorSystem,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller {
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
-  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
   def organizationsIsEmpty: Action[AnyContent] = Action.fox { _ =>
     for {
@@ -111,7 +115,6 @@ class OrganizationController @Inject() (
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken)
-      _ <- Fox.fromBool(!invite.expirationDateTime.isPast)
       organization <- organizationDAO.findOne(invite._organization)
       organizationJson <- organizationService.publicWrites(organization)
     } yield Ok(organizationJson)
@@ -168,6 +171,26 @@ class OrganizationController @Inject() (
       } yield Ok(organizationJson)
     }
 
+  // Assigns the organization to a partner, which co-brands WEBKNOSSOS for it. Only super users may do this.
+  def updatePartner(organizationId: String): Action[OrganizationPartnerParameters] =
+    sil.SecuredAction.fox(validateJson[OrganizationPartnerParameters]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(
+          organizationId
+        ) ~> NOT_FOUND
+        _ <- Fox.runOptional(request.body.partnerId)(
+          partnerDAO.findOne(_)(using GlobalAccessContext)
+        ) ?~> Msg.Partner.notFound ~> NOT_FOUND
+        _ <- organizationDAO.updatePartner(organization._id, request.body.partnerId)
+        _ = logger.info(
+          s"Super user ${request.identity._id} set the partner of organization ${organization._id} to ${request.body.partnerId.getOrElse("none")}"
+        )
+        updated <- organizationDAO.findOne(organization._id)
+        organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
+      } yield Ok(organizationJson)
+    }
+
   def delete(organizationId: String): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
@@ -201,98 +224,67 @@ class OrganizationController @Inject() (
       } yield Ok(user._id.toString)
     }
 
-  def sendExtendPricingPlanEmail(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    for {
-      _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
-      organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-        request.identity._organization
-      ) ~> NOT_FOUND
-      multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ = Mailer ! Send(defaultMails.extendPricingPlanMail(multiUser, organization.name))
-    } yield Ok
-  }
-
-  def sendUpgradePricingPlanEmail(requestedPlan: String): Action[AnyContent] = sil.SecuredAction.fox {
-    implicit request =>
-      for {
-        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
-        organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization
-        ) ~> NOT_FOUND
-        multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-        requestedPlan <- PricingPlan.fromString(requestedPlan).toFox
-        mail =
-          if (requestedPlan == PricingPlan.Team) {
-            defaultMails.upgradePricingPlanToTeamMail
-          } else {
-            defaultMails.upgradePricingPlanToPowerMail
-          }
-        _ = Mailer ! Send(mail(multiUser, organization.name))
-      } yield Ok
-  }
-
-  def sendUpgradePricingPlanUsersEmail(requestedUsers: Int): Action[AnyContent] =
-    sil.SecuredAction.fox { implicit request =>
-      for {
-        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
-        organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization
-        ) ~> NOT_FOUND
-        multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-        _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(multiUser, requestedUsers, organization.name))
-      } yield Ok
-    }
-
-  def sendUpgradePricingPlanStorageEmail(requestedStorage: Int): Action[AnyContent] =
-    sil.SecuredAction.fox { implicit request =>
-      for {
-        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
-        organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization
-        ) ~> NOT_FOUND
-        multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-        _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(multiUser, requestedStorage, organization.name))
-      } yield Ok
-    }
-
   private def aiAddonLabelForPricingPlan(pricingPlan: PricingPlan.PricingPlan): String =
     pricingPlan match {
-      case PricingPlan.Team | PricingPlan.Team_Trial   => "Team AI"
-      case PricingPlan.Power | PricingPlan.Power_Trial => "Power AI"
-      case _                                           => "AI Add-on"
+      case PricingPlan.Team | PricingPlan.Team_Trial                            => "Team AI"
+      case PricingPlan.Power | PricingPlan.Power_Trial | PricingPlan.Enterprise => "Power AI"
+      case _                                                                    => "AI Add-on"
     }
 
-  def sendUpgradeAiAddonEmail(): Action[AnyContent] =
-    sil.SecuredAction.fox { implicit request =>
+  // Only paid, non-trial plans that rank above the current one can be requested.
+  // Open Source may also request Team, which ranks the same but adds jobs and AI features.
+  private def isValidPlanUpgrade(currentPlan: PricingPlan.PricingPlan, requestedPlan: PricingPlan.PricingPlan) =
+    (requestedPlan == PricingPlan.Team || requestedPlan == PricingPlan.Power) &&
+      (PricingPlan.isUpgrade(currentPlan, requestedPlan) || currentPlan == PricingPlan.Open_Source)
+
+  // The AI Add-on needs at least the Team plan (possibly as part of the same request) and must not be active yet.
+  private def canRequestAiAddon(organization: Organization, effectivePlan: PricingPlan.PricingPlan) =
+    organization.aiPlan.isEmpty && PricingPlan.tierRank(effectivePlan) >= PricingPlan.tierRank(PricingPlan.Team) &&
+      PricingPlan.allowsJobs(effectivePlan)
+
+  // Only the items that were actually requested are listed in the email.
+  private def describeUpgradeRequest(upgradeRequest: UpgradeRequest, organization: Organization): Seq[String] = {
+    val currentPlanLabel = PricingPlan.label(organization.pricingPlan)
+    val effectivePlan = upgradeRequest.plan.getOrElse(organization.pricingPlan)
+    Seq(
+      upgradeRequest.plan.map(plan => s"Upgrade from $currentPlanLabel to ${PricingPlan.label(plan)} plan"),
+      upgradeRequest.users.map(users => formatCount(users, "additional user")),
+      upgradeRequest.storageTB.map(storageTB => s"$storageTB TB additional storage"),
+      Option.when(upgradeRequest.aiAddon.contains(true))(
+        s"AI Add-on (${aiAddonLabelForPricingPlan(effectivePlan)})"
+      ),
+      upgradeRequest.credits.map(credits => formatCount(credits, "WEBKNOSSOS credit")),
+      upgradeRequest.extendYears.map(years => s"Plan extension by ${formatCount(years, "year")}")
+    ).flatten
+  }
+
+  def sendUpgradeRequestEmail(): Action[UpgradeRequest] =
+    sil.SecuredAction.fox(validateJson[UpgradeRequest]) { implicit request =>
+      val upgradeRequest = request.body
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Organization.pricingUpdatesOnlyAdmin
+        _ <- Fox.fromBool(upgradeRequest.credits.isEmpty || request.identity.isOrganizationOwner) ?~>
+          Msg.Organization.creditOrdersOnlyOwner
+        _ <- Fox.fromBool(upgradeRequest.hasValidAmounts) ?~> Msg.Organization.upgradeRequestInvalidAmount
+        _ <- Fox.fromBool(upgradeRequest.note.forall(_.length <= UpgradeRequest.maxNoteLength)) ?~>
+          Msg.Organization.upgradeRequestNoteTooLong(UpgradeRequest.maxNoteLength)
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
           request.identity._organization
         ) ~> NOT_FOUND
-        multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-        aiPlanLabel = aiAddonLabelForPricingPlan(organization.pricingPlan)
-        pricingPlanLabel = organization.pricingPlan.toString
-        _ = Mailer ! Send(defaultMails.upgradeAiAddonMail(multiUser, organization.name, aiPlanLabel, pricingPlanLabel))
-      } yield Ok
-    }
-
-  def sendOrderCreditsEmail(requestedCredits: Int): Action[AnyContent] =
-    sil.SecuredAction.fox { implicit request =>
-      for {
-        _ <- Fox.fromBool(requestedCredits > 0) ?~> Msg.Organization.creditOrdersNotPositive
-        _ <- Fox.fromBool(request.identity.isOrganizationOwner) ?~> Msg.Organization.creditOrdersOnlyOwner
-        organization <- organizationDAO.findOne(request.identity._organization) ?~> Msg.Organization.notFound(
-          request.identity._organization
-        ) ~> NOT_FOUND
+        _ <- Fox.fromBool(upgradeRequest.plan.forall(isValidPlanUpgrade(organization.pricingPlan, _))) ?~>
+          Msg.Organization.upgradeRequestInvalidPlan
+        effectivePlan = upgradeRequest.plan.getOrElse(organization.pricingPlan)
+        _ <- Fox.fromBool(!upgradeRequest.aiAddon.contains(true) || canRequestAiAddon(organization, effectivePlan)) ?~>
+          Msg.Organization.upgradeRequestAiAddonNotAvailable
+        requestedChanges = describeUpgradeRequest(upgradeRequest, organization)
+        _ <- Fox.fromBool(requestedChanges.nonEmpty) ?~> Msg.Organization.upgradeRequestEmpty
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         _ = logger.info(
-          s"Received credit order for organization ${organization.name} with $requestedCredits credits by user ${request.identity._id}"
+          s"Received upgrade request for organization ${organization._id} by user ${request.identity._id}: ${requestedChanges
+              .mkString(", ")}"
         )
-        _ = Mailer ! Send(defaultMails.orderCreditsMail(multiUser, requestedCredits))
-        _ = Mailer ! Send(
-          defaultMails
-            .orderCreditsRequestMail(multiUser, organization.name, s"Purchase $requestedCredits WEBKNOSSOS credits.")
-        )
+        note = upgradeRequest.note.map(_.trim).filter(_.nonEmpty)
+        _ = organizationEmailService.sendUpgradeRequestEmail(multiUser, organization, requestedChanges, note)
       } yield Ok
     }
 
@@ -324,12 +316,14 @@ class OrganizationController @Inject() (
         organization <- organizationDAO.findOne(request.body.organizationId) ?~> Msg.Organization.notFound(
           request.body.organizationId
         ) ~> NOT_FOUND
-        _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
-        _ <- organizationDAO.updatePlan(organization._id, request.body)
-        // Note that this logs its failures rather than propagating them, as the plan update above has
-        // already been persisted at this point.
-        _ <- Fox.runOptional(request.body.pricingPlan)(newPricingPlan =>
-          organizationService.sendPricingPlanUpgradeMails(organization, organization.pricingPlan, newPricingPlan)
+        planUpdate = request.body.withQuotasOfPlan(
+          organization.pricingPlan,
+          request.body.pricingPlan.getOrElse(organization.pricingPlan)
+        )
+        _ <- organizationDAO.insertPlanUpdate(organization._id, planUpdate)
+        _ <- organizationDAO.updatePlan(organization._id, planUpdate)
+        _ = request.body.pricingPlan.foreach(newPricingPlan =>
+          organizationEmailService.sendPricingPlanUpgradedEmails(organization, organization.pricingPlan, newPricingPlan)
         )
       } yield Ok
     }

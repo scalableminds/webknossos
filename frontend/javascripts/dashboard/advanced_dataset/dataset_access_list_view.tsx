@@ -15,13 +15,13 @@ const DatasetAccessListView = ({ dataset }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const datasetUsers = useFetch(
-    () => {
+    async () => {
       try {
         setIsLoading(true);
-        return getDatasetAccessList(dataset);
+        return await getDatasetAccessList(dataset);
       } catch (error) {
         handleGenericError(error as Error);
-        return Promise.resolve([]);
+        return [];
       } finally {
         setIsLoading(false);
       }
@@ -33,7 +33,7 @@ const DatasetAccessListView = ({ dataset }: Props) => {
   function renderUserTags(user: APIUser): React.ReactNode[] {
     if (user.isAdmin) {
       return [
-        <Tag key={`team_role_${user.id}`} color="red">
+        <Tag key={`team_role_${user.id}`} color="error">
           Admin
         </Tag>,
       ];

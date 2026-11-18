@@ -4,7 +4,6 @@ import type { Matrix4x4 } from "mjs";
 import { buffers } from "redux-saga";
 import { actionChannel, put } from "typed-redux-saga";
 import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
-import constants from "viewer/constants";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { call, select, take } from "viewer/model/sagas/effect_generators";
 import type { LoadingStrategy, WebknossosState } from "viewer/store";
@@ -12,6 +11,7 @@ import { createWorker } from "viewer/workers/comlink_wrapper";
 import type AsyncGetMaximumZoomForAllMags from "../../workers/async_get_maximum_zoom_for_all_mags.worker";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
+  getGlobalVoxelSizeFromState,
   getTransformsForLayer,
   invertAndTranspose,
 } from "../accessors/dataset_layer_transformation_accessor";
@@ -19,6 +19,7 @@ import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import type { Action } from "../actions/actions";
 import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
+import { getRequiredBucketCapacityPerLayer } from "../bucket_data_handling/data_rendering_logic";
 import { ensureWkInitialized } from "./ready_sagas";
 
 const asyncGetMaximumZoomForAllMags = createWorker<typeof AsyncGetMaximumZoomForAllMags>(
@@ -73,6 +74,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
       "UPDATE_DATASET_SETTING",
       "UPDATE_USER_SETTING",
       "SET_DATASET",
+      "SET_LAYER_TRANSFORMS",
       "SET_INPUT_CATCHER_RECT",
       "SET_INPUT_CATCHER_RECTS",
       "INITIALIZE_GPU_SETUP",
@@ -101,18 +103,21 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         ).affineMatrix,
       );
 
-      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale);
+      const dummyFlycamMatrix = _getDummyFlycamMatrix(getGlobalVoxelSizeFromState(state));
 
       const zoomLevels = yield* call(
         getZoomLevelsFn,
         viewMode,
         state.datasetConfiguration.loadingStrategy,
-        state.dataset.dataSource.scale.factor,
+        getGlobalVoxelSizeFromState(state).factor,
         getMagInfo(layer.mags).getDenseMags(),
         getViewportRects(state),
         Math.min(
           state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
-          constants.GPU_FACTOR_MULTIPLIER * state.userConfiguration.gpuMemoryFactor,
+          getRequiredBucketCapacityPerLayer(
+            state.userConfiguration.gpuMemoryFactor,
+            state.dataset.dataSource.dataLayers.length,
+          ),
         ),
         layerMatrix,
         // Theoretically, the following parameter should be state.flycam.currentMatrix.

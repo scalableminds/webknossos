@@ -109,7 +109,9 @@ function EditableTextLabel(props: EditableTextLabelProp) {
   const handleOnChange = () => {
     const validateAndUpdateValue = () => {
       if (validateFields()) {
-        onChange(value);
+        if (value !== propValue) {
+          onChange(value);
+        }
         setIsEditing(false);
         if (onRenameEnd) {
           onRenameEnd();

@@ -36,6 +36,8 @@ class ThumbnailService @Inject() (
   private val DefaultThumbnailHeight = 400
   private val MaxThumbnailWidth = 4000
   private val MaxThumbnailHeight = 4000
+  // Must match the per-layer limit enforced by the datastore (DSThumbnailService)
+  private val MaxLayerFetchDimension = 3000
 
   // Can’t use None as layerName for whole-dataset thumbnails, because postgres cannot use nullable columns as primary keys.
   private val DatasetThumbnailLayerNameSentinel = ""
@@ -149,15 +151,18 @@ class ThumbnailService @Inject() (
           zoom,
           mag1Width,
           mag1Height,
-          width,
-          height,
           hasColorLayers
         )
       )
+      // Layers lacking a mag coarse enough for the zoom would need too many voxels, skip those.
+      renderableLayerParameters = layerParameters.filter(p =>
+        p.width <= MaxLayerFetchDimension && p.height <= MaxLayerFetchDimension
+      )
+      _ <- Fox.fromBool(renderableLayerParameters.nonEmpty) ?~> Msg.Dataset.noLayersRenderableAtZoom ~> NOT_FOUND
       client <- datasetService.clientFor(dataset)
       image <- client.getDatasetThumbnail(
         dataset,
-        DatasetThumbnailRequest(width, height, layerParameters, blendMode)
+        DatasetThumbnailRequest(width, height, renderableLayerParameters, blendMode)
       )
       _ <- thumbnailDAO.upsertThumbnail(
         dataset._id,
@@ -227,8 +232,6 @@ class ThumbnailService @Inject() (
       zoom: Double,
       mag1Width: Int,
       mag1Height: Int,
-      outputWidth: Int,
-      outputHeight: Int,
       hasColorLayers: Boolean
   ): DatasetThumbnailLayerParameters = {
     val isSegmentation = layer.category == LayerCategory.segmentation
@@ -238,8 +241,8 @@ class ThumbnailService @Inject() (
     val opacity = readOpacity(viewConfiguration, layer.name, isSegmentation, hasColorLayers)
     // Each layer may pick a different native mag (e.g. if it lacks a mag the other layers have), but
     // mag1Width/mag1Height (the physical area covered) are fixed and shared across all layers, so the
-    // target-mag voxel counts fetched here differ instead. The datastore resizes the result to
-    // (outputWidth, outputHeight) before compositing, so this stays pixel-aligned across layers.
+    // target-mag voxel counts fetched here differ instead. The datastore resizes the result to the
+    // request's output size before compositing, so this stays pixel-aligned across layers.
     val mag = magForZoom(layer, zoom)
     val targetMagWidth = math.max(1, mag1Width / mag.x)
     val targetMagHeight = math.max(1, mag1Height / mag.y)

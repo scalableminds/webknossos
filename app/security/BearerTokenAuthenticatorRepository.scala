@@ -12,8 +12,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: ExecutionContext)
     extends AuthenticatorRepository[BearerTokenAuthenticator] {
 
+  // Used for request authentication, so reset password tokens are excluded
   override def find(value: String): Future[Option[BearerTokenAuthenticator]] =
-    findOneByValue(value).toFutureOption
+    findOneUsableForAuthentication(value).toFutureOption
 
   override def add(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
     add(authenticator, TokenType.Authentication)
@@ -34,11 +35,21 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       _ <- tokenDAO.deleteOneByValue(value).futureBox
     } yield ()
 
-  def findOneByValue(value: String): Fox[BearerTokenAuthenticator] =
+  private def findOneByValue(
+      value: String,
+      tokenTypeAllowed: TokenType => Boolean = _ => true
+  ): Fox[BearerTokenAuthenticator] =
     for {
       tokenSQL <- tokenDAO.findOneByValue(value)
+      _ <- Fox.fromBool(tokenTypeAllowed(tokenSQL.tokenType))
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator
+
+  def findOneUsableForAuthentication(value: String): Fox[BearerTokenAuthenticator] =
+    findOneByValue(value, _ != TokenType.ResetPassword)
+
+  def findOneByValueAndType(value: String, tokenType: TokenType): Fox[BearerTokenAuthenticator] =
+    findOneByValue(value, _ == tokenType)
 
   def findOneForUserAndType(userId: ObjectId, tokenType: TokenType): Future[Option[BearerTokenAuthenticator]] =
     (for {

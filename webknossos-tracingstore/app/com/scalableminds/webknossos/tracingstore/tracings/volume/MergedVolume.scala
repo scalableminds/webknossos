@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.File
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{ByteUtils, Fox, FoxIterator}
+import com.scalableminds.util.tools.{ByteUtils, Fox, FoxIterator, MathUtils}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -24,7 +24,7 @@ case class MergedVolumeStats(
 
 object MergedVolumeStats {
   def empty(createdSegmentIndex: Boolean): MergedVolumeStats =
-    MergedVolumeStats(Some(0L), Set.empty, List.empty, createdSegmentIndex)
+    MergedVolumeStats(None, Set.empty, List.empty, createdSegmentIndex)
 }
 
 class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, initialLargestSegmentId: Long = 0)
@@ -35,7 +35,8 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
   private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]
   private val idSets = mutable.ListBuffer[mutable.Set[Long]]()
   private var idMaps = Seq[(Array[Long], Array[Long])]()
-  var largestSegmentId: Long = 0
+  private var largestCollectedSegmentId: Long = 0
+  private var largestRemappedSegmentId: Long = 0
   private val bytesPerElement = ElementClass.bytesPerElement(ElementClass.fromProto(elementClass))
   private val elementsAreSigned = ElementClass.isSigned(ElementClass.fromProto(elementClass))
   private lazy val expectedUncompressedBucketSize: Int =
@@ -75,7 +76,16 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
       } yield ()
     } else Fox.successful(())
 
-  private def addIdSet(idSet: mutable.Set[Long]): Unit = idSets += idSet
+  private def addIdSet(idSet: mutable.Set[Long]): Unit = {
+    idSets += idSet
+    largestCollectedSegmentId = idSet.foldLeft(largestCollectedSegmentId)(MathUtils.maxUnsigned)
+  }
+
+  // None if no ids were collected (remapping disabled), as the merged data then keeps the source ids
+  def largestSegmentId: Option[Long] =
+    if (idMaps.nonEmpty) Some(largestRemappedSegmentId)
+    else if (idSets.nonEmpty) Some(MathUtils.maxUnsigned(initialLargestSegmentId, largestCollectedSegmentId))
+    else None
 
   private def prepareIdMaps(): Unit =
     if (idSets.isEmpty || (idSets.length == 1 && initialLargestSegmentId == 0) || idMaps.nonEmpty || !remapSegmentIds) {
@@ -97,7 +107,7 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
         }
         idMapsBuffer += idMap
       }
-      largestSegmentId = currentSegmentId
+      largestRemappedSegmentId = currentSegmentId
       idMaps = idMapsBuffer.toSeq.map(_.toArray.unzip)
     }
 
@@ -162,7 +172,7 @@ class MergedVolume(elementClass: ElementClassProto, remapSegmentIds: Boolean, in
 
   def stats(createdSegmentIndex: Boolean): MergedVolumeStats =
     MergedVolumeStats(
-      Some(largestSegmentId),
+      largestSegmentId,
       presentMags,
       idMaps.map(idMap => idMap._1.zip(idMap._2).toMap),
       createdSegmentIndex

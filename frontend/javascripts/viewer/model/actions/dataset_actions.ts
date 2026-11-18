@@ -1,3 +1,6 @@
+import Deferred from "libs/async/deferred";
+import noop from "lodash-es/noop";
+import type { Dispatch } from "redux";
 import type { CoordinateTransformation } from "types/api_types";
 import type { StoreDataset } from "viewer/store";
 
@@ -46,11 +49,26 @@ export const setLayerTransformsAction = (
     coordinateTransformations,
   }) as const;
 
-export const ensureLayerMappingsAreLoadedAction = (layerName?: string) =>
+export const ensureLayerMappingsAreLoadedAction = (
+  layerName?: string,
+  callback: (success: boolean) => void = noop,
+) =>
   ({
     type: "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     layerName,
+    callback,
   }) as const;
+
+export const dispatchEnsureLayerMappingsAreLoadedAsync = async (
+  dispatch: Dispatch<any>,
+  layerName?: string,
+): Promise<boolean> => {
+  const readyDeferred = new Deferred<boolean, unknown>();
+  dispatch(
+    ensureLayerMappingsAreLoadedAction(layerName, (success) => readyDeferred.resolve(success)),
+  );
+  return readyDeferred.promise();
+};
 
 export const setLayerHasSegmentIndexAction = (layerName: string, hasSegmentIndex: boolean) =>
   ({

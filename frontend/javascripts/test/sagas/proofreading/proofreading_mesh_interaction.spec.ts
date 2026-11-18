@@ -4,7 +4,8 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import type { MeshSegmentInfo } from "admin/api/mesh";
+import type { ApiResult } from "admin/api/api_result";
+import type { ListMeshChunksParams, MeshSegmentInfo } from "admin/api/mesh";
 import {
   getAgglomeratesForSegmentsFromTracingstore,
   type MinCutTargetEdge,
@@ -12,7 +13,6 @@ import {
 } from "admin/rest_api";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import isEqual from "lodash-es/isEqual";
-import type { APIMeshFileInfo } from "types/api_types";
 import { actionChannel, call, put, take } from "redux-saga/effects";
 import type { Vector3 } from "viewer/constants";
 import { PARTITION_COLORS } from "viewer/controller/segment_mesh_controller";
@@ -72,32 +72,31 @@ const SUPERVOXELS_BY_AGGLOMERATE_ID = new Map<bigint, bigint[]>([
 // resolve its individual supervoxels. This override returns one chunk per constituent supervoxel
 // (each decoded to a unit cube by the mocked draco loader), so the precomputed mesh's real
 // VertexSegmentMapping — built in precomputed_mesh_saga — resolves those supervoxels.
-async function getMultiSupervoxelChunksForSegment(
-  _dataStoreUrl: string,
-  _datasetId: string,
-  _layerName: string,
-  _meshFile: APIMeshFileInfo,
-  segmentId: bigint,
-): Promise<MeshSegmentInfo> {
+async function getMultiSupervoxelChunksForSegment({
+  segmentId,
+}: ListMeshChunksParams): Promise<ApiResult<MeshSegmentInfo>> {
   const supervoxels = SUPERVOXELS_BY_AGGLOMERATE_ID.get(segmentId) ?? [segmentId];
   return {
-    meshFormat: "draco",
-    lods: [
-      {
-        chunks: supervoxels.map((unmappedSegmentId) => ({
-          position: [0, 0, 0],
-          byteOffset: 0,
-          byteSize: 666,
-          unmappedSegmentId,
-        })),
-        transform: [
-          [1, 0, 0, 0],
-          [0, 1, 0, 0],
-          [0, 0, 1, 0],
-        ],
-      },
-    ],
-    chunkScale: [1, 1, 1],
+    ok: true,
+    value: {
+      meshFormat: "draco",
+      lods: [
+        {
+          chunks: supervoxels.map((unmappedSegmentId) => ({
+            position: [0, 0, 0],
+            byteOffset: 0,
+            byteSize: 666,
+            unmappedSegmentId,
+          })),
+          transform: [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+          ],
+        },
+      ],
+      chunkScale: [1, 1, 1],
+    },
   };
 }
 
@@ -428,20 +427,23 @@ describe("Proofreading (with mesh actions)", () => {
           agglomerateId: NumberLike;
           editableMappingId: string;
         },
-      ): Promise<Array<MinCutTargetEdge>> => {
+      ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
         if (version !== 6) {
           throw new Error("Unexpected version of min cut request:" + version);
         }
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
         if (agglomerateId === 6n && isEqual(partition1, [1337n]) && isEqual(partition2, [1338n])) {
-          return [
-            {
-              position1: getPositionForSegmentId(1337),
-              position2: getPositionForSegmentId(1338),
-              segmentId1: 1337n,
-              segmentId2: 1338n,
-            },
-          ];
+          return {
+            ok: true,
+            value: [
+              {
+                position1: getPositionForSegmentId(1337),
+                position2: getPositionForSegmentId(1338),
+                segmentId1: 1337n,
+                segmentId2: 1338n,
+              },
+            ],
+          };
         }
         throw new Error("Unexpected min cut request");
       },

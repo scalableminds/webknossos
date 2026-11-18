@@ -12,6 +12,37 @@ export function registerPingFn(fn: (str: string) => void): void {
   _pingFn = fn;
 }
 
+// Registered by main.tsx to avoid an import edge from libs/ to the viewer store.
+let _hasActiveUserFn: () => boolean = () => false;
+
+export function registerHasActiveUserFn(fn: () => boolean): void {
+  _hasActiveUserFn = fn;
+}
+
+/*
+ * Shows a "session expired" toast for 401 responses if a user was logged in before
+ * (e.g. after the user logged out in another tab). If no user was logged in, the session
+ * never existed and the server's error message is more accurate.
+ * Returns whether the toast was shown, so that callers can skip showing the server's message.
+ */
+export function showSessionExpiredToastIfApplicable(status: number | undefined): boolean {
+  if (status !== 401 || !_hasActiveUserFn()) {
+    return false;
+  }
+  showToastOnce(
+    "error",
+    <>
+      Your session has expired. Please refresh the page
+      <br />
+      <Button type="default" onClick={() => location.reload()}>
+        Refresh
+      </Button>
+    </>,
+    { timeout: 10000, sticky: true },
+  );
+  return true;
+}
+
 export const handleError = async (
   requestedUrl: string,
   showErrorToast: boolean,
@@ -22,21 +53,9 @@ export const handleError = async (
     // Check whether this request failed due to a problematic datastore
     _pingFn(requestedUrl);
     if (error instanceof Response) {
-      // Handle 401 Unauthorized errors and ensure an understandable error toast is shown.
-      // This might happen e.g. after a user logged out everywhere.
-      if (error.status === 401 && showErrorToast) {
-        showToastOnce(
-          "error",
-          <>
-            Your session has expired. Please refresh the page
-            <br />
-            <Button type="default" onClick={() => location.reload()}>
-              Refresh
-            </Button>
-          </>,
-          { timeout: 10000, sticky: true },
-        );
-      }
+      // The session expired toast already explains the error, so the server's message is not shown in addition.
+      const showServerErrorToast =
+        showErrorToast && !showSessionExpiredToastIfApplicable(error.status);
       return error.text().then(
         (text) => {
           try {
@@ -51,7 +70,7 @@ export const handleError = async (
               ...message,
               key: json.status.toString(),
             }));
-            if (showErrorToast) {
+            if (showServerErrorToast) {
               Toast.messages(messages); // Note: Toast.error internally logs to console
             } else {
               console.error(messages);
@@ -63,7 +82,7 @@ export const handleError = async (
             /* eslint-disable-next-line prefer-promise-reject-errors */
             return Promise.reject({ ...json, url: requestedUrl });
           } catch (_jsonError) {
-            if (showErrorToast) {
+            if (showServerErrorToast) {
               Toast.error(text); // Note: Toast.error internally logs to console
             } else {
               console.error(`Request failed for ${requestedUrl}:`, text);

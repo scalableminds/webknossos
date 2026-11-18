@@ -65,6 +65,7 @@ import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
+import type { StatisticsViewState } from "./view/right_border_tabs/segments_tab/segment_statistics_view_state";
 
 export type UserBoundingBoxForServer = {
   boundingBox: BoundingBoxObject;
@@ -621,6 +622,8 @@ type UiInformation = {
   readonly borderOpenStatus: BorderOpenStatus;
   // Null means that the statistics of all segments of the visible segmentation layer are shown.
   readonly segmentStatisticsScope: SegmentStatisticsScope | null;
+  // Which columns, units, filters, sorting etc. the segment statistics tab uses.
+  readonly segmentStatisticsView: StatisticsViewState;
   // The OS color scheme. Use getActiveTheme() for the theme that is actually in effect.
   readonly systemTheme: Theme;
   readonly isWkInitialized: boolean;

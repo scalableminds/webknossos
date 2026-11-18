@@ -78,6 +78,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_SEGMENT_STATISTICS_VIEW": {
+      return updateKey(state, "uiInformation", {
+        segmentStatisticsView: action.view,
+      });
+    }
+
     case "SET_SYSTEM_THEME": {
       return updateKey(state, "uiInformation", {
         systemTheme: action.systemTheme,

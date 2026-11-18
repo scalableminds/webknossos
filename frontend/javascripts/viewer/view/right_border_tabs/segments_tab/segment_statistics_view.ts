@@ -1,11 +1,36 @@
 import { getBestUnitForValue, UnitsMap } from "libs/format_utils";
-import { useCallback, useMemo, useState } from "react";
+import { useWkSelector } from "libs/react_hooks";
+import { useMemo } from "react";
 import { UnitShort } from "viewer/constants";
+import { setSegmentStatisticsViewAction } from "viewer/model/actions/ui_actions";
+import type { SegmentStatisticsScope } from "viewer/store";
+import Store from "viewer/store";
 import type {
   SegmentStatisticsRow,
   StatisticSpec,
   StatisticValue,
 } from "./segment_statistics_helpers";
+import {
+  DEFAULT_VIEW_STATE,
+  type GroupBy,
+  MAX_COMPARED_COUNT,
+  type SortOrder,
+  type StatisticsMode,
+  type StatisticsSort,
+  type StatisticsViewState,
+  type ValueRange,
+} from "./segment_statistics_view_state";
+
+export {
+  DEFAULT_VIEW_STATE,
+  type GroupBy,
+  MAX_COMPARED_COUNT,
+  type SortOrder,
+  type StatisticsMode,
+  type StatisticsSort,
+  type StatisticsViewState,
+  type ValueRange,
+} from "./segment_statistics_view_state";
 
 /*
  * The state of the segment statistics view (which columns are shown, in which unit, how the rows
@@ -17,20 +42,7 @@ export type ColumnSpec = StatisticSpec & { title: string; value: StatisticValue 
 
 export type ResolvedUnit = { label: string; factor: number };
 
-// Lower and upper bound in the base unit of the statistic (not the displayed one). Null is open.
-export type ValueRange = [number | null, number | null];
-
-export type SortOrder = "ascend" | "descend";
-export type StatisticsSort = { key: string; order: SortOrder } | null;
-
-export type GroupBy = "group" | "none";
-export type StatisticsMode = "table" | "compare";
-
-// More entities than this cannot be told apart in the comparison.
-export const MAX_COMPARED_COUNT = 6;
-
 export const SEGMENT_COLUMN_KEY = "segment";
-const DEFAULT_SORT: StatisticsSort = { key: "volume", order: "descend" };
 const DEFAULT_FRACTION_DIGITS = 2;
 
 // The units that can be chosen for a column, besides the automatically chosen one.
@@ -163,28 +175,6 @@ export function computeHistogram(numbers: number[], binCount: number): Histogram
   return { bins, min, max };
 }
 
-export type StatisticsViewState = {
-  hiddenColumnKeys: ReadonlySet<string>;
-  // The label of the unit the user chose for a column, by the key of its spec.
-  chosenUnits: Record<string, string>;
-  ranges: Record<string, ValueRange>;
-  sort: StatisticsSort;
-  groupBy: GroupBy;
-  mode: StatisticsMode;
-  // The keys of the table rows (segments and groups) that are compared with each other.
-  comparedKeys: string[];
-};
-
-export const DEFAULT_VIEW_STATE: StatisticsViewState = {
-  hiddenColumnKeys: new Set(),
-  chosenUnits: {},
-  ranges: {},
-  sort: DEFAULT_SORT,
-  groupBy: "group",
-  mode: "table",
-  comparedKeys: [],
-};
-
 export type StatisticsView = StatisticsViewState & {
   toggleColumn: (key: string) => void;
   setChosenUnit: (key: string, unitLabel: string | null) => void;
@@ -201,83 +191,126 @@ function omitKey<T>(record: Record<string, T>, key: string): Record<string, T> {
   return rest;
 }
 
-export function useStatisticsView(
-  initialState: StatisticsViewState = DEFAULT_VIEW_STATE,
-): StatisticsView {
-  const [state, setState] = useState(initialState);
+function updateViewState(update: (previous: StatisticsViewState) => StatisticsViewState) {
+  Store.dispatch(
+    setSegmentStatisticsViewAction(update(Store.getState().uiInformation.segmentStatisticsView)),
+  );
+}
 
-  const toggleColumn = useCallback((key: string) => {
-    setState((previous) => {
+const viewActions = {
+  toggleColumn: (key: string) =>
+    updateViewState((previous) => {
       const hiddenColumnKeys = new Set(previous.hiddenColumnKeys);
       if (!hiddenColumnKeys.delete(key)) {
         hiddenColumnKeys.add(key);
       }
       return { ...previous, hiddenColumnKeys };
-    });
-  }, []);
-
-  const setChosenUnit = useCallback((key: string, unitLabel: string | null) => {
-    setState((previous) => ({
+    }),
+  setChosenUnit: (key: string, unitLabel: string | null) =>
+    updateViewState((previous) => ({
       ...previous,
       chosenUnits:
         unitLabel == null
           ? omitKey(previous.chosenUnits, key)
           : { ...previous.chosenUnits, [key]: unitLabel },
-    }));
-  }, []);
-
-  const setRange = useCallback((key: string, range: ValueRange) => {
-    setState((previous) => ({
+    })),
+  setRange: (key: string, range: ValueRange) =>
+    updateViewState((previous) => ({
       ...previous,
       ranges:
         range[0] == null && range[1] == null
           ? omitKey(previous.ranges, key)
           : { ...previous.ranges, [key]: range },
-    }));
-  }, []);
+    })),
+  resetRanges: () => updateViewState((previous) => ({ ...previous, ranges: {} })),
+  setSort: (sort: StatisticsSort) => updateViewState((previous) => ({ ...previous, sort })),
+  setGroupBy: (groupBy: GroupBy) => updateViewState((previous) => ({ ...previous, groupBy })),
+  setMode: (mode: StatisticsMode) => updateViewState((previous) => ({ ...previous, mode })),
+  setComparedKeys: (keys: string[]) =>
+    updateViewState((previous) => ({
+      ...previous,
+      comparedKeys: keys.slice(0, MAX_COMPARED_COUNT),
+    })),
+};
 
-  const resetRanges = useCallback(() => {
-    setState((previous) => ({ ...previous, ranges: {} }));
-  }, []);
+/*
+ * The view state lives in the store (and not in the tab), so that it survives switching to
+ * another tab and can be restored from and written to a link.
+ */
+export function useStatisticsView(): StatisticsView {
+  const state = useWkSelector((storeState) => storeState.uiInformation.segmentStatisticsView);
+  return useMemo(() => ({ ...state, ...viewActions }), [state]);
+}
 
-  const setSort = useCallback((sort: StatisticsSort) => {
-    setState((previous) => ({ ...previous, sort }));
-  }, []);
+// The part of the URL hash that restores the segment statistics tab. Only values that differ from
+// the defaults are included. Segment ids are strings, as they can exceed the safe integer range.
+export type SegmentStatisticsUrlState = {
+  scope?: { groupId: number } | { segmentIds: string[] };
+  groupBy?: GroupBy;
+  mode?: StatisticsMode;
+  sort?: { key: string; order: SortOrder } | null;
+  hiddenColumns?: string[];
+  units?: Record<string, string>;
+  ranges?: Record<string, ValueRange>;
+  compared?: string[];
+};
 
-  const setGroupBy = useCallback((groupBy: GroupBy) => {
-    setState((previous) => ({ ...previous, groupBy }));
-  }, []);
+export function toUrlState(
+  viewState: StatisticsViewState,
+  scope: SegmentStatisticsScope | null,
+): SegmentStatisticsUrlState {
+  const urlState: SegmentStatisticsUrlState = {};
+  if (scope != null) {
+    urlState.scope =
+      scope.kind === "group"
+        ? { groupId: scope.groupId }
+        : { segmentIds: scope.segmentIds.map(String) };
+  }
+  if (viewState.groupBy !== DEFAULT_VIEW_STATE.groupBy) urlState.groupBy = viewState.groupBy;
+  if (viewState.mode !== DEFAULT_VIEW_STATE.mode) urlState.mode = viewState.mode;
+  if (
+    viewState.sort?.key !== DEFAULT_VIEW_STATE.sort?.key ||
+    viewState.sort?.order !== DEFAULT_VIEW_STATE.sort?.order
+  ) {
+    urlState.sort = viewState.sort;
+  }
+  if (viewState.hiddenColumnKeys.size > 0) {
+    urlState.hiddenColumns = [...viewState.hiddenColumnKeys];
+  }
+  if (Object.keys(viewState.chosenUnits).length > 0) urlState.units = viewState.chosenUnits;
+  if (Object.keys(viewState.ranges).length > 0) urlState.ranges = viewState.ranges;
+  if (viewState.comparedKeys.length > 0) urlState.compared = viewState.comparedKeys;
+  return urlState;
+}
 
-  const setMode = useCallback((mode: StatisticsMode) => {
-    setState((previous) => ({ ...previous, mode }));
-  }, []);
-
-  const setComparedKeys = useCallback((keys: string[]) => {
-    setState((previous) => ({ ...previous, comparedKeys: keys.slice(0, MAX_COMPARED_COUNT) }));
-  }, []);
-
-  return useMemo(
-    () => ({
-      ...state,
-      toggleColumn,
-      setChosenUnit,
-      setRange,
-      resetRanges,
-      setSort,
-      setGroupBy,
-      setMode,
-      setComparedKeys,
-    }),
-    [
-      state,
-      toggleColumn,
-      setChosenUnit,
-      setRange,
-      resetRanges,
-      setSort,
-      setGroupBy,
-      setMode,
-      setComparedKeys,
-    ],
-  );
+// The scope of a link refers to the segmentation layer that is visible when the link is opened
+// (which the link restores as well). Without such a layer, the scope is dropped.
+export function fromUrlState(
+  urlState: SegmentStatisticsUrlState,
+  layerName: string | null,
+): {
+  viewState: StatisticsViewState;
+  scope: SegmentStatisticsScope | null;
+} {
+  const { scope } = urlState;
+  return {
+    scope:
+      scope == null || layerName == null
+        ? null
+        : "groupId" in scope
+          ? { kind: "group", layerName, groupId: scope.groupId }
+          : "segmentIds" in scope
+            ? { kind: "segments", layerName, segmentIds: scope.segmentIds.map(BigInt) }
+            : null,
+    viewState: {
+      hiddenColumnKeys: new Set(urlState.hiddenColumns ?? []),
+      chosenUnits: urlState.units ?? {},
+      ranges: urlState.ranges ?? {},
+      // An explicit null means "unsorted", whereas a missing value means the default.
+      sort: urlState.sort !== undefined ? urlState.sort : DEFAULT_VIEW_STATE.sort,
+      groupBy: urlState.groupBy ?? DEFAULT_VIEW_STATE.groupBy,
+      mode: urlState.mode ?? DEFAULT_VIEW_STATE.mode,
+      comparedKeys: (urlState.compared ?? []).slice(0, MAX_COMPARED_COUNT),
+    },
+  };
 }

@@ -1,15 +1,20 @@
+import { validateUrlStateJSON } from "types/validation";
 import { UnitShort } from "viewer/constants";
-import type { Segment } from "viewer/store";
+import type { Segment, SegmentStatisticsScope } from "viewer/store";
 import type { SegmentStatisticsRow } from "viewer/view/right_border_tabs/segments_tab/segment_statistics_helpers";
 import {
   type ColumnSpec,
   computeHistogram,
+  DEFAULT_VIEW_STATE,
   filterRows,
   formatStatisticNumber,
+  fromUrlState,
   getMedian,
   getPercentile,
   getSelectableUnits,
   resolveUnit,
+  type StatisticsViewState,
+  toUrlState,
 } from "viewer/view/right_border_tabs/segments_tab/segment_statistics_view";
 import { describe, expect, it } from "vitest";
 
@@ -90,6 +95,61 @@ describe("segment statistics view", () => {
     expect(getPercentile(1, [])).toBe(0);
     expect(getMedian([5, 1, 3])).toBe(3);
     expect(getMedian([])).toBeUndefined();
+  });
+
+  it("omits defaults from the url state", () => {
+    expect(toUrlState(DEFAULT_VIEW_STATE, null)).toEqual({});
+    expect(fromUrlState({}, "segmentation")).toEqual({
+      viewState: DEFAULT_VIEW_STATE,
+      scope: null,
+    });
+  });
+
+  it("round-trips the view state and scope through a validated url hash", () => {
+    const viewState: StatisticsViewState = {
+      hiddenColumnKeys: new Set(["surfaceArea"]),
+      chosenUnits: { volume: "µm³" },
+      ranges: { volume: [1e9, null] },
+      sort: { key: "voxelCount", order: "ascend" },
+      groupBy: "none",
+      mode: "compare",
+      comparedKeys: ["group-1", "5"],
+    };
+    // Exceeds the safe integer range, which is why segment ids are encoded as strings.
+    const scope: SegmentStatisticsScope = {
+      kind: "segments",
+      layerName: "segmentation",
+      segmentIds: [2n ** 60n, 7n],
+    };
+
+    const urlState = toUrlState(viewState, scope);
+    const parsed = validateUrlStateJSON(JSON.stringify({ segmentStatistics: urlState }));
+    expect(fromUrlState(parsed.segmentStatistics, "segmentation")).toEqual({ viewState, scope });
+
+    const groupScope: SegmentStatisticsScope = {
+      kind: "group",
+      layerName: "segmentation",
+      groupId: 3,
+    };
+    expect(fromUrlState(toUrlState(viewState, groupScope), "segmentation").scope).toEqual(
+      groupScope,
+    );
+    // The scope applies to the layer that is visible when the link is opened.
+    expect(fromUrlState(toUrlState(viewState, groupScope), "other").scope).toEqual({
+      ...groupScope,
+      layerName: "other",
+    });
+    expect(fromUrlState(toUrlState(viewState, groupScope), null).scope).toBeNull();
+    // Being unsorted is kept apart from the default sorting.
+    expect(
+      fromUrlState(toUrlState({ ...viewState, sort: null }, null), null).viewState.sort,
+    ).toBeNull();
+  });
+
+  it("rejects malformed statistics in the url", () => {
+    expect(() =>
+      validateUrlStateJSON(JSON.stringify({ segmentStatistics: { mode: "chart" } })),
+    ).toThrow();
   });
 
   it("computes a histogram", () => {

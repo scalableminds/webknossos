@@ -1,4 +1,4 @@
-import { DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, LinkOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
@@ -12,12 +12,15 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import { bigIntReplacer } from "libs/bigint_helpers";
+import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import { LongUnitToShortUnitMap } from "viewer/constants";
+import UrlManager, { encodeUrlHash } from "viewer/controller/url_manager";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
@@ -31,6 +34,7 @@ import {
 import { ensureSegmentIndexIsLoadedAction } from "viewer/model/actions/dataset_actions";
 import { setSegmentStatisticsScopeAction } from "viewer/model/actions/ui_actions";
 import type { Segment, SegmentGroup, SegmentStatisticsScope } from "viewer/store";
+import Store from "viewer/store";
 import { findGroup, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 import { useSegmentStatisticsRows } from "./hooks/use_segment_statistics_rows";
 import { SegmentStatisticsCompare } from "./segment_statistics_compare";
@@ -48,6 +52,7 @@ import {
   getColumnSpecs,
   resolveUnit,
   type StatisticsMode,
+  toUrlState,
   useStatisticsView,
 } from "./segment_statistics_view";
 import { getSegmentsOfGroupRecursively } from "./segments_view_helper";
@@ -145,6 +150,15 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
     });
 
   const view = useStatisticsView();
+  const copyLink = () => {
+    const state = Store.getState();
+    const urlState = {
+      ...UrlManager.getUrlState(state),
+      segmentStatistics: toUrlState(state.uiInformation.segmentStatisticsView, scope),
+    };
+    const hash = encodeUrlHash(JSON.stringify(urlState, bigIntReplacer));
+    copyToClipboard(`${location.origin}${location.pathname}${location.search}#${hash}`, "Link");
+  };
   const datasetUnit = useWkSelector(
     (state) => LongUnitToShortUnitMap[state.dataset.dataSource.scale.unit],
   );
@@ -233,6 +247,9 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
             },
           ]}
         />
+        <Tooltip title="Copy a link that opens the statistics as they are shown right now">
+          <Button icon={<LinkOutlined />} onClick={copyLink} aria-label="Copy link" />
+        </Tooltip>
         <Tooltip title="Recompute the statistics, e.g. after editing segments">
           <Button
             icon={<ReloadOutlined />}

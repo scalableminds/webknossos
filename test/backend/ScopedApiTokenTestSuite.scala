@@ -5,12 +5,12 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import oauth.{OAuthGrant, OAuthGrantDAO}
-import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.wordspec.AsyncWordSpec
 import security.{Scope, ScopeMode, ScopeResource, ScopedApiToken, ScopedApiTokenService, Token, TokenDAO, TokenType}
 
 import scala.collection.mutable
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Keeps the tokens in memory and mimics the soft deletion of the real DAO. The SqlClient is never touched, because all
   * methods ScopedApiTokenService uses are overridden. The round trip through the real database is covered by the e2e
@@ -42,11 +42,7 @@ class InMemoryOAuthGrantDAO(implicit ec: ExecutionContext) extends OAuthGrantDAO
   override def findLive(id: ObjectId): Fox[OAuthGrant] = grants.get(id).filterNot(_.isDeleted).toFox
 }
 
-class ScopedApiTokenTestSuite extends AnyWordSpec {
-
-  private given ExecutionContext = ExecutionContext.global
-
-  private def await[T](fox: Fox[T]) = Await.result(fox.futureBox, 5.seconds)
+class ScopedApiTokenTestSuite extends AsyncWordSpec {
 
   private case class Setup(
       tokenDAO: InMemoryTokenDAO,
@@ -59,10 +55,13 @@ class ScopedApiTokenTestSuite extends AnyWordSpec {
       grant
     }
 
-    def create(grant: OAuthGrant, expiry: FiniteDuration = 1.hour): ScopedApiToken =
-      await(service.create(grant, expiry)).get("creating a token must succeed in this test")
+    def create(grant: OAuthGrant, expiry: FiniteDuration = 1.hour): Future[ScopedApiToken] =
+      service.create(grant, expiry).toFutureOrThrowException("creating a token must succeed in this test")
 
-    def findValid(value: String): Option[ScopedApiToken] = await(service.findValid(value)).toOption
+    def createFrom(token: ScopedApiToken, expiry: FiniteDuration): Future[ScopedApiToken] =
+      service.createFrom(token, expiry).toFutureOrThrowException("creating a token must succeed in this test")
+
+    def findValid(value: String): Future[Option[ScopedApiToken]] = service.findValid(value).toFutureOption
   }
 
   private def setup(): Setup = {
@@ -75,69 +74,87 @@ class ScopedApiTokenTestSuite extends AnyWordSpec {
     "store a created token as a scoped API token of the grant's user, without idle timeout" in {
       val s = setup()
       val grant = s.addGrant()
-      val token = s.create(grant)
-      val stored = s.tokenDAO.tokens(token.value)
-      assert(stored.tokenType == TokenType.ScopedApi)
-      assert(stored._user == grant._user)
-      assert(stored._oauthGrant.contains(grant._id))
-      assert(stored.idleTimeout.isEmpty)
-      assert(stored.expirationDateTime == token.expiresAt)
-      assert(token.value.startsWith("wk_scoped_api_token_"))
-      assert(s.service.looksLikeScopedApiTokenValue(token.value))
+      s.create(grant).map { token =>
+        val stored = s.tokenDAO.tokens(token.value)
+        assert(stored.tokenType == TokenType.ScopedApi)
+        assert(stored._user == grant._user)
+        assert(stored._oauthGrant.contains(grant._id))
+        assert(stored.idleTimeout.isEmpty)
+        assert(stored.expirationDateTime == token.expiresAt)
+        assert(token.value.startsWith("wk_scoped_api_token_"))
+        assert(s.service.looksLikeScopedApiTokenValue(token.value))
+      }
     }
 
     "find a token it created, with the grant's scopes" in {
       val s = setup()
       val grant = s.addGrant(scopes = "read")
-      val token = s.create(grant)
-      val found = s.findValid(token.value)
-      assert(found.map(_.userId).contains(grant._user))
-      assert(found.map(_.grantId).contains(grant._id))
-      assert(found.exists(_.scopes.allows(Scope(ScopeResource.dataset, ScopeMode.read))))
-      assert(!found.exists(_.scopes.allows(Scope(ScopeResource.dataset, ScopeMode.write))))
+      for {
+        token <- s.create(grant)
+        found <- s.findValid(token.value)
+      } yield {
+        assert(found.map(_.userId).contains(grant._user))
+        assert(found.map(_.grantId).contains(grant._id))
+        assert(found.exists(_.scopes.allows(Scope(ScopeResource.dataset, ScopeMode.read))))
+        assert(!found.exists(_.scopes.allows(Scope(ScopeResource.dataset, ScopeMode.write))))
+      }
     }
 
     "follow the current scopes of the grant" in {
       val s = setup()
       val grant = s.addGrant(scopes = "read")
-      val token = s.create(grant)
-      s.grantDAO.grants.put(grant._id, grant.copy(scopes = "delete"))
-      assert(s.findValid(token.value).exists(_.scopes.allows(Scope(ScopeResource.annotation, ScopeMode.delete))))
+      for {
+        token <- s.create(grant)
+        _ = s.grantDAO.grants.put(grant._id, grant.copy(scopes = "delete"))
+        found <- s.findValid(token.value)
+      } yield assert(found.exists(_.scopes.allows(Scope(ScopeResource.annotation, ScopeMode.delete))))
     }
 
     "create another token under the same grant" in {
       val s = setup()
       val grant = s.addGrant()
-      val token = s.create(grant)
-      val derived = await(s.service.createFrom(token, 1.hour)).get("creating a token must succeed in this test")
-      assert(derived.value != token.value)
-      assert(s.findValid(derived.value).map(_.grantId).contains(grant._id))
+      for {
+        token <- s.create(grant)
+        derived <- s.createFrom(token, 1.hour)
+        found <- s.findValid(derived.value)
+      } yield {
+        assert(derived.value != token.value)
+        assert(found.map(_.grantId).contains(grant._id))
+      }
     }
 
     "not let a derived token outlive the token it was created from" in {
       val s = setup()
-      val token = s.create(s.addGrant(), 1.hour)
-      val derived = await(s.service.createFrom(token, 1.day)).get("creating a token must succeed in this test")
-      assert(derived.expiresAt == token.expiresAt)
-      val shorter = await(s.service.createFrom(token, 1.minute)).get("creating a token must succeed in this test")
-      assert(shorter.expiresAt < token.expiresAt)
+      for {
+        token <- s.create(s.addGrant(), 1.hour)
+        derived <- s.createFrom(token, 1.day)
+        shorter <- s.createFrom(token, 1.minute)
+      } yield {
+        assert(derived.expiresAt == token.expiresAt)
+        assert(shorter.expiresAt < token.expiresAt)
+      }
     }
 
     "create distinct tokens" in {
       val s = setup()
       val grant = s.addGrant()
-      assert(s.create(grant).value != s.create(grant).value)
+      for {
+        tokenA <- s.create(grant)
+        tokenB <- s.create(grant)
+      } yield assert(tokenA.value != tokenB.value)
     }
 
     "not find an unknown token" in {
       val s = setup()
-      assert(s.findValid("wk_scoped_api_token_unknown").isEmpty)
+      s.findValid("wk_scoped_api_token_unknown").map(found => assert(found.isEmpty))
     }
 
     "not query the database for values without the prefix" in {
       val s = setup()
-      assert(s.findValid("someRegularApiToken").isEmpty)
-      assert(s.tokenDAO.findCalls == 0)
+      s.findValid("someRegularApiToken").map { found =>
+        assert(found.isEmpty)
+        assert(s.tokenDAO.findCalls == 0)
+      }
     }
 
     "not accept a token of another type, even with the prefix" in {
@@ -148,7 +165,7 @@ class ScopedApiTokenTestSuite extends AnyWordSpec {
         value,
         Token(ObjectId.generate, value, ObjectId.generate, now, now + 1.hour, None, TokenType.Authentication, now)
       )
-      assert(s.findValid(value).isEmpty)
+      s.findValid(value).map(found => assert(found.isEmpty))
     }
 
     "not accept a scoped API token without a grant" in {
@@ -159,36 +176,44 @@ class ScopedApiTokenTestSuite extends AnyWordSpec {
         value,
         Token(ObjectId.generate, value, ObjectId.generate, now, now + 1.hour, None, TokenType.ScopedApi, now)
       )
-      assert(s.findValid(value).isEmpty)
+      s.findValid(value).map(found => assert(found.isEmpty))
     }
 
     "not find an expired token" in {
       val s = setup()
-      val token = s.create(s.addGrant(), (-1).second)
-      assert(s.findValid(token.value).isEmpty)
+      for {
+        token <- s.create(s.addGrant(), (-1).second)
+        found <- s.findValid(token.value)
+      } yield assert(found.isEmpty)
     }
 
     "not find a token whose grant has been revoked" in {
       val s = setup()
       val grant = s.addGrant()
-      val token = s.create(grant)
-      s.grantDAO.grants.put(grant._id, grant.copy(isDeleted = true))
-      assert(s.findValid(token.value).isEmpty)
+      for {
+        token <- s.create(grant)
+        _ = s.grantDAO.grants.put(grant._id, grant.copy(isDeleted = true))
+        found <- s.findValid(token.value)
+      } yield assert(found.isEmpty)
     }
 
     "revoke all tokens of one grant, but not those of others" in {
       val s = setup()
       val grant = s.addGrant()
       val otherGrant = s.addGrant(userId = grant._user)
-      val tokenA = s.create(grant)
-      val tokenB = s.create(grant)
-      val tokenOfOther = s.create(otherGrant)
-
-      await(s.service.revokeAllForGrant(grant._id))
-
-      assert(s.findValid(tokenA.value).isEmpty)
-      assert(s.findValid(tokenB.value).isEmpty)
-      assert(s.findValid(tokenOfOther.value).isDefined)
+      for {
+        tokenA <- s.create(grant)
+        tokenB <- s.create(grant)
+        tokenOfOther <- s.create(otherGrant)
+        _ <- s.service.revokeAllForGrant(grant._id).toFutureOrThrowException("revoking must succeed in this test")
+        foundA <- s.findValid(tokenA.value)
+        foundB <- s.findValid(tokenB.value)
+        foundOfOther <- s.findValid(tokenOfOther.value)
+      } yield {
+        assert(foundA.isEmpty)
+        assert(foundB.isEmpty)
+        assert(foundOfOther.isDefined)
+      }
     }
   }
 }

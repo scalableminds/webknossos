@@ -21,7 +21,7 @@ export const OAUTH_PERMISSION_LEVELS: ReadonlyArray<{
   {
     key: "delete",
     label: "Delete",
-    description: "Additionally delete datasets, annotations, tasks and teams. Use with care.",
+    description: "Additionally delete resources where available. Use with care.",
   },
 ];
 

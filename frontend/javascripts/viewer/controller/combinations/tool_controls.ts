@@ -43,6 +43,7 @@ import {
   handleMergeTrees,
   handleOpenContextMenu,
   handleSelectNode,
+  isContinuousNodeCreationOn,
   maybeGetNodeIdFromPosition,
   moveNode,
 } from "viewer/controller/combinations/skeleton_handlers";
@@ -357,10 +358,11 @@ export class SkeletonToolController extends ToolController {
         plane: string | null | undefined,
         event: MouseEvent,
       ) => {
-        const { annotation, userConfiguration } = Store.getState();
-        const { useLegacyBindings, continuousNodeCreation } = userConfiguration;
+        const state = Store.getState();
+        const { annotation } = state;
+        const { useLegacyBindings } = state.userConfiguration;
 
-        if (continuousNodeCreation && !useLegacyBindings) {
+        if (isContinuousNodeCreationOn(state) && !useLegacyBindings) {
           maybePlaceContinuousNode(pos, plane);
         } else {
           if (
@@ -380,10 +382,10 @@ export class SkeletonToolController extends ToolController {
         plane: string | null | undefined,
         _event: MouseEvent,
       ) => {
-        const { userConfiguration } = Store.getState();
-        const { useLegacyBindings, continuousNodeCreation } = userConfiguration;
+        const state = Store.getState();
+        const { useLegacyBindings } = state.userConfiguration;
 
-        if (!useLegacyBindings || !continuousNodeCreation) {
+        if (!useLegacyBindings || !isContinuousNodeCreationOn(state)) {
           return;
         }
 
@@ -423,14 +425,15 @@ export class SkeletonToolController extends ToolController {
     isTouch: boolean,
     allowNodeCreation: boolean = true,
   ): void {
-    const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
-    const showSkeleton = isSkeletonLayerVisible(Store.getState());
+    const state = Store.getState();
+    const showSkeleton = isSkeletonLayerVisible(state);
     if (!showSkeleton) {
       // Don't do anything in case the skeleton layer is disabled or does not exist.
       return;
     }
 
-    if (continuousNodeCreation && allowNodeCreation && !useLegacyBindings) {
+    const { useLegacyBindings } = state.userConfiguration;
+    if (isContinuousNodeCreationOn(state) && allowNodeCreation && !useLegacyBindings) {
       handleCreateNodeFromEvent(position, ctrlPressed);
       return;
     }
@@ -507,9 +510,8 @@ export class SkeletonToolController extends ToolController {
     altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
-    const { continuousNodeCreation } = Store.getState().userConfiguration;
     const { useLegacyBindings } = userConfiguration;
-    if (continuousNodeCreation) {
+    if (isContinuousNodeCreationOn(Store.getState())) {
       if (useLegacyBindings) {
         return {
           leftDrag: "Move",

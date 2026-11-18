@@ -1168,8 +1168,8 @@ function SkeletonTracingReducer(
     }
 
     case "CREATE_TREE": {
-      const { timestamp } = action;
-      const tree = createTree(state, timestamp);
+      const { timestamp, name, color } = action;
+      const tree = createTree(state, timestamp, { name, color });
       if (tree == null) {
         return state;
       }
@@ -1302,7 +1302,7 @@ function SkeletonTracingReducer(
     }
 
     case "RESET_SKELETON_TRACING": {
-      const newTree = createTree(state, Date.now(), false);
+      const newTree = createTree(state, Date.now(), { addToActiveGroup: false });
       if (newTree == null) {
         return state;
       }

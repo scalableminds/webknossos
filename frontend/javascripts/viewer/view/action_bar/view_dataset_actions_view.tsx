@@ -20,7 +20,7 @@ import { toGroupedMenuItems } from "./menu_groups";
 import { getViewDatasetMenuGroups } from "./menu_items";
 
 type Props = {
-  layoutMenu: SubMenuType;
+  layoutMenu: SubMenuType | null;
 };
 
 export default function ViewDatasetActionsView(props: Props) {

@@ -32,6 +32,7 @@ import type {
   APIDataset,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
+  APISettings,
   APITracingStoreAnnotation,
   MutableAPIDataset,
   ServerEditableMapping,
@@ -109,6 +110,7 @@ import {
   validateShortcutMapText,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { getTransformedDatasetCenter } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
@@ -381,6 +383,13 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
   }
 }
 
+function removeUnavailableViewModes(settings: APISettings): APISettings {
+  if (getViewerCapabilities().hasFlightMode) {
+    return settings;
+  }
+  return { ...settings, allowedModes: settings.allowedModes.filter((mode) => mode !== "flight") };
+}
+
 function initializeAnnotation(
   _annotation: APIAnnotation,
   version: number,
@@ -391,7 +400,9 @@ function initializeAnnotation(
   // This method is not called for the View mode
   const { dataset, save: saveState } = Store.getState();
   let annotation = _annotation;
-  const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
+  const { allowedModes, preferredMode } = determineAllowedModes(
+    removeUnavailableViewModes(annotation.settings),
+  );
 
   extend(annotation.settings, {
     allowedModes,

@@ -1,0 +1,88 @@
+import once from "lodash-es/once";
+import { Toolkit } from "viewer/model/accessors/tool_accessor";
+import {
+  isLayerRegistrationAnnotationIframe,
+  isLayerRegistrationLandmarkIframe,
+} from "viewer/view/layer_registration/layer_registration_protocol";
+
+// What the viewer offers where it runs. Everything is on in the normal viewer. Embedded viewers,
+// such as the landmark iframes of the layer registration page, turn parts of it off.
+export type ViewerCapabilities = {
+  // Without a scene, the viewer only loads, edits and saves the annotation, e.g. through the
+  // cross-origin API as the annotation iframe of the layer registration page. It shows no UI and
+  // renders nothing, so it creates no WebGL context and loads no data to save resources.
+  hasScene: boolean;
+  // Whether changed user settings, dataset settings and layouts are stored.
+  shouldPersistSettings: boolean;
+  // The share button, the menu entries "Share", "Zarr Links" and "Duplicate", and "Copy to my
+  // account" of sandboxes.
+  showShareAndCopyActions: boolean;
+  // Null if the user can switch between the toolkits. Otherwise, the viewer always uses this
+  // toolkit, and the tools outside of it are disabled, also for their shortcuts.
+  fixedToolkit: Toolkit | null;
+  // Without flight mode, only the orthogonal mode is available, whatever the annotation allows.
+  hasFlightMode: boolean;
+  showRightBorder: boolean;
+  // The menu entry to switch, add, delete and reset layouts.
+  showLayoutMenu: boolean;
+  showCommandPalette: boolean;
+};
+
+const DEFAULT_CAPABILITIES: ViewerCapabilities = {
+  hasScene: true,
+  shouldPersistSettings: true,
+  showShareAndCopyActions: true,
+  fixedToolkit: null,
+  hasFlightMode: true,
+  showRightBorder: true,
+  showLayoutMenu: true,
+  showCommandPalette: true,
+};
+
+// The landmark iframes are sandboxes inside the layer registration page (see
+// layer_registration_landmark_iframe.ts). They offer nothing that leaves the page, opens a
+// landmark iframe without the page around it, or changes what the page set up.
+const LAYER_REGISTRATION_LANDMARK_IFRAME_CAPABILITIES: ViewerCapabilities = {
+  hasScene: true,
+  // The landmark iframes force some settings, which must not end up in the user's account or in
+  // the layouts of the normal viewer.
+  shouldPersistSettings: false,
+  // Links (Share, Zarr Links) would point to the sandbox of the landmark iframe, which only exists
+  // inside the page. "Copy To My Account" would open the copy inside the landmark iframe and reload
+  // it, which breaks the page. The page saves the landmarks anyway.
+  showShareAndCopyActions: false,
+  // The landmark iframes only offer the tools for placing landmarks.
+  fixedToolkit: Toolkit.LANDMARKS,
+  // Landmarks are placed in orthogonal mode only. Flight mode switches to all tools and creates
+  // nodes without landmark names.
+  hasFlightMode: false,
+  // The tabs of the right border (e.g. the dataset info with its links) break the page.
+  showRightBorder: false,
+  // The landmark iframes always start with the same layout (see
+  // getLayerRegistrationLandmarkIframeLayoutConfig), so switching or storing layouts has no effect.
+  showLayoutMenu: false,
+  // The command palette can leave the page or undo the forced settings.
+  showCommandPalette: false,
+};
+
+// The annotation iframe is a hidden iframe of the layer registration page. The page uses it to
+// read and save the landmarks of the layer registration annotation, so it needs no scene.
+const LAYER_REGISTRATION_ANNOTATION_IFRAME_CAPABILITIES: ViewerCapabilities = {
+  ...DEFAULT_CAPABILITIES,
+  hasScene: false,
+};
+
+// Computed once, because the role of a viewer (and with it the URL params) is fixed while its
+// page runs: the landmark iframes block navigation (see
+// blockLayerRegistrationLandmarkIframeNavigation), the annotation iframe shows no UI to navigate
+// with, and the outer frame never has these params. Leaving one of the iframes loads a new page,
+// which computes the capabilities again. This is also why the role is not part of the Redux
+// store: it never changes.
+export const getViewerCapabilities = once((): ViewerCapabilities => {
+  if (isLayerRegistrationAnnotationIframe()) {
+    return LAYER_REGISTRATION_ANNOTATION_IFRAME_CAPABILITIES;
+  }
+  return isLayerRegistrationLandmarkIframe()
+    ? LAYER_REGISTRATION_LANDMARK_IFRAME_CAPABILITIES
+    : DEFAULT_CAPABILITIES;
+});

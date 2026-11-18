@@ -50,6 +50,7 @@ import {
   LayoutEvents,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
 import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import NumberSliderSetting from "./left_border_tabs/components/number_slider_setting";
@@ -275,9 +276,10 @@ function ModesView() {
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
+  const { fixedToolkit } = getViewerCapabilities();
 
   // The outer div is necessary for proper spacing.
-  return isViewMode || isReadOnly || !isOrthoMode ? null : (
+  return isViewMode || isReadOnly || !isOrthoMode || fixedToolkit != null ? null : (
     <div>
       <Space.Compact>
         <ToolkitView />
@@ -403,17 +405,19 @@ class ActionBarView extends PureComponent<Props, State> {
         isJobAvailable(dataset.dataStore, jobCommand, this.props.activeOrganization),
       );
 
-    const layoutMenu = getLayoutMenu({
-      ...layoutProps,
-      addNewLayout: () => {
-        this.setState({
-          isNewLayoutModalOpen: true,
-        });
-      },
-      onResetLayout: this.handleResetLayout,
-      onSelectLayout: layoutProps.setCurrentLayout,
-      onDeleteLayout: this.handleLayoutDeleted,
-    });
+    const layoutMenu = getViewerCapabilities().showLayoutMenu
+      ? getLayoutMenu({
+          ...layoutProps,
+          addNewLayout: () => {
+            this.setState({
+              isNewLayoutModalOpen: true,
+            });
+          },
+          onResetLayout: this.handleResetLayout,
+          onSelectLayout: layoutProps.setCurrentLayout,
+          onDeleteLayout: this.handleLayoutDeleted,
+        })
+      : null;
 
     const aiJobsUnsupportedReason = getAIJobsUnsupportedReason(dataset);
     const shouldDisableAIJobButton = !getIsAIAnalysisEnabled() || aiJobsUnsupportedReason != null;

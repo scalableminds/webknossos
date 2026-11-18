@@ -411,16 +411,12 @@ function splitTreeByNodes(
           };
         } else {
           // Create new tree
-          const immutableNewTree = createTree(
-            intermediateState,
-            timestamp,
-            true,
-            activeTree.name,
-            activeTree.type,
-            activeTree.edgesAreVisible,
-            [],
-            activeTree.agglomerateInfo,
-          );
+          const immutableNewTree = createTree(intermediateState, timestamp, {
+            name: activeTree.name,
+            type: activeTree.type,
+            edgesAreVisible: activeTree.edgesAreVisible,
+            agglomerateInfo: activeTree.agglomerateInfo,
+          });
 
           // Cast to mutable tree type since we want to mutably do the split
           // in this reducer for performance reasons.
@@ -526,15 +522,29 @@ export function deleteBranchPoint(
   return null;
 }
 
+type CreateTreeOptions = {
+  addToActiveGroup?: boolean;
+  // Without a name or color, they are generated from the tree id.
+  name?: string;
+  color?: Vector3;
+  type?: TreeType;
+  edgesAreVisible?: boolean;
+  metadata?: MetadataEntryProto[];
+  agglomerateInfo?: TreeAgglomerateInfo;
+};
+
 export function createTree(
   state: WebknossosState,
   timestamp: number,
-  addToActiveGroup: boolean = true,
-  name?: string,
-  type: TreeType = TreeTypeEnum.DEFAULT,
-  edgesAreVisible: boolean = true,
-  metadata: MetadataEntryProto[] = [],
-  agglomerateInfo?: TreeAgglomerateInfo | undefined,
+  {
+    addToActiveGroup = true,
+    name,
+    color,
+    type = TreeTypeEnum.DEFAULT,
+    edgesAreVisible = true,
+    metadata = [],
+    agglomerateInfo,
+  }: CreateTreeOptions = {},
 ): Tree | null {
   const skeletonTracing = getSkeletonTracing(state.annotation);
   if (skeletonTracing == null) {
@@ -557,7 +567,7 @@ export function createTree(
     treeId: newTreeId,
     nodes: new DiffableMap(),
     timestamp,
-    color: ColorGenerator.distinctColorForId(newTreeId),
+    color: color ?? ColorGenerator.distinctColorForId(newTreeId),
     branchPoints: [],
     edges: new EdgeCollection(),
     comments: [],
@@ -1010,12 +1020,9 @@ export function extractPathAsNewTree(
   sourceTree: Tree,
   pathOfNodeIds: number[],
 ): Tree | null {
-  const newTree = createTree(
-    state,
-    Date.now(),
-    true,
-    `Path from node ${pathOfNodeIds[0]} to ${pathOfNodeIds[pathOfNodeIds.length - 1]}`,
-  );
+  const newTree = createTree(state, Date.now(), {
+    name: `Path from node ${pathOfNodeIds[0]} to ${pathOfNodeIds[pathOfNodeIds.length - 1]}`,
+  });
 
   if (newTree == null) {
     return null;

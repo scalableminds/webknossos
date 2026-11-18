@@ -65,6 +65,8 @@ import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
+import type { LandmarkPairInfo } from "./view/layer_registration/helpers/layer_registration_helpers";
+import type { LayerRegistrationViewState } from "./view/layer_registration/layer_registration_protocol";
 
 export type UserBoundingBoxForServer = {
   boundingBox: BoundingBoxObject;
@@ -751,6 +753,14 @@ export type OperationContextState = {
   }>;
 };
 
+// What the layer registration page tells a landmark iframe (see
+// layer_registration_landmark_iframe.ts). The page sends each part with the cross-origin command of
+// the same name. Null until it did, and always null outside of the landmark iframes.
+export type LayerRegistrationLandmarkIframeState = {
+  readonly viewState: LayerRegistrationViewState | null;
+  readonly landmarkPairInfo: LandmarkPairInfo | null;
+};
+
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
@@ -774,6 +784,7 @@ export type WebknossosState = {
   readonly localSkeletonState: LocalSkeletonState;
   readonly localAnnotationState: LocalAnnotationState;
   readonly operationContext: OperationContextState;
+  readonly layerRegistrationLandmarkIframe: LayerRegistrationLandmarkIframeState;
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;

@@ -26,6 +26,8 @@ export function* ensureWkInitialized(): Saga<void> {
   yield* take("WK_INITIALIZED");
 }
 
+// Never returns in a viewer without a scene (see ViewerCapabilities.hasScene), so sagas that need
+// the scene don't run there.
 export function* ensureSceneControllerInitialized(): Saga<void> {
   if (isSceneControllerInitialized) return;
   yield* take("SCENE_CONTROLLER_INITIALIZED");

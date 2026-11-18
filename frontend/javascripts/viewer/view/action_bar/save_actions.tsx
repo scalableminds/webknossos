@@ -22,6 +22,7 @@ import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action_bar/save_button";
 import ButtonComponent from "viewer/view/components/button_component";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import UndoRedoActions from "./undo_redo_actions";
 
 const ButtonWithAuthentication = withAuthentication<ButtonProps, typeof Button>(Button);
@@ -141,7 +142,9 @@ function SaveActions() {
     return (
       <Space.Compact>
         <UndoRedoActions hasTracing={hasTracing} isBusy={isBusy} />
-        <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
+        {getViewerCapabilities().showShareAndCopyActions ? (
+          <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
+        ) : null}
       </Space.Compact>
     );
   }

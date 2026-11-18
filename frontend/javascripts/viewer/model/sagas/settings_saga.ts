@@ -13,6 +13,7 @@ import { type Saga, select, take } from "viewer/model/sagas/effect_generators";
 import { callWithAbortSignal } from "viewer/model/sagas/saga_helpers";
 import { SETTINGS_RETRY_OPTIONS } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
 import { getMappingFromLayerNameToBaseDatasetLayerName } from "../accessors/dataset_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
@@ -21,6 +22,7 @@ import { ensureWkInitialized } from "./ready_sagas";
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
+  if (!getViewerCapabilities().shouldPersistSettings) return;
   const userConfiguration = yield* select((state) => state.userConfiguration);
   const result = yield* call(
     updateUserConfiguration,
@@ -39,6 +41,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
+  if (!getViewerCapabilities().shouldPersistSettings) return;
   const dataset = yield* select((state) => state.dataset);
   const layerNamesOfDatasetToFallbackNameMaybe =
     getMappingFromLayerNameToBaseDatasetLayerName(dataset);
@@ -129,9 +132,15 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
 
 function* ensureValidToolkit(): Saga<void> {
   /*
-   * Default to the ALL_TOOLS toolkit if the annotation/dataset is read-only.
+   * Use the fixed toolkit of the viewer if it has one (see ViewerCapabilities). Otherwise,
+   * default to the ALL_TOOLS toolkit if the annotation/dataset is read-only.
    */
   yield* call(ensureWkInitialized);
+  const { fixedToolkit } = getViewerCapabilities();
+  if (fixedToolkit != null) {
+    yield* put(updateUserSettingAction("activeToolkit", fixedToolkit));
+    return;
+  }
   const isViewMode = yield* select(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );

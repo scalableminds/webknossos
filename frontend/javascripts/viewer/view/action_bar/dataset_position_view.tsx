@@ -18,6 +18,7 @@ import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import { ShareButton } from "viewer/view/action_bar/share_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
 
 const warningColors: React.CSSProperties = {
@@ -149,7 +150,9 @@ function DatasetPositionView() {
           />
         </FastTooltip>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
-        <ShareButton dataset={dataset} style={iconColoringStyle} />
+        {getViewerCapabilities().showShareAndCopyActions ? (
+          <ShareButton dataset={dataset} style={iconColoringStyle} />
+        ) : null}
       </Space.Compact>
     </FastTooltip>
   );

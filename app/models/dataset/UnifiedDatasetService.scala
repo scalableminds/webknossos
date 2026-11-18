@@ -15,6 +15,8 @@ import models.annotation.{
   AnnotationType,
   AnnotationVisibility
 }
+import com.scalableminds.util.Msg
+import models.annotation.TracingStoreService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO}
@@ -61,7 +63,8 @@ class UnifiedDatasetService @Inject() (
     organizationDAO: OrganizationDAO,
     teamDAO: TeamDAO,
     teamService: TeamService,
-    userDAO: UserDAO
+    userDAO: UserDAO,
+    tracingStoreService: TracingStoreService
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
@@ -294,5 +297,60 @@ class UnifiedDatasetService @Inject() (
         "skipped" -> skipped,
         "failed" -> failed
       )
+    }
+
+  // B5: records where a layer added via compose/addLayer really lives (the source's own origin if it has one).
+  def recordAddedLayerOrigin(targetDatasetId: ObjectId, request: ComposeRequestLayer): Fox[Unit] =
+    for {
+      sourceOrigins <- datasetLayerOriginDAO.findAllForDataset(request.sourceDatasetId)
+      origin = sourceOrigins.find(_.layerName == request.sourceLayerName) match {
+        case Some(o) =>
+          DatasetLayerOrigin(targetDatasetId, request.targetLayerName, o._sourceDataset, o.sourceLayerName)
+        case None =>
+          DatasetLayerOrigin(targetDatasetId, request.targetLayerName, request.sourceDatasetId, request.sourceLayerName)
+      }
+      _ <- datasetLayerOriginDAO.insertAll(Seq(origin))
+    } yield ()
+
+  // B5: removes a data layer from a virtual dataset. Layers that a volume annotation layer extends cannot be removed.
+  def removeDataLayer(dataset: Dataset, user: User, layerName: String): Fox[Unit] = {
+    given ctx: DBAccessContext = GlobalAccessContext
+    for {
+      _ <- datasetService.assertEditableBy(dataset, user)
+      _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
+      dataSource <- datasetService.usableDataSourceFor(dataset)
+      _ <- Fox.fromBool(dataSource.dataLayers.exists(_.name == layerName)) ?~> s"Data layer $layerName not found."
+      _ <- Fox.fromBool(dataSource.dataLayers.length > 1) ?~> "A dataset needs at least one data layer."
+      extendedLayerNames <- layerNamesExtendedByVolumeLayers(dataset)
+      _ <- Fox.fromBool(!extendedLayerNames.contains(layerName)) ?~>
+        s"The data layer $layerName is extended by a volume annotation layer. Remove that annotation layer first."
+      _ <- datasetService.updateDataSourceFromUserChanges(
+        dataset,
+        dataSource.copy(dataLayers = dataSource.dataLayers.filterNot(_.name == layerName)),
+        Seq.empty,
+        Seq.empty
+      )
+      _ <- datasetLayerOriginDAO.deleteOne(dataset._id, layerName)
+      updated <- datasetDAO.findOne(dataset._id)
+      _ <- datasetService.scanRealpathsIfVirtual(updated)
+      _ <- datasetService.writeMirrorForVirtual(updated)
+    } yield ()
+  }
+
+  private def layerNamesExtendedByVolumeLayers(dataset: Dataset): Fox[Seq[String]] =
+    dataset._annotation match {
+      case None               => Fox.successful(Seq.empty)
+      case Some(annotationId) =>
+        for {
+          annotation <- annotationDAO.findOne(annotationId)(using GlobalAccessContext)
+          volumeLayers = annotation.volumeAnnotationLayers
+          fallbackNames <-
+            if (volumeLayers.isEmpty) Fox.successful(Seq.empty)
+            else
+              for {
+                client <- tracingStoreService.clientFor(dataset)
+                tracings <- client.getVolumeTracings(volumeLayers.map(l => Some(l.tracingId)))
+              } yield tracings.tracings.flatMap(_.tracing).flatMap(_.fallbackLayer)
+        } yield fallbackNames
     }
 }

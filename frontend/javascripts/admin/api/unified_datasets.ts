@@ -52,3 +52,20 @@ export function convertAnnotationToDataset(
     showErrorToast: false,
   });
 }
+
+// Links a data layer of another dataset into a virtual dataset (B5, reuses compose/addLayer).
+export function addLayerFromOtherDataset(
+  targetDatasetId: string,
+  request: { sourceDatasetId: string; sourceLayerName: string; targetLayerName: string },
+): Promise<void> {
+  return Request.sendJSONReceiveJSON(`/api/datasets/${targetDatasetId}/compose/addLayer`, {
+    method: "POST",
+    data: { ...request, transformations: null },
+  });
+}
+
+export function removeDataLayer(datasetId: string, layerName: string): Promise<void> {
+  return Request.receiveJSON(`/api/datasets/${datasetId}/layers/${encodeURIComponent(layerName)}`, {
+    method: "DELETE",
+  });
+}

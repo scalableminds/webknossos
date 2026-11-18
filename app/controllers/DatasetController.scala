@@ -176,6 +176,7 @@ class DatasetController @Inject() (
     mailchimpClient: MailchimpClient,
     wkExploreRemoteLayerService: WKExploreRemoteLayerService,
     composeService: ComposeService,
+    unifiedDatasetService: UnifiedDatasetService,
     rpc: RPC,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -782,6 +783,9 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[ComposeRequestLayer]) { implicit request =>
       for {
         _ <- composeService.addLayer(datasetId, request.body, request.identity) ?~> Msg.Dataset.Compose.addLayerFailed
+        _ <- Fox.runIf(conf.Features.unifiedDatasets)(
+          unifiedDatasetService.recordAddedLayerOrigin(datasetId, request.body)
+        )
       } yield Ok
     }
 

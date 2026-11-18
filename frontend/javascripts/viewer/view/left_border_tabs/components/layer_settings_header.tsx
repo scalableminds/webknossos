@@ -78,6 +78,8 @@ import type { DatasetLayerConfiguration, StoreDataset, VolumeTracing } from "vie
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
+import { removeDataLayerIfConfirmed } from "viewer/view/left_border_tabs/remove_data_layer";
+import { FIXED_DATA_LAYERS_EXPLANATION } from "viewer/view/left_border_tabs/unified_layer_actions";
 import { validateReadableLayerName } from "../modals/add_volume_layer_modal";
 import { DragHandle, DummyDragHandle } from "./drag_handle";
 import LayerInfoIconWithTooltip from "./layer_info_icon_with_tooltip";
@@ -435,6 +437,19 @@ export default function LayerSettingsHeader({
     },
   });
 
+  // Unified datasets prototype (B5): data layers can only be removed from virtual datasets.
+  const getRemoveDataLayerItem = (): ItemType => ({
+    key: "removeDataLayer",
+    icon: <DeleteOutlined />,
+    disabled: !dataset.isVirtual,
+    label: (
+      <FastTooltip title={dataset.isVirtual ? null : FIXED_DATA_LAYERS_EXPLANATION}>
+        <span>Remove this data layer</span>
+      </FastTooltip>
+    ),
+    onClick: () => removeDataLayerIfConfirmed(dataset.id, layerName),
+  });
+
   const getClipItem = (): ItemType => {
     const editModeAddendum = isInEditMode
       ? "In Edit Mode, the histogram's range will be adjusted, too."
@@ -549,6 +564,7 @@ export default function LayerSettingsHeader({
     isAnnotationLayer && !isOnlyAnnotationLayer && (!isUnifiedView || mayEditUnified)
       ? getDeleteAnnotationLayerItem()
       : null,
+    isUnifiedView && !isAnnotationLayer && dataset.isEditable ? getRemoveDataLayerItem() : null,
     isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
     !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,

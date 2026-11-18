@@ -85,4 +85,14 @@ class UnifiedDatasetController @Inject() (
         report <- unifiedDatasetService.convertAnnotations(organizationId, limit.getOrElse(1000))
       } yield Ok(report)
     }
+
+  // B5: removes a data layer from a virtual dataset.
+  def removeDataLayer(datasetId: ObjectId, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.fox { implicit request =>
+      for {
+        _ <- assertFeatureEnabled
+        dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+        _ <- unifiedDatasetService.removeDataLayer(dataset, request.identity, layerName)
+      } yield Ok
+    }
 }

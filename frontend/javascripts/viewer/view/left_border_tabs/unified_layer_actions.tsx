@@ -12,9 +12,10 @@ import { mayEditUnifiedDataset } from "viewer/model/accessors/unified_dataset_ac
 import { pushSaveQueueTransactionIsolated } from "viewer/model/actions/save_actions";
 import { addLayerToAnnotation } from "viewer/model/sagas/volume/update_actions";
 import { Model } from "viewer/singletons";
+import AddLayerFromDatasetModal from "./modals/add_layer_from_dataset_modal";
 import AddSkeletonLayerModal from "./modals/add_skeleton_layer_modal";
 
-const FIXED_DATA_LAYERS_EXPLANATION =
+export const FIXED_DATA_LAYERS_EXPLANATION =
   "This dataset's data layers are fixed. Make a copy to add or remove data layers.";
 
 function useAddSkeletonLayer() {
@@ -56,6 +57,25 @@ function AddSkeletonLayerButton({ disabledReason }: { disabledReason: string | n
   );
 }
 
+function AddLayerFromDatasetButton({ disabledReason }: { disabledReason: string | null }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  return (
+    <>
+      <FastTooltip title={disabledReason}>
+        <Button
+          block
+          icon={<PlusOutlined />}
+          disabled={disabledReason != null}
+          onClick={() => setIsModalOpen(true)}
+        >
+          Add layer from another dataset
+        </Button>
+      </FastTooltip>
+      {isModalOpen ? <AddLayerFromDatasetModal onCancel={() => setIsModalOpen(false)} /> : null}
+    </>
+  );
+}
+
 export default function UnifiedLayerActions({
   onShowAddVolumeLayerModal,
 }: {
@@ -64,6 +84,7 @@ export default function UnifiedLayerActions({
   const mayEdit = useWkSelector(mayEditUnifiedDataset);
   const hasSkeletonLayer = useWkSelector((state) => state.annotation.skeleton != null);
   const isVirtualDataset = useWkSelector((state) => state.dataset.isVirtual);
+  const isDatasetEditable = useWkSelector((state) => state.dataset.isEditable);
   const { isDisabled: mayNotEditLayerSet, explanation: reasonForCantEditLayerSet } = useWkSelector(
     (state) => isEditingAnnotationLayerSetDisabled(state),
   );
@@ -92,15 +113,15 @@ export default function UnifiedLayerActions({
             Add volume layer
           </Button>
         </FastTooltip>
-        <FastTooltip
-          title={
-            isVirtualDataset ? "Coming soon in this prototype." : FIXED_DATA_LAYERS_EXPLANATION
+        <AddLayerFromDatasetButton
+          disabledReason={
+            !isVirtualDataset
+              ? FIXED_DATA_LAYERS_EXPLANATION
+              : !isDatasetEditable
+                ? "You may not change the data layers of this dataset."
+                : null
           }
-        >
-          <Button block icon={<PlusOutlined />} disabled>
-            Add layer from another dataset
-          </Button>
-        </FastTooltip>
+        />
       </Flex>
     </>
   );

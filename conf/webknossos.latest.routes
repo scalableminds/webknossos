@@ -119,6 +119,7 @@ POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary           
 POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 POST          /datasets/:datasetId/backingAnnotation                                            controllers.UnifiedDatasetController.backingAnnotation(datasetId: ObjectId, sharingToken: Option[String])
+DELETE        /datasets/:datasetId/layers/:layerName                                            controllers.UnifiedDatasetController.removeDataLayer(datasetId: ObjectId, layerName: String)
 POST          /datasets/:datasetId/copy                                                         controllers.UnifiedDatasetController.copy(datasetId: ObjectId, sharingToken: Option[String])
 GET           /datasets/:datasetId/dataSourceForSuperUser                                       controllers.DatasetController.dataSourceForSuperUser(datasetId: ObjectId)
 POST          /datasets/:datasetId/duplicateToOrga                                              controllers.DatasetController.duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String)

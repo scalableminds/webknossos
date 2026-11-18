@@ -77,8 +77,9 @@ object RouteScopes {
     "LegacyApiController.reserveUploadToPathsForPreliminaryV14" -> Scope(dataset, ScopeMode.write)
   )
 
-  // Actions whose HTTP method does not describe what they do.
-  private val methodOverrides: Map[String, ScopeMode.Value] = Map(
+  // Actions whose HTTP method does not describe what they do. Not private so that ScopeTestSuite can check that every
+  // entry refers to an existing route.
+  val methodOverrides: Map[String, ScopeMode.Value] = Map(
     "ConfigurationController.readDatasetViewConfiguration" -> ScopeMode.read,
     "TaskController.listTasks" -> ScopeMode.read,
     // Loads data and returns a mask for it, stores nothing.

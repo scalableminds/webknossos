@@ -13,7 +13,7 @@ import org.apache.http.client.utils.URIBuilder
 import play.api.libs.json.{JsArray, JsObject, JsString, JsValue, Json}
 import play.api.http.HeaderNames
 import play.api.mvc.RequestHeader
-import security.{RandomIDGenerator, Scope, ScopeMode, ScopedApiTokenService}
+import security.{RandomIDGenerator, ScopeMode, ScopeSet, ScopedApiTokenService}
 import utils.WkConf
 
 import java.net.URI
@@ -399,7 +399,7 @@ object OAuthService {
   private val registeredClientPrefix = "wkoc_"
   private val refreshTokenPrefix = "wkor_"
 
-  // The levels the consent page offers are those of security.Scope.Set. They are also the OAuth scope values.
+  // The levels the consent page offers are those of security.ScopeSet. They are also the OAuth scope values.
   // Preselected on the consent page if the client asks for no level, so that choosing more is a deliberate step.
   val defaultLevel: ScopeMode.Value = ScopeMode.read
 
@@ -407,7 +407,7 @@ object OAuthService {
   def levelFromScope(scope: Option[String]): ScopeMode.Value =
     scope.toList
       .flatMap(_.split(' ').toList)
-      .flatMap(Scope.Set.levelFromString)
+      .flatMap(ScopeSet.levelFromString)
       .maxByOption(ScopeMode.rank)
       .getOrElse(defaultLevel)
 

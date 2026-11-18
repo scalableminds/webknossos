@@ -24,7 +24,16 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.UserAwareRequest
 import play.silhouette.impl.authenticators.BearerTokenAuthenticator
-import security.{RandomIDGenerator, Scope, ScopeMode, ScopedApiTokenService, URLSharing, WkEnv, WkSilhouetteEnvironment}
+import security.{
+  RandomIDGenerator,
+  Scope,
+  ScopeMode,
+  ScopeSet,
+  ScopedApiTokenService,
+  URLSharing,
+  WkEnv,
+  WkSilhouetteEnvironment
+}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -145,7 +154,7 @@ class UserTokenController @Inject() (
     case Allowed
     // A value that looks like a scoped API token but is not a valid one (expired, revoked, or its grant revoked).
     case InvalidToken
-    case MissingScope(scopes: Scope.Set)
+    case MissingScope(scopes: ScopeSet)
   }
 
   /*

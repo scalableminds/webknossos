@@ -10,7 +10,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-case class ScopedApiToken(value: String, userId: ObjectId, expiresAt: Instant, grantId: ObjectId, scopes: Scope.Set)
+case class ScopedApiToken(value: String, userId: ObjectId, expiresAt: Instant, grantId: ObjectId, scopes: ScopeSet)
 
 /** Scoped API tokens are API tokens for clients that a user connected via OAuth. Today those are AI agents, which get
   * them from the MCP server for use with the WEBKNOSSOS Python library. Each one is issued under an OAuth grant (see
@@ -30,7 +30,7 @@ class ScopedApiTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantD
   private val valuePrefix = "wk_scoped_api_token_"
 
   def create(grant: OAuthGrant, expiry: FiniteDuration): Fox[ScopedApiToken] =
-    insert(grant._user, grant._id, Scope.Set.parse(grant.scopes), Instant.now + expiry)
+    insert(grant._user, grant._id, ScopeSet.parse(grant.scopes), Instant.now + expiry)
 
   /** Another token under the same grant, e.g. when an agent asks for a datastore token. It expires no later than the
     * existing one. Otherwise a scoped API token could renew itself forever, without the OAuth tokens of its grant.
@@ -44,7 +44,7 @@ class ScopedApiTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantD
   private def insert(
       userId: ObjectId,
       grantId: ObjectId,
-      scopes: Scope.Set,
+      scopes: ScopeSet,
       expiresAt: Instant
   ): Fox[ScopedApiToken] = {
     val now = Instant.now
@@ -84,7 +84,7 @@ class ScopedApiTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantD
         token._user,
         token.expirationDateTime,
         grant._id,
-        Scope.Set.parse(grant.scopes)
+        ScopeSet.parse(grant.scopes)
       )
 
   def revokeAllForGrant(grantId: ObjectId): Fox[Unit] =

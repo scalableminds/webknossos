@@ -77,72 +77,72 @@ object Scope {
       // Not classified for scoped tokens yet, so they are denied. See AlignmentProjectController in RouteScopes.
       case AccessResourceType.alignmentProject => None
     }
+}
 
-  /** The set of scopes a token carries. Note the difference between "no restriction" (an unscoped token, e.g. the
-    * regular API token) and "no permissions at all" (a scoped token with an empty set).
+/** The set of scopes a token carries. Note the difference between "no restriction" (an unscoped token, e.g. the regular
+  * API token) and "no permissions at all" (a scoped token with an empty set).
+  */
+case class ScopeSet(scopes: List[Scope]) {
+  def allows(required: Scope): Boolean = scopes.exists(_.covers(required))
+
+  override def toString: String = scopes.mkString(",")
+}
+
+object ScopeSet {
+  val empty: ScopeSet = ScopeSet(List.empty)
+
+  /** Accepts both individual scopes ("dataset:read,annotation:write") and the coarse level names that the UI offers
+    * ("write"). Unparsable entries are ignored, so they grant nothing.
     */
-  case class Set(scopes: List[Scope]) {
-    def allows(required: Scope): Boolean = scopes.exists(_.covers(required))
-
-    override def toString: String = scopes.mkString(",")
+  def parse(commaSeparated: String): ScopeSet = {
+    val entries = commaSeparated.split(',').toList.map(_.trim).filter(_.nonEmpty)
+    val fromLevels = entries.flatMap(levelFromString).flatMap(level => forLevel(level).scopes)
+    ScopeSet((entries.flatMap(Scope.fromString) ++ fromLevels).distinct)
   }
 
-  object Set {
-    val empty: Set = Set(List.empty)
+  /** Resources an agent works on. Covers everything the WEBKNOSSOS Python library talks to, so that the library works
+    * fully at the create/modify and delete levels. Note that this includes teams and users, because the library creates
+    * teams and updates users (e.g. to assign team memberships). The user scope covers all of UserController (see
+    * RouteScopes), so for an admin this includes activating and deactivating users and changing who is admin or dataset
+    * manager. The docs (docs/users/mcp.md) say so.
+    *
+    * The organization is deliberately left out and stays read-only at every level: an agent has no business changing
+    * the organization itself, and nothing in the library does.
+    */
+  private val contentResources: List[ScopeResource.Value] = List(
+    ScopeResource.dataset,
+    ScopeResource.annotation,
+    ScopeResource.task,
+    ScopeResource.project,
+    ScopeResource.job,
+    ScopeResource.script,
+    ScopeResource.aiModel,
+    ScopeResource.voxelytics,
+    ScopeResource.team,
+    ScopeResource.user
+  )
 
-    /** Accepts both individual scopes ("dataset:read,annotation:write") and the coarse level names that the UI offers
-      * ("write"). Unparsable entries are ignored, so they grant nothing.
-      */
-    def parse(commaSeparated: String): Set = {
-      val entries = commaSeparated.split(',').toList.map(_.trim).filter(_.nonEmpty)
-      val fromLevels = entries.flatMap(levelFromString).flatMap(level => forLevel(level).scopes)
-      Set((entries.flatMap(fromString) ++ fromLevels).distinct)
+  // administrate is no level: it is not part of the read/write/delete ladder (see ScopeMode.rank), so forLevel would
+  // grant it on teams and users while not even granting read on datasets.
+  // These are also the levels the consent page offers, and the OAuth scope values (see oauth.OAuthService).
+  val levels: List[ScopeMode.Value] = List(ScopeMode.read, ScopeMode.write, ScopeMode.delete)
+
+  def levelFromString(s: String): Option[ScopeMode.Value] =
+    ScopeMode.fromString(s).filter(levels.contains)
+
+  /** The three coarse permission levels offered in the UI. Each grants read on everything, plus the given mode on the
+    * resources an agent works on.
+    */
+  def forLevel(level: ScopeMode.Value): ScopeSet = {
+    val perResource = ScopeResource.values.toList.map { resource =>
+      if (contentResources.contains(resource)) Scope(resource, level) else Scope(resource, ScopeMode.read)
     }
-
-    /** Resources an agent works on. Covers everything the WEBKNOSSOS Python library talks to, so that the library works
-      * fully at the create/modify and delete levels. Note that this includes teams and users, because the library
-      * creates teams and updates users (e.g. to assign team memberships). The user scope covers all of UserController
-      * (see RouteScopes), so for an admin this includes activating and deactivating users and changing who is admin or
-      * dataset manager. The docs (docs/users/mcp.md) say so.
-      *
-      * The organization is deliberately left out and stays read-only at every level: an agent has no business changing
-      * the organization itself, and nothing in the library does.
-      */
-    private val contentResources: List[ScopeResource.Value] = List(
-      ScopeResource.dataset,
-      ScopeResource.annotation,
-      ScopeResource.task,
-      ScopeResource.project,
-      ScopeResource.job,
-      ScopeResource.script,
-      ScopeResource.aiModel,
-      ScopeResource.voxelytics,
-      ScopeResource.team,
-      ScopeResource.user
-    )
-
-    // administrate is no level: it is not part of the read/write/delete ladder (see ScopeMode.rank), so forLevel would
-    // grant it on teams and users while not even granting read on datasets.
-    // These are also the levels the consent page offers, and the OAuth scope values (see oauth.OAuthService).
-    val levels: List[ScopeMode.Value] = List(ScopeMode.read, ScopeMode.write, ScopeMode.delete)
-
-    def levelFromString(s: String): Option[ScopeMode.Value] =
-      ScopeMode.fromString(s).filter(levels.contains)
-
-    /** The three coarse permission levels offered in the UI. Each grants read on everything, plus the given mode on the
-      * resources an agent works on.
-      */
-    def forLevel(level: ScopeMode.Value): Set = {
-      val perResource = ScopeResource.values.toList.map { resource =>
-        if (contentResources.contains(resource)) Scope(resource, level) else Scope(resource, ScopeMode.read)
-      }
-      // Creating a dataset (uploading it, exploring a remote one) is gated behind administrate on the datastore
-      // side, so the levels that promise creating datasets have to grant it explicitly.
-      val datasetAdministrate =
-        if (ScopeMode.rank(level) >= ScopeMode.rank(ScopeMode.write))
-          List(Scope(ScopeResource.dataset, ScopeMode.administrate))
-        else List.empty
-      Set(perResource ++ datasetAdministrate)
-    }
+    // Creating a dataset (uploading it, exploring a remote one) is gated behind administrate on the datastore
+    // side, so the levels that promise creating datasets have to grant it explicitly.
+    val datasetAdministrate =
+      if (ScopeMode.rank(level) >= ScopeMode.rank(ScopeMode.write))
+        List(Scope(ScopeResource.dataset, ScopeMode.administrate))
+      else List.empty
+    ScopeSet(perResource ++ datasetAdministrate)
   }
 }

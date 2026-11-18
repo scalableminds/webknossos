@@ -7,7 +7,7 @@ import oauth.{AuthorizationError, OAuthService}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
-import security.{Scope, WkEnv}
+import security.{ScopeSet, WkEnv}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -33,7 +33,7 @@ class OAuthController @Inject() (
     val bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  private val levels = Scope.Set.levels
+  private val levels = ScopeSet.levels
 
   private def assertEnabled: Fox[Unit] =
     Fox.fromBool(conf.Features.mcpEnabled) ?~> "The MCP server is not enabled on this instance." ~> NOT_FOUND
@@ -126,7 +126,7 @@ class OAuthController @Inject() (
             Fox.successful(Ok(redirectJson(oauthService.denyRedirect(validated))))
           case Right(validated) =>
             for {
-              level <- Scope.Set.levelFromString(request.body.level).toFox ?~> "Invalid permission level"
+              level <- ScopeSet.levelFromString(request.body.level).toFox ?~> "Invalid permission level"
               redirectUrl <- oauthService.approve(request.identity, validated, level)
             } yield Ok(redirectJson(redirectUrl))
         }

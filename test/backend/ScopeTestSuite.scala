@@ -5,7 +5,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import scala.io.Source
 import scala.util.Using
-import security.{RouteScopes, Scope, ScopeMode, ScopeResource}
+import security.{RouteScopes, Scope, ScopeMode, ScopeResource, ScopeSet}
 
 class ScopeTestSuite extends AnyWordSpec {
 
@@ -43,33 +43,33 @@ class ScopeTestSuite extends AnyWordSpec {
       assert(!Scope(ScopeResource.dataset, ScopeMode.delete).covers(Scope(ScopeResource.annotation, ScopeMode.read)))
   }
 
-  "Scope.Set" should {
+  "ScopeSet" should {
     "parse a comma separated list and ignore unknown entries" in {
-      val parsed = Scope.Set.parse("dataset:read, annotation:write ,nonsense,dataset:bogus")
+      val parsed = ScopeSet.parse("dataset:read, annotation:write ,nonsense,dataset:bogus")
       assert(parsed.scopes.size == 2)
       assert(parsed.allows(Scope(ScopeResource.dataset, ScopeMode.read)))
       assert(parsed.allows(Scope(ScopeResource.annotation, ScopeMode.write)))
     }
 
     "round-trip through toString" in {
-      val set = Scope.Set.parse("dataset:read,annotation:delete")
-      assert(Scope.Set.parse(set.toString).scopes == set.scopes)
+      val set = ScopeSet.parse("dataset:read,annotation:delete")
+      assert(ScopeSet.parse(set.toString).scopes == set.scopes)
     }
 
     "allow nothing when empty" in
-      assert(!Scope.Set.empty.allows(Scope(ScopeResource.dataset, ScopeMode.read)))
+      assert(!ScopeSet.empty.allows(Scope(ScopeResource.dataset, ScopeMode.read)))
   }
 
-  "Scope.Set.forLevel" should {
+  "ScopeSet.forLevel" should {
     "grant read on everything at the read level" in {
-      val read = Scope.Set.forLevel(ScopeMode.read)
+      val read = ScopeSet.forLevel(ScopeMode.read)
       assert(read.allows(Scope(ScopeResource.dataset, ScopeMode.read)))
       assert(read.allows(Scope(ScopeResource.organization, ScopeMode.read)))
       assert(!read.allows(Scope(ScopeResource.dataset, ScopeMode.write)))
     }
 
     "grant writing content, but keep the organization read-only" in {
-      val write = Scope.Set.forLevel(ScopeMode.write)
+      val write = ScopeSet.forLevel(ScopeMode.write)
       assert(write.allows(Scope(ScopeResource.dataset, ScopeMode.write)))
       assert(write.allows(Scope(ScopeResource.annotation, ScopeMode.write)))
       assert(!write.allows(Scope(ScopeResource.dataset, ScopeMode.delete)))
@@ -81,7 +81,7 @@ class ScopeTestSuite extends AnyWordSpec {
     }
 
     "grant deleting content at the delete level" in {
-      val delete = Scope.Set.forLevel(ScopeMode.delete)
+      val delete = ScopeSet.forLevel(ScopeMode.delete)
       assert(delete.allows(Scope(ScopeResource.dataset, ScopeMode.delete)))
       assert(delete.allows(Scope(ScopeResource.annotation, ScopeMode.delete)))
       assert(delete.allows(Scope(ScopeResource.team, ScopeMode.delete)))
@@ -90,42 +90,42 @@ class ScopeTestSuite extends AnyWordSpec {
 
     "grant administrating datasets from the write level upwards, since that is what gates uploading one" in {
       val administrateDatasets = Scope(ScopeResource.dataset, ScopeMode.administrate)
-      assert(!Scope.Set.forLevel(ScopeMode.read).allows(administrateDatasets))
-      assert(Scope.Set.forLevel(ScopeMode.write).allows(administrateDatasets))
-      assert(Scope.Set.forLevel(ScopeMode.delete).allows(administrateDatasets))
+      assert(!ScopeSet.forLevel(ScopeMode.read).allows(administrateDatasets))
+      assert(ScopeSet.forLevel(ScopeMode.write).allows(administrateDatasets))
+      assert(ScopeSet.forLevel(ScopeMode.delete).allows(administrateDatasets))
       // Only for datasets: nothing else uses administrate, and granting it broadly would open admin routes.
-      assert(!Scope.Set.forLevel(ScopeMode.delete).allows(Scope(ScopeResource.organization, ScopeMode.administrate)))
-      assert(!Scope.Set.forLevel(ScopeMode.delete).allows(Scope(ScopeResource.annotation, ScopeMode.administrate)))
+      assert(!ScopeSet.forLevel(ScopeMode.delete).allows(Scope(ScopeResource.organization, ScopeMode.administrate)))
+      assert(!ScopeSet.forLevel(ScopeMode.delete).allows(Scope(ScopeResource.annotation, ScopeMode.administrate)))
     }
 
     "not let administrating datasets imply deleting them" in {
       // Otherwise the Create/modify level, which must be able to upload, could also delete.
-      assert(Scope.Set.forLevel(ScopeMode.write).allows(Scope(ScopeResource.dataset, ScopeMode.administrate)))
-      assert(!Scope.Set.forLevel(ScopeMode.write).allows(Scope(ScopeResource.dataset, ScopeMode.delete)))
+      assert(ScopeSet.forLevel(ScopeMode.write).allows(Scope(ScopeResource.dataset, ScopeMode.administrate)))
+      assert(!ScopeSet.forLevel(ScopeMode.write).allows(Scope(ScopeResource.dataset, ScopeMode.delete)))
     }
   }
 
-  "Scope.Set.parse" should {
+  "ScopeSet.parse" should {
     "understand the coarse level names the UI sends" in {
-      assert(Scope.Set.parse("write").scopes == Scope.Set.forLevel(ScopeMode.write).scopes)
-      assert(Scope.Set.parse("delete").scopes == Scope.Set.forLevel(ScopeMode.delete).scopes)
+      assert(ScopeSet.parse("write").scopes == ScopeSet.forLevel(ScopeMode.write).scopes)
+      assert(ScopeSet.parse("delete").scopes == ScopeSet.forLevel(ScopeMode.delete).scopes)
     }
 
     "treat an unknown level such as \"none\" as no permissions at all" in {
-      val none = Scope.Set.parse("none")
+      val none = ScopeSet.parse("none")
       assert(none.scopes.isEmpty)
       assert(!none.allows(Scope(ScopeResource.dataset, ScopeMode.read)))
     }
 
     "combine a level with individual scopes" in {
-      val combined = Scope.Set.parse("read,dataset:delete")
+      val combined = ScopeSet.parse("read,dataset:delete")
       assert(combined.allows(Scope(ScopeResource.dataset, ScopeMode.delete)))
       assert(combined.allows(Scope(ScopeResource.annotation, ScopeMode.read)))
       assert(!combined.allows(Scope(ScopeResource.annotation, ScopeMode.delete)))
     }
 
     "not treat administrate as a level" in {
-      val parsed = Scope.Set.parse("administrate")
+      val parsed = ScopeSet.parse("administrate")
       assert(parsed.scopes.isEmpty)
       assert(!parsed.allows(Scope(ScopeResource.team, ScopeMode.administrate)))
     }
@@ -230,7 +230,7 @@ class ScopeTestSuite extends AnyWordSpec {
       // classified. This is how the legacy api routes (used by clients that pin an api version, such as the
       // WEBKNOSSOS Python library) were missed at first.
       // Controllers that scoped tokens must not reach at all, see the comment in RouteScopes.
-      val intentionallyDenied = scala.collection.immutable.Set(
+      val intentionallyDenied = Set(
         "controllers.AlignmentProjectController",
         "controllers.AuthenticationController",
         "controllers.InitialDataController",
@@ -250,6 +250,16 @@ class ScopeTestSuite extends AnyWordSpec {
       }
 
       assert(unclassified.isEmpty, s"Unclassified routes: ${unclassified.mkString(", ")}")
+    }
+
+    "only have method overrides for actions that are routed" in {
+      // A renamed or removed action would otherwise leave a stale override behind, and the route would silently fall
+      // back to the mode derived from its http method.
+      val routedKeys = routedActions.map { case (_, controller, method) =>
+        s"${controller.split('.').last}.$method"
+      }.toSet
+      val stale = RouteScopes.methodOverrides.keySet.diff(routedKeys)
+      assert(stale.isEmpty, s"methodOverrides entries without a route: ${stale.mkString(", ")}")
     }
 
     "scope the legacy api routes like their current counterparts" in {

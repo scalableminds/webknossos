@@ -18,7 +18,7 @@ import scala.concurrent.ExecutionContext
   * @param clientId
   *   the URL of the client's metadata document, see OAuthClientMetadataService
   * @param scopes
-  *   as understood by security.Scope.Set.parse. The consent page offers the permission levels read, write and delete.
+  *   as understood by security.ScopeSet.parse. The consent page offers the permission levels read, write and delete.
   */
 case class OAuthGrant(
     _id: ObjectId,

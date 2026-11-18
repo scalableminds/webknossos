@@ -1,6 +1,6 @@
 import type { OAuthPermissionLevel } from "admin/rest_api";
 
-// The permission levels a user can grant to an MCP client, see security.Scope.Set.forLevel in the backend. They are
+// The permission levels a user can grant to an MCP client, see security.ScopeSet.forLevel in the backend. They are
 // ordered: each level also grants everything the ones before it grant.
 export const OAUTH_PERMISSION_LEVELS: ReadonlyArray<{
   key: OAuthPermissionLevel;

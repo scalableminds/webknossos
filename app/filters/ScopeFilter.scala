@@ -7,7 +7,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Filter, RequestHeader, Result}
 import play.api.mvc.Results.{Forbidden, InternalServerError, Unauthorized}
 import play.api.routing.Router
-import security.{RouteScopes, Scope, ScopedApiToken, ScopedApiTokenService, TokenHeaders}
+import security.{RouteScopes, Scope, ScopeSet, ScopedApiToken, ScopedApiTokenService, TokenHeaders}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -94,7 +94,7 @@ class ScopeFilter @Inject() (
 
   private def deny(
       request: RequestHeader,
-      effectiveScopes: Scope.Set,
+      effectiveScopes: ScopeSet,
       reason: String,
       nextFilter: RequestHeader => Future[Result]
   ): Future[Result] =

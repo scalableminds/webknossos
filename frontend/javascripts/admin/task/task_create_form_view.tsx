@@ -8,6 +8,7 @@ import {
   getTaskTypes,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
+import { getOnlyItem, usePreselectFormValue } from "admin/use_preselect_form_value";
 import {
   Alert,
   App,
@@ -345,6 +346,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const {
     data: taskTypes = [],
     isFetching: isFetchingTaskTypes,
+    dataUpdatedAt: taskTypesUpdatedAt,
     refetch: refetchTaskTypes,
   } = useQueryWithErrorHandling({
     queryKey: ["taskTypes"],
@@ -354,6 +356,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const {
     data: projects = [],
     isFetching: isFetchingProjects,
+    dataUpdatedAt: projectsUpdatedAt,
     refetch: refetchProjects,
   } = useQueryWithErrorHandling({
     queryKey: ["projects"],
@@ -369,6 +372,18 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     queryFn: getScripts,
     refetchOnWindowFocus: false,
   });
+  usePreselectFormValue(
+    form,
+    "taskTypeId",
+    taskId == null ? getOnlyItem(taskTypes)?.id : undefined,
+    taskTypesUpdatedAt,
+  );
+  usePreselectFormValue(
+    form,
+    "projectName",
+    taskId == null ? getOnlyItem(projects)?.name : undefined,
+    projectsUpdatedAt,
+  );
   const [specificationType, setSpecificationType] = useState<Specification>(
     SpecificationEnum.Manual,
   );

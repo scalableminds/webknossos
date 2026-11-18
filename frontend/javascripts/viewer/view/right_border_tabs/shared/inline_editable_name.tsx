@@ -16,7 +16,7 @@ type Props = {
   style?: React.CSSProperties;
   // Omitted for a name that is not truncated (the expanded row shows it in full).
   title?: string | undefined;
-  onClick?: (() => void) | undefined;
+  onClick?: ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
   onStartEditing: () => void;
   onCommit: (newName: string) => void;
   onFinishEditing: () => void;
@@ -84,6 +84,9 @@ export function InlineEditableName({
         // Enter commits by blurring, so that saving has exactly one code path.
         onPressEnter={() => inputRef.current?.blur()}
         onKeyDown={(event) => {
+          // The tree handles keys such as the arrow keys on its way up and would prevent their
+          // default behavior (e.g., moving the caret).
+          event.stopPropagation();
           if (event.key === "Escape") {
             event.currentTarget.value = editableValue;
             inputRef.current?.blur();

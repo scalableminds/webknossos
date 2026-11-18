@@ -18,9 +18,10 @@ import constants, {
   OrthoViewValuesWithoutTDView,
 } from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { getUnitPerPixel, getVoxelPerPixel } from "viewer/model/scaleinfo";
-import type { Flycam, WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import Dimensions from "../dimensions";
 
 export function getTDViewportSize(state: WebknossosState): [number, number] {
@@ -30,9 +31,9 @@ export function getTDViewportSize(state: WebknossosState): [number, number] {
 export function getTDViewZoom(state: WebknossosState) {
   const { width } = getInputCatcherRect(state, OrthoViews.TDView);
   const [viewplaneWidth] = getTDViewportSize(state);
-  const { factor } = state.dataset.dataSource.scale;
-  // We only need to calculate scaleX as scaleY would have the same value.
-  const scaleX = viewplaneWidth / (width * factor[0]);
+  // Like the zoom step of the other viewports, this is relative to the smallest voxel extent
+  // (see getUnitPerPixel). We only need to calculate scaleX as scaleY would have the same value.
+  const scaleX = viewplaneWidth / (width * getUnitPerPixel(getGlobalVoxelSizeFromState(state)));
   return scaleX;
 }
 export function getInputCatcherRect(state: WebknossosState, viewport: Viewport): Rect {
@@ -84,13 +85,6 @@ export function getInputCatcherAspectRatio(state: WebknossosState, viewport: Vie
 //   const scaledHeight = width / (!useWidth ? 1 : aspectRatio);
 //   return [scaledWidth, scaledHeight];
 // }
-// Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
-export function getViewportScale(state: WebknossosState, viewport: Viewport): [number, number] {
-  const { width, height } = getInputCatcherRect(state, viewport);
-  const xScale = width / constants.VIEWPORT_WIDTH;
-  const yScale = height / constants.VIEWPORT_WIDTH;
-  return [xScale, yScale];
-}
 
 export type PositionWithRounding = { rounded: Vector3; floating: Vector3 };
 
@@ -111,7 +105,7 @@ function _calculateMaybeGlobalPos(
   const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
-  const voxelPerPixel = getVoxelPerPixel(state.dataset.dataSource.scale, state.flycam.zoomStep);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep);
   const { width, height } = getInputCatcherRect(state, planeId);
   // Subtract clickPos from only half of the viewport extent as
   // the center of the viewport / the flycam position is used as a reference point.
@@ -206,7 +200,7 @@ function _calculateMaybePlaneScreenPos(
 
   const flycamPosition = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
-  const voxelPerPixel = getVoxelPerPixel(state.dataset.dataSource.scale, state.flycam.zoomStep);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep);
 
   const positionInViewportPerspective = calculateInViewportPos(
     globalPosition,
@@ -247,7 +241,7 @@ function _calculateMaybeGlobalDelta(
 ): Vector3 | null | undefined {
   let position: Vector3;
   planeId = planeId || state.viewModeData.plane.activeViewport;
-  const voxelPerPixel = getVoxelPerPixel(state.dataset.dataSource.scale, state.flycam.zoomStep);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep);
 
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
@@ -336,7 +330,7 @@ function _getViewportExtentInVoxelPerAxis(state: WebknossosState): Vector3 {
    * for anisotropic voxel sizes so the result is expressed in mag1 voxels, comparable to
    * bounding box/position coordinates.
    */
-  const voxelPerPixel = getVoxelPerPixel(state.dataset.dataSource.scale);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state));
   // Extents in pixels at zoom step 1
   const extents = OrthoViewValuesWithoutTDView.map((orthoView) => {
     const { width, height } = getInputCatcherRect(state, orthoView);
@@ -413,23 +407,13 @@ export function isPlaneMode(state: WebknossosState): boolean {
   return constants.MODES_PLANE.includes(viewMode);
 }
 
-// Returns the factors by which the plane geometry (which is VIEWPORT_WIDTH wide) needs to be
-// scaled so that it covers the viewport extent in the dataset unit.
-export function getPlaneScalingFactor(
-  state: WebknossosState,
-  flycam: Flycam,
-  planeID: OrthoView,
-): [number, number] {
-  const [width, height] = getPlaneExtentInUnitFromStore(state, flycam.zoomStep, planeID);
-  return [width / constants.VIEWPORT_WIDTH, height / constants.VIEWPORT_WIDTH];
-}
 export function getPlaneExtentInUnitFromStore(
   state: WebknossosState,
   zoomStep: number,
   planeID: OrthoView,
 ): [number, number] {
   const { width, height } = getInputCatcherRect(state, planeID);
-  const unitPerPixel = getUnitPerPixel(state.dataset.dataSource.scale, zoomStep);
+  const unitPerPixel = getUnitPerPixel(getGlobalVoxelSizeFromState(state), zoomStep);
   return [width * unitPerPixel, height * unitPerPixel];
 }
 export function getPlaneExtentInVoxelFromStore(
@@ -439,6 +423,6 @@ export function getPlaneExtentInVoxelFromStore(
 ): [number, number] {
   const { width, height } = getInputCatcherRect(state, planeID);
   const [u, v] = Dimensions.getIndices(planeID);
-  const voxelPerPixel = getVoxelPerPixel(state.dataset.dataSource.scale, zoomStep);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), zoomStep);
   return [width * voxelPerPixel[u], height * voxelPerPixel[v]];
 }

@@ -17,6 +17,7 @@ object Dependencies {
   private val awsVersion = "2.57.5"
   private val postgresVersion = "42.7.14"
   private val jacksonVersion = "2.22.4"
+  private val webauthn4jVersion = "0.31.11.RELEASE"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
@@ -128,7 +129,9 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % postgresVersion,
     /// WebAuthn for passkey authentication. import com.webauthn4j
-    "com.webauthn4j" % "webauthn4j-core" % "0.31.11.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind")
+    "com.webauthn4j" % "webauthn4j-core" % webauthn4jVersion exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+    // Emulated passkey authenticator for backend tests. import com.webauthn4j.test
+    "com.webauthn4j" % "webauthn4j-test" % webauthn4jVersion % Test exclude ("com.fasterxml.jackson.core", "jackson-databind")
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

@@ -32,16 +32,6 @@ const UserLocalStorage = {
     }
   },
 
-  // For values that are only a convenience: unlike setItem, a full storage is not cleared to make
-  // room, so other entries are never lost. The value is just not saved then.
-  trySetItem(key: string, value: string, isOrganizationSpecific: boolean = true): void {
-    try {
-      localStorage.setItem(prefixKey(key, isOrganizationSpecific), value);
-    } catch (exception) {
-      console.warn("localStorage.setItem failed.", exception);
-    }
-  },
-
   removeItem(key: string, isOrganizationSpecific: boolean = true): void {
     localStorage.removeItem(prefixKey(key, isOrganizationSpecific));
   },

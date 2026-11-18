@@ -37,7 +37,6 @@ import SelectExperienceDomain from "components/select_experience_domain";
 import { FormItemWithDescription } from "dashboard/dataset/helper_components";
 import { saveAs } from "file-saver";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
-import UserLocalStorage from "libs/user_local_storage";
 import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import isEqual from "lodash-es/isEqual";
@@ -317,27 +316,6 @@ type FormValues = {
   neededExperience: { domain?: string; value?: number } | undefined;
 };
 
-const LAST_USED_TASK_TYPE_KEY = "lastTaskTypeIdForNewTasks";
-const LAST_USED_PROJECT_KEY = "lastProjectNameForNewTasks";
-
-function readLastUsed(key: string): string | null {
-  try {
-    return UserLocalStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-// The only option, or else the option the user picked when they last created tasks.
-function getPreselection(optionValues: string[], lastUsedKey: string): string | undefined {
-  const onlyOption = getOnlyItem(optionValues);
-  if (onlyOption != null) {
-    return onlyOption;
-  }
-  const lastUsed = readLastUsed(lastUsedKey);
-  return lastUsed != null && optionValues.includes(lastUsed) ? lastUsed : undefined;
-}
-
 function isNonEmptyDomain(domain: string | null | undefined): domain is string {
   return domain != null && domain.trim() !== "";
 }
@@ -368,7 +346,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const {
     data: taskTypes = [],
     isFetching: isFetchingTaskTypes,
-    dataUpdatedAt: taskTypesUpdatedAt,
+    isFetchedAfterMount: hasFetchedTaskTypes,
     refetch: refetchTaskTypes,
   } = useQueryWithErrorHandling({
     queryKey: ["taskTypes"],
@@ -378,7 +356,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const {
     data: projects = [],
     isFetching: isFetchingProjects,
-    dataUpdatedAt: projectsUpdatedAt,
+    isFetchedAfterMount: hasFetchedProjects,
     refetch: refetchProjects,
   } = useQueryWithErrorHandling({
     queryKey: ["projects"],
@@ -397,24 +375,14 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   usePreselectFormValue(
     form,
     "taskTypeId",
-    taskId == null
-      ? getPreselection(
-          taskTypes.map((taskType) => taskType.id),
-          LAST_USED_TASK_TYPE_KEY,
-        )
-      : undefined,
-    taskTypesUpdatedAt,
+    taskId == null ? getOnlyItem(taskTypes)?.id : undefined,
+    hasFetchedTaskTypes,
   );
   usePreselectFormValue(
     form,
     "projectName",
-    taskId == null
-      ? getPreselection(
-          projects.map((project) => project.name),
-          LAST_USED_PROJECT_KEY,
-        )
-      : undefined,
-    projectsUpdatedAt,
+    taskId == null ? getOnlyItem(projects)?.name : undefined,
+    hasFetchedProjects,
   );
   const [specificationType, setSpecificationType] = useState<Specification>(
     SpecificationEnum.Manual,
@@ -475,8 +443,6 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       const confirmedTask = await updateTask(taskId, newTask);
       navigate(`/tasks/${confirmedTask.id}`);
     } else {
-      UserLocalStorage.trySetItem(LAST_USED_TASK_TYPE_KEY, formValues.taskTypeId);
-      UserLocalStorage.trySetItem(LAST_USED_PROJECT_KEY, formValues.projectName);
       setIsUploading(true);
       // or create a new one either from the form values or with an NML file
       let taskResponses: TaskCreationResponse[] = [];

@@ -1591,7 +1591,10 @@ export function createResumableUpload(
       chunkSize: 10 * 1024 * 1024, // 10MB
       simultaneousUploads: 3,
       chunkRetryInterval: 2000,
-      maxChunkRetries: undefined,
+      // Only retryable HTTP errors (e.g. 502/503) count towards this limit, network errors are
+      // retried indefinitely. 100 retries every 2 s give the datastore ~200 s to recover before
+      // the file fails and is retried once more with a refreshed token (see below).
+      maxChunkRetries: 100,
       fetchTimeout: 10 * 60 * 1000, // 10m
       generateUniqueIdentifier,
       // The following errors only tell Resumable-upload to not

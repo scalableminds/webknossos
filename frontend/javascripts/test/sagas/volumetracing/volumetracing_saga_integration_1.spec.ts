@@ -215,6 +215,52 @@ describe("Volume Tracing", () => {
     expect(await valueAt([16, 19, 16])).toBe(0);
   });
 
+  it<WebknossosTestContext>("Brushing a layer whose x axis is mirrored onto the plane axis paints the displayed slice", async ({
+    api,
+    mocks,
+  }) => {
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 5),
+    );
+    await api.data.reloadAllBuckets();
+    const layerName = api.data.getVolumeTracingLayerIds()[0];
+    // Rotates the layer by 90° around the y axis through [16, 16, 16]: the rendered z is
+    // 32 - x. The XY plane at z = 16 shows the layer slice x = 16, which covers the
+    // rendered z range (15, 16], i.e., it lies below the plane.
+    const center: Vector3 = [16, 16, 16];
+    Store.dispatch(
+      setLayerTransformsAction(layerName, [
+        { type: "affine", matrix: translationMatrix(V3.scale(center, -1)) },
+        {
+          type: "affine",
+          matrix: [
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [-1, 0, 0, 0],
+            [0, 0, 0, 1],
+          ],
+        },
+        { type: "affine", matrix: translationMatrix(center) },
+      ]),
+    );
+
+    const newCellId = 2n;
+    Store.dispatch(updateUserSettingAction("brushSize", 10));
+    Store.dispatch(setPositionAction(center));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
+    Store.dispatch(setActiveCellAction(newCellId));
+    Store.dispatch(startEditingAction(center, OrthoViews.PLANE_XY));
+    Store.dispatch(addToContourListAction(center));
+    Store.dispatch(finishEditingAction());
+
+    expect(hasRootSagaCrashed()).toBe(false);
+    const valueAt = (position: Vector3) => api.data.getDataValue(layerName, position);
+    expect(await valueAt([16, 16, 16])).toBe(Number(newCellId));
+    expect(await valueAt([16, 19, 19])).toBe(Number(newCellId));
+    expect(await valueAt([15, 16, 16])).toBe(0);
+    expect(await valueAt([17, 16, 16])).toBe(0);
+  });
+
   it<WebknossosTestContext>("Erasing with overwrite-empty removes only the active segment", async ({
     api,
     mocks,

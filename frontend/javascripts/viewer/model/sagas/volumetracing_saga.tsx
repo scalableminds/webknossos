@@ -345,19 +345,30 @@ export function* editVolumeLayerAsync(): Saga<never> {
         radius = V3.scale3(radiusInMag, brushMag);
         voxelToShapeSpace = voxelToRenderedSpaceMap(layerTransform, labeledMag);
         const layerToRenderedSpace = transformPointUnscaled(layerTransform);
-        getBrushCenter = (position) =>
-          V3.scale3(
+        getBrushCenter = (position) => {
+          // The position was mapped from the rendered space to the layer before.
+          // Mapping it back can turn 192 into 191.99999999, which would select
+          // the wrong slice.
+          const positionInLayer = position.map(roundIfAlmostInteger) as Vector3;
+          const center = V3.scale3(
             getBrushCenterInMag(
-              // The position was mapped from the rendered space to the layer before.
-              // Mapping it back can turn 192 into 191.99999999, which would select
-              // the wrong slice.
-              layerToRenderedSpace(position).map(roundIfAlmostInteger) as Vector3,
+              layerToRenderedSpace(positionInLayer).map(roundIfAlmostInteger) as Vector3,
               brushMag,
               diameterInMag,
               planeAxis,
             ),
             brushMag,
           );
+          // The viewport plane lies on a voxel boundary and shows the layer voxel that
+          // contains the position. If the transform mirrors the plane axis, that voxel
+          // lies below the plane in the rendered space, not above it. So, the painted
+          // slice is centered on that voxel rather than on the rendered grid.
+          const hoveredVoxelCenter = positionInLayer.map(
+            (value, axis) => (Math.floor(value / labeledMag[axis]) + 0.5) * labeledMag[axis],
+          ) as Vector3;
+          center[planeAxis] = layerToRenderedSpace(hoveredVoxelCenter)[planeAxis];
+          return center;
+        };
       } else {
         getBrushCenter = (position) =>
           getBrushCenterInMag(position, labeledMag, diameterInMag, planeAxis);

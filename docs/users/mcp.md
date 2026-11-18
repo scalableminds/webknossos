@@ -1,7 +1,7 @@
 # MCP Server
 
 WEBKNOSSOS provides an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server, so that AI agents such
-as Claude Code, Claude Desktop or Cursor can work with your WEBKNOSSOS instance via the WEBKNSOSOS python library.
+as Claude Code, Claude Desktop or Cursor can work with your WEBKNOSSOS instance via the WEBKNOSSOS Python library.
 When enabled, it is reachable at `https://<your-instance>/api/mcp`, e.g. `https://webknossos.org/api/mcp`.
 
 ## Connecting
@@ -17,6 +17,10 @@ switch to it first and connect again.
 The `MCP Agent Connections` tab of the `Developer` group in `Account Settings` shows the URL of your instance's
 server and lists the applications you connected.
 
+The agent works with your data by writing and running Python code, so it must be able to run code with network
+access to your WEBKNOSSOS instance. Claude Code and Cursor run it on your computer. For Claude Desktop and
+claude.ai, see [below](#claude-desktop-and-claudeai).
+
 ### Claude Code
 
 ```bash
@@ -29,6 +33,12 @@ Then run `/mcp` in Claude Code to connect.
 
 In the settings, go to `Connectors`, choose `Add custom connector` and enter the URL of the server, e.g.
 `https://webknossos.org/api/mcp`.
+
+!!! note
+    Claude Desktop and claude.ai cannot run code on your computer. They run the agent's Python code in a cloud
+    sandbox, which requires code execution to be enabled. The sandbox must also be allowed to reach your WEBKNOSSOS
+    instance: in the organization settings for code execution, add the domain of your instance to the allowed domains.
+    Otherwise, the agent can connect and read the documentation, but cannot work with your data.
 
 ### Other clients
 

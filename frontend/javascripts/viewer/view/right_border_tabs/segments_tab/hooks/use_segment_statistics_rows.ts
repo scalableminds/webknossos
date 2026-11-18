@@ -185,6 +185,7 @@ export function useSegmentStatisticsRows({
         {
           key: "voxelCount",
           title: "Voxel Count",
+          category: "Size",
           value: {
             kind: "number",
             unit: "vx",
@@ -199,6 +200,7 @@ export function useSegmentStatisticsRows({
         {
           key: "volume",
           title: "Volume",
+          category: "Size",
           value: { kind: "number", unit: { dimension: 3 }, get: (row) => row.volumeInUnit3 },
           isLoading: volumes.isLoading,
           isError: volumes.isError,
@@ -212,6 +214,7 @@ export function useSegmentStatisticsRows({
       specs.push({
         key: "surfaceArea",
         title: "Surface Area",
+        category: "Size",
         value: { kind: "number", unit: { dimension: 2 }, get: (row) => row.surfaceAreaInUnit2 },
         isLoading: surfaceAreas.isLoading,
         isError: surfaceAreas.isError,
@@ -224,6 +227,7 @@ export function useSegmentStatisticsRows({
       specs.push({
         key: "maxDistance",
         title: "Max Distance",
+        category: "Shape",
         value: {
           kind: "number",
           unit: { dimension: 1 },
@@ -241,6 +245,7 @@ export function useSegmentStatisticsRows({
       specs.push({
         key: "sphericity",
         title: "Sphericity",
+        category: "Shape",
         value: {
           kind: "number",
           unit: "0–1",
@@ -260,6 +265,7 @@ export function useSegmentStatisticsRows({
         {
           key: "principalExtents",
           title: "Principal Extents",
+          category: "Shape",
           value: {
             kind: "vector",
             unit: { dimension: 1 },
@@ -285,6 +291,7 @@ export function useSegmentStatisticsRows({
         {
           key: "boundingBoxTopLeft",
           title: "Bounding Box Position",
+          category: "Location",
           value: {
             kind: "vector",
             unit: "vx",
@@ -301,6 +308,7 @@ export function useSegmentStatisticsRows({
         {
           key: "boundingBoxSize",
           title: "Bounding Box Size",
+          category: "Location",
           value: {
             kind: "vector",
             unit: "vx",
@@ -320,6 +328,7 @@ export function useSegmentStatisticsRows({
       specs.push({
         key: "centerOfMass",
         title: "Center of Mass",
+        category: "Location",
         value: {
           kind: "vector",
           unit: "vx",

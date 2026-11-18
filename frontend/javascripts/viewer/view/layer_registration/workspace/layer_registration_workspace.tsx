@@ -89,6 +89,7 @@ export function LayerRegistrationWorkspace({
     hasUnsyncedLandmarks,
     fetchLandmarks,
     stopSync,
+    flushLandmarks,
     flushAndStopSync,
     resumeSync,
   } = useLandmarkSync(sendMessage, layerNames);
@@ -200,9 +201,11 @@ export function LayerRegistrationWorkspace({
   };
 
   // Saves the layer registration annotation right away instead of waiting for its auto-save.
-  // Reloading this page closes all iframes at once, which may interrupt the auto-save.
+  // Reloading this page closes all iframes at once, which may interrupt the auto-save. Landmarks
+  // that the sync hasn't written to the annotation yet are written first.
   const forceSave = async () => {
     try {
+      await flushLandmarks();
       await sendMessage("annotation", "save");
     } catch (error) {
       handleGenericError(error as Error, "Could not save the landmarks.");

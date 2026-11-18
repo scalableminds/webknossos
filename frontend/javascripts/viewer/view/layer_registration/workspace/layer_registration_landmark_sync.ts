@@ -220,6 +220,17 @@ export class LandmarkSync {
     this.isStopped = true;
   };
 
+  // Writes the current landmarks of both landmark iframes to the layer registration annotation
+  // right away instead of with the next run, e.g. before saving. Does nothing while the sync is
+  // stopped, because then a landmark iframe may have lost its landmarks. Throws if writing fails.
+  flush = async () => {
+    await this.runningSync;
+    if (this.groupIds == null || this.isStopped) {
+      return;
+    }
+    await this.storeChangedLandmarks(await this.fetchLandmarksBySide(), this.groupIds);
+  };
+
   // Writes the current landmarks of both landmark iframes to the layer registration annotation, so
   // that a landmark placed right before is not lost, and stops the sync. Throws if writing fails.
   flushAndStop = async () => {

@@ -183,24 +183,18 @@ class UserTokenController @Inject() (
         }
     }
 
-  // Like filters.ScopeFilter: invalid scoped tokens are always denied, missing scopes only if enforcement is on.
-  private def denialFor(scopeCheck: ScopeCheck, accessRequest: UserAccessRequest): Option[String] = {
-    def describe =
-      s"${accessRequest.mode} access to ${accessRequest.resourceType} ${accessRequest.resourceId.getOrElse("")}"
+  // Like filters.ScopeFilter: scoped tokens that are invalid or lack the required scope are denied.
+  private def denialFor(scopeCheck: ScopeCheck, accessRequest: UserAccessRequest): Option[String] =
     scopeCheck match {
-      case ScopeCheck.Allowed      => None
-      case ScopeCheck.InvalidToken => Some("Not allowed for this token: it is invalid or expired.")
-      case ScopeCheck.MissingScope(scopes) if conf.WebKnossos.TokenScopes.enforced =>
-        logger.info(s"Denying $describe for scoped token (scopes $scopes): missing scope")
-        Some("Not allowed for this token, missing scope.")
+      case ScopeCheck.Allowed              => None
+      case ScopeCheck.InvalidToken         => Some("Not allowed for this token: it is invalid or expired.")
       case ScopeCheck.MissingScope(scopes) =>
-        logger.warn(
-          s"Would deny $describe for scoped token (scopes $scopes): missing scope. " +
-            "Allowing it because webKnossos.tokenScopes.enforced is false."
+        logger.info(
+          s"Denying ${accessRequest.mode} access to ${accessRequest.resourceType} " +
+            s"${accessRequest.resourceId.getOrElse("")} for scoped token (scopes $scopes): missing scope"
         )
-        None
+        Some("Not allowed for this token, missing scope.")
     }
-  }
 
   private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(using
       ctx: DBAccessContext

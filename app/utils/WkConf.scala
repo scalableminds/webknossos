@@ -129,10 +129,6 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
 
     val operatorData: String = get[String]("webKnossos.operatorData")
 
-    object TokenScopes {
-      val enforced: Boolean = get[Boolean]("webKnossos.tokenScopes.enforced")
-    }
-
     object Mcp {
       val allowInsecureClientMetadataUrls: Boolean = get[Boolean]("webKnossos.mcp.allowInsecureClientMetadataUrls")
     }
@@ -158,7 +154,6 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,
-        TokenScopes,
         Mcp,
         Datasets
       )

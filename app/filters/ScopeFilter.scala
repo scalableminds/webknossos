@@ -8,7 +8,6 @@ import play.api.mvc.{Filter, RequestHeader, Result}
 import play.api.mvc.Results.{Forbidden, InternalServerError, Unauthorized}
 import play.api.routing.Router
 import security.{RouteScopes, Scope, ScopeSet, ScopedApiToken, ScopedApiTokenService, TokenHeaders}
-import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -25,10 +24,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * credential. Datastore and tracingstore routes are not covered here at all, they are scoped in
   * UserTokenController.validateUserAccess.
   */
-class ScopeFilter @Inject() (
-    scopedApiTokenService: ScopedApiTokenService,
-    conf: WkConf
-)(implicit
+class ScopeFilter @Inject() (scopedApiTokenService: ScopedApiTokenService)(implicit
     val mat: Materializer,
     ec: ExecutionContext
 ) extends Filter
@@ -57,10 +53,10 @@ class ScopeFilter @Inject() (
           // The scopes come from the tokens' grants, read per request, so that changing them takes effect at once.
           requiredScopeFor(request) match {
             case None =>
-              deny(request, tokens.head.scopes, "This endpoint cannot be used with a scoped token", nextFilter)
+              deny(request, tokens.head.scopes, "This endpoint cannot be used with a scoped token")
             case Some(required) =>
               tokens.find(!_.scopes.allows(required)) match {
-                case Some(token) => deny(request, token.scopes, s"Missing scope $required", nextFilter)
+                case Some(token) => deny(request, token.scopes, s"Missing scope $required")
                 case None        => nextFilter(request)
               }
           }
@@ -92,23 +88,10 @@ class ScopeFilter @Inject() (
       RouteScopes.requiredScope(handlerDef.controller, handlerDef.method, request.method)
     }
 
-  private def deny(
-      request: RequestHeader,
-      effectiveScopes: ScopeSet,
-      reason: String,
-      nextFilter: RequestHeader => Future[Result]
-  ): Future[Result] =
-    if (conf.WebKnossos.TokenScopes.enforced) {
-      logger.info(s"Denying ${request.method} ${request.path} for scoped token: $reason")
-      Future.successful(
-        Forbidden(Json.obj("messages" -> Json.arr(Json.obj("error" -> s"Not allowed for this token. $reason"))))
-      )
-    } else {
-      // Permissive mode, for finding routes that still need to be classified before turning enforcement on.
-      logger.warn(
-        s"Would deny ${request.method} ${request.path} for scoped token (scopes $effectiveScopes): $reason. " +
-          "Allowing it because webKnossos.tokenScopes.enforced is false."
-      )
-      nextFilter(request)
-    }
+  private def deny(request: RequestHeader, effectiveScopes: ScopeSet, reason: String): Future[Result] = {
+    logger.info(s"Denying ${request.method} ${request.path} for scoped token (scopes $effectiveScopes): $reason")
+    Future.successful(
+      Forbidden(Json.obj("messages" -> Json.arr(Json.obj("error" -> s"Not allowed for this token. $reason"))))
+    )
+  }
 }

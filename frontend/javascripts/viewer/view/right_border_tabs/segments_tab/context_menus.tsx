@@ -63,7 +63,7 @@ import type { SegmentSelection } from "./hooks/use_segment_selection";
 import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import { withMeshFileCompatibilityCheck } from "./mesh_file_compatibility_modal";
-import { mayEditVisibleSegmentation } from "./segments_view_helper";
+import { mayEditVisibleSegmentation, removeSegmentsFromList } from "./segments_view_helper";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
@@ -234,9 +234,11 @@ function useSegmentListMenuItems({
           if (visibleSegmentationLayer == null) {
             return;
           }
-          for (const segment of segments) {
-            dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name));
-          }
+          removeSegmentsFromList(
+            dispatch,
+            visibleSegmentationLayer.name,
+            segments.map((segment) => segment.id),
+          );
         }),
       };
 

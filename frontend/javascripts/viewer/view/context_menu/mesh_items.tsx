@@ -4,6 +4,7 @@ import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { useDispatch } from "react-redux";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -32,7 +33,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
 
   const volumeTracing = useWkSelector(getActiveSegmentationTracing);
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
-  const voxelSizeFactor = useWkSelector((state) => state.dataset.dataSource.scale.factor);
+  const voxelSizeFactor = useWkSelector((state) => getGlobalVoxelSizeFromState(state).factor);
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
 
   const currentMeshFile = useWkSelector((state) =>

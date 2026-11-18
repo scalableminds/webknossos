@@ -13,6 +13,7 @@ import { useState } from "react";
 import { shallowEqual } from "react-redux";
 import { LongUnitToShortUnitMap } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveNode,
   getNodePosition,
@@ -52,7 +53,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== NO_SEGMENT_ID;
 
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
-  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const voxelSize = useWkSelector(getGlobalVoxelSizeFromState);
   const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
   const additionalCoordinates = useWkSelector(
     (state) => state.flycam.additionalCoordinates || undefined,

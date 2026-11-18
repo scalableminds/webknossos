@@ -5,7 +5,10 @@ import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "viewer/constants";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
-import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getGlobalVoxelSizeFromState,
+  getTransformsForSkeletonLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
@@ -56,7 +59,7 @@ class NodeShader {
         value: getZoomValue(state.flycam),
       },
       unitPerPixelAtZoomStep1: {
-        value: getUnitPerPixel(state.dataset.dataSource.scale),
+        value: getUnitPerPixel(getGlobalVoxelSizeFromState(state)),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,
@@ -112,6 +115,12 @@ class NodeShader {
         (_state) => _state.userConfiguration.highlightCommentedNodes,
         (highlightCommentedNodes) => {
           this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
+        },
+      ),
+      listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState),
+        (voxelSize) => {
+          this.uniforms.unitPerPixelAtZoomStep1.value = getUnitPerPixel(voxelSize);
         },
       ),
       listenToStoreProperty(

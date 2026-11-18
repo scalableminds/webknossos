@@ -32,7 +32,10 @@ export function generateTpsInitialization(
     );
   }
 
+  // The TPS operates in the physical space of the voxel size it was created with.
   const code = `
+const vec3 TPS_scale_${name} = vec3(${tps.scale.map((num) => ff(num)).join(", ")});
+const vec3 TPS_scale_inverted_${name} = vec3(${tps.scale.map((num) => ff(1 / num)).join(", ")});
 const int TPS_CPS_LENGTH_${name} = ${tps.tpsX.cps.length};
 vec3 TPS_W_${name}[TPS_CPS_LENGTH_${name}];
 vec3 TPS_a_${name}[4];
@@ -50,9 +53,9 @@ ${aLines.join("\n")}
 export function generateCalculateTpsOffsetFunction(name: string) {
   return `
     vec3 calculateTpsOffsetFor${name}(vec3 originalWorldCoord) {
-      float x = originalWorldCoord.x * voxelSizeFactor.x;
-      float y = originalWorldCoord.y * voxelSizeFactor.y;
-      float z = originalWorldCoord.z * voxelSizeFactor.z;
+      float x = originalWorldCoord.x * TPS_scale_${name}.x;
+      float y = originalWorldCoord.y * TPS_scale_${name}.y;
+      float z = originalWorldCoord.z * TPS_scale_${name}.z;
 
       vec3 a[4] = TPS_a_${name};
       vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
@@ -74,7 +77,7 @@ export function generateCalculateTpsOffsetFunction(name: string) {
         bending_part += dist * TPS_W_${name}[cpIdx];
       }
 
-      vec3 offset = (linear_part + bending_part) * voxelSizeFactorInverted;
+      vec3 offset = (linear_part + bending_part) * TPS_scale_inverted_${name};
       return offset;
     }
   `;

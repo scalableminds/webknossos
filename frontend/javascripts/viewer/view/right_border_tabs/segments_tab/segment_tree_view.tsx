@@ -1,7 +1,7 @@
 import { type Tree as AntdTree, App, type GetRef, type TreeProps } from "antd";
 import app from "app";
 import { useWkSelector } from "libs/react_hooks";
-import { sleep } from "libs/utils";
+import { clamp, isEditableEventTarget, sleep } from "libs/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -33,7 +33,9 @@ import {
   useSegmentContextMenuBuilder,
 } from "./context_menus";
 import {
+  findSegmentToSelectAfterRemoval,
   getGroupUiNodeKey,
+  getRenderedNodes,
   getSegmentIdsInRange,
   getSegmentUiNodeKey,
   isRootGroupNode,
@@ -42,11 +44,12 @@ import {
   type SegmentUiNode,
 } from "./hierarchy";
 import { useJumpToSegment } from "./hooks/use_jump_to_segment";
+import { useSegmentListKeyboardShortcuts } from "./hooks/use_segment_list_keyboard_shortcuts";
 import { withMeshFileCompatibilityCheck } from "./mesh_file_compatibility_modal";
 import { GroupNodeTitle } from "./node_titles";
 import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentNodeTitle, type SegmentRowActions } from "./segment_row";
-import { mayEditVisibleSegmentation } from "./segments_view_helper";
+import { mayEditVisibleSegmentation, removeSegmentsFromList } from "./segments_view_helper";
 
 const CONTEXT_MENU_CLASS = "segment-list-context-menu-overlay";
 const SCROLL_DELAY_MS = 100;
@@ -109,6 +112,20 @@ export function SegmentTreeView(props: Props) {
     useTreeContextMenu(CONTEXT_MENU_CLASS);
 
   useScrollBenchmark(treeRef);
+
+  const treeContainerRef = useRef<HTMLDivElement>(null);
+  useSegmentListKeyboardShortcuts(treeContainerRef, () => {
+    if (visibleSegmentationLayer == null || selection.selectedSegmentIds.length === 0) {
+      return;
+    }
+    // Select the neighboring segment afterwards, so that one can keep removing segments
+    // with the shortcut (like in a file manager).
+    const nextNode = findSegmentToSelectAfterRemoval(hierarchy, selection.selectedSegmentIds);
+    removeSegmentsFromList(dispatch, visibleSegmentationLayer.name, selection.selectedSegmentIds);
+    if (nextNode != null) {
+      selection.setSelection([nextNode.segment.id], null);
+    }
+  });
 
   // At most one row is editable at a time. Owning the key here (instead of letting each
   // row keep its own state) lets the "Rename" context menu entry start an edit, and lets
@@ -332,6 +349,37 @@ export function SegmentTreeView(props: Props) {
     selection.setSelection(newSelection.segmentIds, newSelection.groupId);
   };
 
+  const isPlainArrowKeyInList = (event: React.KeyboardEvent, keys: string[]) =>
+    keys.includes(event.key) &&
+    !(event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) &&
+    // Editable elements (e.g. the rename input) keep their native arrow key handling.
+    !isEditableEventTarget(event.target);
+
+  // Arrow up/down move the selection (instead of antd's own keyboard cursor). In contrast to
+  // clicking a segment row, this does not move the camera to the segment.
+  // The event is consumed, so that the shortcuts of the viewports (e.g. moving the camera)
+  // don't react to it, too.
+  const onKeyDownCapture = (event: React.KeyboardEvent) => {
+    if (!isPlainArrowKeyInList(event, ["ArrowUp", "ArrowDown"])) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+
+    const renderedNodes = getRenderedNodes(hierarchy);
+    const offset = event.key === "ArrowDown" ? 1 : -1;
+    const currentKey = selection.selectedKeys.at(-1);
+    const currentIndex = renderedNodes.findIndex((node) => node.key === currentKey);
+    const newIndex =
+      currentIndex === -1
+        ? offset === 1
+          ? 0
+          : renderedNodes.length - 1
+        : clamp(0, currentIndex + offset, renderedNodes.length - 1);
+    const newSelection = getSelectionForKeys([renderedNodes[newIndex].key]);
+    selection.setSelection(newSelection.segmentIds, newSelection.groupId);
+  };
+
   const onDrop: TreeProps<SegmentsUiNode>["onDrop"] = (info) => {
     const { dragNode: draggedNode, node: dropTargetNode } = info;
 
@@ -404,6 +452,11 @@ export function SegmentTreeView(props: Props) {
     ) {
       clearSelection();
     }
+    // Left/right are handled by antd's tree (collapsing/expanding groups) before this handler is
+    // reached. Only make sure that they don't move the camera, too.
+    if (isPlainArrowKeyInList(event, ["ArrowLeft", "ArrowRight"])) {
+      event.stopPropagation();
+    }
   };
 
   return (
@@ -423,9 +476,11 @@ export function SegmentTreeView(props: Props) {
           >
             {({ height, width }) => (
               <div
+                ref={treeContainerRef}
                 style={{ height, width, overflow: "hidden" }}
                 // The tree's list element is focusable, so its key events bubble up to here.
                 onClick={onClickTreeContainer}
+                onKeyDownCapture={onKeyDownCapture}
                 onKeyDown={onKeyDownTreeContainer}
               >
                 <ScrollableVirtualizedTree<SegmentsUiNode>
@@ -433,7 +488,7 @@ export function SegmentTreeView(props: Props) {
                   height={height}
                   itemHeight={LIST_ROW_HEIGHT}
                   ref={treeRef}
-                  className="list-tree"
+                  className="list-tree list-tree--active-is-selected"
                   titleRender={(node) =>
                     node.type === "segment" ? (
                       <SegmentNodeTitle
@@ -454,6 +509,9 @@ export function SegmentTreeView(props: Props) {
                     )
                   }
                   switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
+                  // antd's keyboard cursor ("active" node) is kept on the selected node so that
+                  // there is only one kind of selection (the one that a click creates).
+                  activeKey={selection.selectedKeys.at(-1) ?? null}
                   onSelect={onSelect}
                   onDrop={onDrop}
                   allowDrop={allowDrop}

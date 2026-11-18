@@ -163,9 +163,13 @@ export type StatisticValue =
  * is exported but not rendered; `csvHeaders` and the array returned by `getCsvValues` always have
  * the same length, so missing values keep the CSV columns aligned.
  */
+export type StatisticCategory = "Size" | "Shape" | "Location";
+
 export type StatisticSpec = {
   key: string;
   title?: string;
+  // Groups the statistics that are shown to the user.
+  category?: StatisticCategory;
   value?: StatisticValue;
   isLoading?: boolean;
   isError?: boolean;

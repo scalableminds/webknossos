@@ -1,10 +1,22 @@
 import { DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Flex, Select, Space, Tag, Tooltip, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  Empty,
+  Flex,
+  Select,
+  Space,
+  Splitter,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
+import { LongUnitToShortUnitMap } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
@@ -21,13 +33,20 @@ import type { Segment, SegmentGroup, SegmentStatisticsScope } from "viewer/store
 import { findGroup, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 import { useSegmentStatisticsRows } from "./hooks/use_segment_statistics_rows";
 import { exportStatisticsToCSV } from "./segment_statistics_helpers";
+import { SegmentStatisticsRail } from "./segment_statistics_rail";
 import { SegmentStatisticsTable } from "./segment_statistics_table";
 import { buildGroupedTableRows, toSegmentTableRows } from "./segment_statistics_tree";
+import {
+  filterRows,
+  type GroupBy,
+  getColumnSpecs,
+  resolveUnit,
+  useStatisticsView,
+} from "./segment_statistics_view";
 import { getSegmentsOfGroupRecursively } from "./segments_view_helper";
 
 const MAX_SEGMENT_COUNT_FOR_AUTOMATIC_COMPUTATION = 50;
-
-type GroupBy = "group" | "none";
+const RAIL_WIDTH = 272;
 
 function getScopeLabel(scope: SegmentStatisticsScope, segmentGroups: SegmentGroup[]): string {
   if (scope.kind === "group") {
@@ -118,7 +137,29 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
       refreshToken,
     });
 
-  const [groupBy, setGroupBy] = useState<GroupBy>("group");
+  const view = useStatisticsView();
+  const datasetUnit = useWkSelector(
+    (state) => LongUnitToShortUnitMap[state.dataset.dataSource.scale.unit],
+  );
+  const columnSpecs = useMemo(() => getColumnSpecs(statisticSpecs), [statisticSpecs]);
+  const visibleColumnSpecs = useMemo(
+    () => columnSpecs.filter((spec) => !view.hiddenColumnKeys.has(spec.key)),
+    [columnSpecs, view.hiddenColumnKeys],
+  );
+  const units = useMemo(
+    () =>
+      Object.fromEntries(
+        columnSpecs.map((spec) => [
+          spec.key,
+          resolveUnit(spec.value, rows, datasetUnit, view.chosenUnits[spec.key]),
+        ]),
+      ),
+    [columnSpecs, rows, datasetUnit, view.chosenUnits],
+  );
+  const filteredRows = useMemo(
+    () => filterRows(rows, columnSpecs, view.ranges),
+    [rows, columnSpecs, view.ranges],
+  );
   // For a group scope, the nesting starts at the chosen group. Otherwise, each of its ancestors
   // would get a row that merely repeats the statistics of the chosen group.
   const rootGroups = useMemo(() => {
@@ -130,11 +171,16 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
   }, [scope, segmentGroups]);
   const tableRows = useMemo(
     () =>
-      groupBy === "group"
-        ? buildGroupedTableRows(rows, rootGroups, statisticSpecs)
-        : toSegmentTableRows(rows),
-    [groupBy, rows, rootGroups, statisticSpecs],
+      view.groupBy === "group"
+        ? buildGroupedTableRows(filteredRows, rootGroups, statisticSpecs)
+        : toSegmentTableRows(filteredRows),
+    [view.groupBy, filteredRows, rootGroups, statisticSpecs],
   );
+  const filteredTitles = columnSpecs
+    .filter((spec) => view.ranges[spec.key] != null)
+    .map((spec) => spec.title.toLowerCase());
+  // Hidden columns are left out of the export. Specs without a column (e.g. ids) are always kept.
+  const exportedSpecs = statisticSpecs.filter((spec) => !view.hiddenColumnKeys.has(spec.key));
 
   if (!areSegmentStatisticsAvailable && !isAnyStatisticLoading) {
     return (
@@ -150,7 +196,9 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
       <Flex align="center" gap="small" wrap>
         <Typography.Text strong>{layerName}</Typography.Text>
         <Typography.Text type="secondary">
-          {segments.length} {pluralize("segment", segments.length)}
+          {filteredTitles.length > 0
+            ? `${filteredRows.length} of ${segments.length} ${pluralize("segment", segments.length)} · filtered by ${filteredTitles.join(", ")}`
+            : `${segments.length} ${pluralize("segment", segments.length)}`}
         </Typography.Text>
         {scope != null ? (
           <Tag closable onClose={() => dispatch(setSegmentStatisticsScopeAction(null))}>
@@ -162,8 +210,8 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
           <Space size="small">
             <Typography.Text type="secondary">Group by</Typography.Text>
             <Select<GroupBy>
-              value={groupBy}
-              onChange={setGroupBy}
+              value={view.groupBy}
+              onChange={view.setGroupBy}
               style={{ width: 160 }}
               options={[
                 { value: "group", label: "Segment groups" },
@@ -182,17 +230,17 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
         </Tooltip>
         <Button
           icon={<DownloadOutlined />}
-          disabled={!isComputationConfirmed || isAnyStatisticLoading || rows.length === 0}
+          disabled={!isComputationConfirmed || isAnyStatisticLoading || filteredRows.length === 0}
           onClick={() =>
             exportStatisticsToCSV(
-              rows,
-              statisticSpecs,
+              filteredRows,
+              exportedSpecs,
               tracingId || datasetName,
               getCsvFilenameSuffix(scope),
             )
           }
         >
-          Export to CSV
+          {`Export ${filteredRows.length} ${pluralize("row", filteredRows.length)}`}
         </Button>
       </Flex>
       {hasAdditionalCoordinates(additionalCoordinates) ? (
@@ -226,12 +274,24 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
           showIcon
         />
       ) : null}
-      <SegmentStatisticsTable
-        rows={rows}
-        tableRows={tableRows}
-        statisticSpecs={statisticSpecs}
-        layerName={layer.name}
-      />
+      <Splitter style={{ flex: 1, minHeight: 0 }}>
+        <Splitter.Panel defaultSize={RAIL_WIDTH} min={220} max={420} collapsible>
+          <SegmentStatisticsRail columnSpecs={columnSpecs} units={units} rows={rows} view={view} />
+        </Splitter.Panel>
+        <Splitter.Panel>
+          <Flex vertical style={{ height: "100%", minHeight: 0, paddingInlineStart: 8 }}>
+            <SegmentStatisticsTable
+              rows={rows}
+              tableRows={tableRows}
+              columnSpecs={visibleColumnSpecs}
+              units={units}
+              sort={view.sort}
+              onSortChange={view.setSort}
+              layerName={layer.name}
+            />
+          </Flex>
+        </Splitter.Panel>
+      </Splitter>
     </Flex>
   );
 }

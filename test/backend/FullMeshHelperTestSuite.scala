@@ -41,12 +41,14 @@ class FullMeshHelperTestSuite extends AnyWordSpec with FullMeshHelper {
         (stl.getFloat(offset).toDouble, stl.getFloat(offset + 4).toDouble, stl.getFloat(offset + 8).toDouble)
       val faces = (0 until stl.capacity / 50).map { faceIndex =>
         val base = faceIndex * 50
-        (readVec(base), Seq(readVec(base + 12), readVec(base + 24), readVec(base + 36)))
+        (readVec(base), (readVec(base + 12), readVec(base + 24), readVec(base + 36)))
       }
       assert(faces.length == vertexBuffer.length / 9 && faces.length > 8)
-      assert(faces.flatMap(_._2).flatMap(v => Seq(v._1, v._2, v._3)) == vertexBuffer.map(_.toDouble))
+      assert(faces.flatMap { case (_, (a, b, c)) =>
+        Seq(a, b, c)
+      }.flatMap(v => Seq(v._1, v._2, v._3)) == vertexBuffer.map(_.toDouble))
 
-      faces.foreach { case (normal, Seq(a, b, c)) =>
+      faces.foreach { case (normal, (a, b, c)) =>
         val faceNormal = cross(sub(b, a), sub(c, a))
         val cosine = dot(normal, faceNormal) / Math.sqrt(dot(faceNormal, faceNormal))
         assert(cosine > 0.9999, s"stored normal $normal does not belong to face ($a, $b, $c)")
@@ -54,10 +56,10 @@ class FullMeshHelperTestSuite extends AnyWordSpec with FullMeshHelper {
 
       // The normals match their faces, so they all point outward if the closed surface is oriented consistently
       // (each edge is traversed once in each direction) and encloses a positive volume.
-      val directedEdges = faces.flatMap { case (_, Seq(a, b, c)) => Seq((a, b), (b, c), (c, a)) }
+      val directedEdges = faces.flatMap { case (_, (a, b, c)) => Seq((a, b), (b, c), (c, a)) }
       assert(directedEdges.distinct.length == directedEdges.length)
       assert(directedEdges.forall { case (from, to) => directedEdges.contains((to, from)) })
-      val signedVolume = faces.map { case (_, Seq(a, b, c)) => dot(a, cross(b, c)) }.sum / 6
+      val signedVolume = faces.map { case (_, (a, b, c)) => dot(a, cross(b, c)) }.sum / 6
       assert(signedVolume > 0)
     }
   }

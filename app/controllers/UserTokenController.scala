@@ -65,9 +65,8 @@ class UserTokenController @Inject() (
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
         scopedApiTokenOf(request) match {
-          // a scoped API token must not be able to trade itself in for a DataStore token, which would not be subject
-          // to the agent's scopes. It gets another scoped API token under the same grant instead, which is. That token
-          // expires no later than the one it was created from, so this cannot be used to keep a token alive forever.
+          // If the request is by a scopedApiToken, this will also yield a scopedApiToken so permissions stay scoped.
+          // The datastore accepts those too.
           case Some(scopedApiTokenValue) =>
             for {
               scopedApiToken <- scopedApiTokenService.findValid(scopedApiTokenValue) ?~> "Invalid token"
@@ -103,6 +102,7 @@ class UserTokenController @Inject() (
        - the global webknossosToken (allow everything)
        - a user token (allow what that user may do)
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
+       - A scoped access token (allow what that user may do *and* is allowed by the token’s scope)
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(implicit
       ec: ExecutionContext
@@ -138,7 +138,7 @@ class UserTokenController @Inject() (
   // The authenticator has already been validated at this point, so recognizing the token type is enough.
   private def scopedApiTokenOf(request: UserAwareRequest[WkEnv, ?]): Option[String] =
     request.authenticator.map(_.actualAuthenticator).collect {
-      case a: BearerTokenAuthenticator if scopedApiTokenService.isScopedApiTokenValue(a.id) => a.id
+      case a: BearerTokenAuthenticator if scopedApiTokenService.looksLikeScopedApiTokenValue(a.id) => a.id
     }
 
   private enum ScopeCheck {
@@ -149,16 +149,15 @@ class UserTokenController @Inject() (
   }
 
   /*
-   * The datastore and tracingstore ask here whether a token may access a resource. This is the second place where
-   * scopes are enforced, next to filters.ScopeFilter, and it is the one that covers reading and writing voxel data.
+   * Datastore/Tracingstore access using scoped tokens must also be checked against their scopes.
+   * On pure WK side this is handled by filters.ScopeFilter.
    */
   private def checkScopes(token: Option[String], accessRequest: UserAccessRequest)(implicit
       ec: ExecutionContext
   ): Fox[ScopeCheck] =
     token match {
-      case None             => Fox.successful(ScopeCheck.Allowed)
+      case None             => Fox.successful(ScopeCheck.Allowed) // Not a scoped token, no scope restrictions.
       case Some(tokenValue) =>
-        // Fails (rather than allowing) if the lookup itself fails.
         scopedApiTokenService.findValid(tokenValue).shiftBox.flatMap {
           // The scopes are read from the grant per request, so that changing them takes effect at once.
           case Full(scopedApiToken) =>
@@ -166,11 +165,9 @@ class UserTokenController @Inject() (
               scopedApiToken.scopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
             }
             Fox.successful(if (allowed) ScopeCheck.Allowed else ScopeCheck.MissingScope(scopedApiToken.scopes))
-          // Only scoped API tokens are restricted here. A value that looks like one but is not valid is denied rather
-          // than treated as unscoped.
           case Empty =>
             Fox.successful(
-              if (scopedApiTokenService.isScopedApiTokenValue(tokenValue)) ScopeCheck.InvalidToken
+              if (scopedApiTokenService.looksLikeScopedApiTokenValue(tokenValue)) ScopeCheck.InvalidToken
               else ScopeCheck.Allowed
             )
           case failure: Failure => failure.toFox

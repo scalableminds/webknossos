@@ -64,13 +64,13 @@ class ScopedApiTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantD
     } yield ScopedApiToken(token.value, userId, token.expirationDateTime, grantId, scopes)
   }
 
-  def isScopedApiTokenValue(value: String): Boolean = value.startsWith(valuePrefix)
+  def looksLikeScopedApiTokenValue(value: String): Boolean = value.startsWith(valuePrefix)
 
   /** Empty if the token does not exist, is not a scoped API token, has been revoked or has expired, or if its grant has
     * been revoked. Failure means that the lookup itself failed, callers must then fail closed.
     */
   def findValid(value: String): Fox[ScopedApiToken] =
-    if (!isScopedApiTokenValue(value)) Fox.empty
+    if (!looksLikeScopedApiTokenValue(value)) Fox.empty
     else
       for {
         token <- tokenDAO.findOneByValue(value)

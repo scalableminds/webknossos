@@ -73,7 +73,7 @@ class ScopeFilter @Inject() (
     */
   private def scopedApiTokenValuesOf(request: RequestHeader): List[String] =
     if (!request.path.startsWith("/api/")) List.empty
-    else TokenHeaders.allTokenValues(request).filter(scopedApiTokenService.isScopedApiTokenValue)
+    else TokenHeaders.allTokenValues(request).filter(scopedApiTokenService.looksLikeScopedApiTokenValue)
 
   // Empty if any of the values is not a valid scoped API token. Failure means the lookup itself failed.
   private def findAllValid(tokenValues: List[String]): Future[Box[List[ScopedApiToken]]] =

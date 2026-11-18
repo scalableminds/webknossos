@@ -410,4 +410,30 @@ describe("MCP server with OAuth (E2E)", () => {
     expect(await statusWithApiToken("/api/user", token)).toBe(401);
     expect(await statusWithApiToken("/api/user", tokenUserA)).toBe(200);
   });
+
+  // Fetches the live docs from docs.webknossos.org on purpose, so that this fails if they are no longer served as
+  // markdown (or are unreachable), which would break these tools for all MCP clients.
+  it("lists and reads the Python library docs", async ({ expect }) => {
+    const { accessToken } = await connect();
+    const callTool = async (name: string, args: object) => {
+      const response = await mcpRequest(accessToken, "tools/call", { name, arguments: args });
+      expect(response.status).toBe(200);
+      const { result } = await response.json();
+      const text: string = result.content[0].text;
+      expect(result.isError, text).toBe(false);
+      return text;
+    };
+
+    const index = await callTool("list_python_library_docs", {});
+    const pageUrls = [...index.matchAll(/\((https:\/\/docs\.webknossos\.org\/[^)\s]+\.md)\)/g)].map(
+      (match) => match[1],
+    );
+    expect(pageUrls.length).toBeGreaterThan(0);
+
+    const datasetPageUrl = "https://docs.webknossos.org/api/webknossos/dataset/dataset.md";
+    expect(pageUrls).toContain(datasetPageUrl);
+    const page = await callTool("read_python_library_docs_page", { url: datasetPageUrl });
+    expect(page).toContain("# webknossos.dataset");
+    expect(page).not.toMatch(/<html/i);
+  });
 });

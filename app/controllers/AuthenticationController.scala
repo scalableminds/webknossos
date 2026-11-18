@@ -433,8 +433,6 @@ class AuthenticationController @Inject() (
 
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
-      // The scoped API tokens that agents obtained via the MCP server end as well. Their connections stay, so the
-      // agents can ask for new ones.
       _ <- tokenDAO.deleteAllByUserIdAndType(request.identity._id, TokenType.ScopedApi)
       tokenOpt <- Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id))
       result <- tokenOpt match {
@@ -930,7 +928,6 @@ class AuthenticationController @Inject() (
       _ <- userDAO.logOutEverywhereByMultiUserId(request.identity._multiUser)
       userIds <- userDAO.findIdsByMultiUserId(request.identity._multiUser)
       _ = userIds.map(userService.removeUserFromCache)
-      // Agents connected via OAuth (MCP clients) are disconnected as well, including their scoped API tokens.
       _ <- oauthService.revokeAllForUsers(userIds)
       _ <- tokenDAO.deleteDataStoreTokensForMultiUser(request.identity._multiUser)
     } yield Ok

@@ -83,7 +83,7 @@ class ScopedApiTokenTestSuite extends AnyWordSpec {
       assert(stored.idleTimeout.isEmpty)
       assert(stored.expirationDateTime == token.expiresAt)
       assert(token.value.startsWith("wk_scoped_api_token_"))
-      assert(s.service.isScopedApiTokenValue(token.value))
+      assert(s.service.looksLikeScopedApiTokenValue(token.value))
     }
 
     "find a token it created, with the grant's scopes" in {

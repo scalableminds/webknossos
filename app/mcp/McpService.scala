@@ -23,6 +23,8 @@ class McpService @Inject() (
 )(implicit ec: ExecutionContext)
     extends Formatter {
 
+  // Model Context Protocol spec revisions, see https://modelcontextprotocol.io/specification/2025-11-25
+  // and https://modelcontextprotocol.io/specification/versioning
   private val latestProtocolVersion = "2025-11-25"
   val supportedProtocolVersions: Set[String] = Set("2024-11-05", "2025-03-26", "2025-06-18", latestProtocolVersion)
 

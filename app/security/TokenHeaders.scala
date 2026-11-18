@@ -9,7 +9,7 @@ import play.api.mvc.RequestHeader
   */
 object TokenHeaders {
   // Read by silhouette's BearerTokenAuthenticatorService (its default fieldName, headers only).
-  val authTokenHeader = "X-Auth-Token"
+  private val authTokenHeader = "X-Auth-Token"
 
   private val bearerPrefix = "Bearer "
 

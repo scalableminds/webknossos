@@ -25,7 +25,6 @@ object RouteScopes {
     "AnalyticsController" -> meta,
     "AnnotationController" -> annotation,
     "AnnotationIOController" -> annotation,
-    "AnnotationPrivateLinkController" -> annotation,
     "Application" -> meta,
     "ConfigurationController" -> user,
     "CreditTransactionController" -> organization,
@@ -55,6 +54,10 @@ object RouteScopes {
     // - WKRemoteDataStoreController, WKRemoteTracingStoreController, WKRemoteWorkerController: internal
     //   store-to-wk communication, authenticated by a store key rather than by a user token.
     // - InitialDataController, MaintenanceController: instance administration.
+    // - AnnotationPrivateLinkController: a private link carries an access token of its own, which is tied to the
+    //   annotation rather than to the OAuth grant, and which may not expire. Listing links would hand an agent these
+    //   credentials, and creating one would give it access that outlives disconnecting it. The remaining action,
+    //   annotationSource, is called by the datastore with its key, not with a user token in the headers.
     // - AlignmentProjectController: not classified for scoped tokens yet, there is no scope for alignment projects.
     // - McpController, OAuthController: the MCP server takes OAuth access tokens only, and connecting or revoking
     //   agents is for the user alone. An agent must not mint more tokens or approve connections.

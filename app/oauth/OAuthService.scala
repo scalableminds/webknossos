@@ -283,12 +283,11 @@ class OAuthService @Inject() (
     (params.get("refresh_token"), params.get("client_id")) match {
       case (Some(refreshToken), Some(clientId)) =>
         val tokenHash = hash(refreshToken)
-        tokenDAO.redeemRefreshToken(tokenHash).shiftBox.flatMap {
+        // A token issued to another client is not redeemed, see redeemRefreshToken. It ends up in the Empty case and,
+        // as it is still unused, is rejected without revoking anything.
+        tokenDAO.redeemRefreshToken(tokenHash, clientId).shiftBox.flatMap {
           case Full(grantId) =>
-            withLiveGrant(grantId) { grant =>
-              if (grant.clientId != clientId) Fox.successful(invalidGrant("The token was issued to another client"))
-              else issueTokens(grant).map(Right(_))
-            }
+            withLiveGrant(grantId)(grant => issueTokens(grant).map(Right(_)))
           case Empty =>
             tokenDAO
               .findGrantOfRefreshTokenUsedAfter(tokenHash, Instant.now - refreshTokenReuseGracePeriod)

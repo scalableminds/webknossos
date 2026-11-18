@@ -232,6 +232,7 @@ class ScopeTestSuite extends AnyWordSpec {
       // Controllers that scoped tokens must not reach at all, see the comment in RouteScopes.
       val intentionallyDenied = Set(
         "controllers.AlignmentProjectController",
+        "controllers.AnnotationPrivateLinkController",
         "controllers.AuthenticationController",
         "controllers.InitialDataController",
         "controllers.MaintenanceController",
@@ -271,11 +272,14 @@ class ScopeTestSuite extends AnyWordSpec {
       assert(stale.isEmpty, s"deniedActions entries without a route: ${stale.mkString(", ")}")
     }
 
-    "deny starting jobs and the job export redirect, which hand out unscoped tokens" in {
+    "deny the actions that hand out credentials beyond the grant: starting jobs, the job export redirect, private links" in {
       assert(RouteScopes.requiredScope("controllers.JobController", "runExportTiffJob", "POST").isEmpty)
       assert(RouteScopes.requiredScope("controllers.JobController", "retry", "PATCH").isEmpty)
       assert(RouteScopes.requiredScope("controllers.JobController", "redirectToExport", "GET").isEmpty)
       assert(RouteScopes.requiredScope("controllers.AiModelController", "runNeuronTraining", "POST").isEmpty)
+      // Private links carry credentials of their own that disconnecting the agent does not revoke.
+      assert(RouteScopes.requiredScope("controllers.AnnotationPrivateLinkController", "list", "GET").isEmpty)
+      assert(RouteScopes.requiredScope("controllers.AnnotationPrivateLinkController", "create", "POST").isEmpty)
       // Listing and reading jobs stays possible.
       assert(
         RouteScopes

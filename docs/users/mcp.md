@@ -60,14 +60,16 @@ When you approve a connection, you choose one of three permission levels:
 | Create/modify | Additionally upload and edit datasets, create annotations, tasks, projects and teams, and edit users (see the warning below). |
 | Delete | Additionally delete datasets, annotations, tasks and teams. |
 
-The level belongs to the connection. To change it, connect the same application again and choose another level;
-this takes effect immediately, also for agents that are already running. Only data that the agent read or wrote in
-the last two minutes may stay accessible at the old level for up to two more minutes, because the data servers cache
-access checks.
+The level belongs to the connection. To change it, [disconnect](#disconnecting) the application, then connect it
+again and choose another level. Applications that are still signed in do not ask for consent again by themselves.
+In Claude Code, run `/mcp` after disconnecting and authenticate `webknossos` again. Only data that the agent read or
+wrote in the last two minutes may stay accessible at the old level for up to two more minutes, because the data
+servers cache access checks.
 
 The levels cover everything the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) can do, so
 an agent granted `Delete` can use the whole library. The organization itself stays read-only at every level.
-Agents can list and inspect jobs, but cannot start or retry jobs at any level.
+Agents can list and inspect jobs, but cannot start or retry jobs at any level. They cannot manage the private links
+of annotations either.
 
 !!! warning
     Because the Python library creates teams and updates users, `Create/modify` includes everything you can do in

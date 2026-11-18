@@ -185,15 +185,18 @@ class OAuthTokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield ObjectId(grantId)
 
   /** Marks a refresh token as used and returns its grant, in one statement, so that it can only be used once (refresh
-    * token rotation). Empty if it is unknown, expired or used already.
+    * token rotation). Empty if it is unknown, expired, used already, or was issued to another client than the given
+    * one. The client is part of the condition so that a request naming the wrong client leaves the token unused,
+    * otherwise it would use up the token of the legitimate client.
     */
-  def redeemRefreshToken(tokenHash: String): Fox[ObjectId] =
+  def redeemRefreshToken(tokenHash: String, clientId: String): Fox[ObjectId] =
     for {
       rows <- run(q"""UPDATE webknossos.oauthTokens SET usedTime = NOW()
                       WHERE tokenHash = $tokenHash
                       AND tokenType = ${OAuthTokenType.Refresh}
                       AND usedTime IS NULL
                       AND expirationDateTime > NOW()
+                      AND _grant IN (SELECT _id FROM webknossos.oauthGrants_ WHERE clientId = $clientId)
                       RETURNING _grant""".as[String])
       grantId <- rows.headOption.toFox
     } yield ObjectId(grantId)

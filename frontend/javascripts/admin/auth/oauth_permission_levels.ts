@@ -16,7 +16,7 @@ export const OAUTH_PERMISSION_LEVELS: ReadonlyArray<{
     key: "write",
     label: "Create/modify",
     description:
-      "Additionally upload and edit datasets, and create annotations, tasks, projects and teams. Cannot change the organization.",
+      "Additionally upload and edit datasets, and create annotations, tasks, projects and teams. The agent can also manage users as far as you can, e.g. change their teams, and for admins activate or deactivate users and change their roles. Cannot change the organization.",
   },
   {
     key: "delete",

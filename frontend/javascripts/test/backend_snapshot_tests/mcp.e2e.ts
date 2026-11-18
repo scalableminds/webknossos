@@ -353,6 +353,25 @@ describe("MCP server with OAuth (E2E)", () => {
     expect((await mcpRequest(newAccessToken, "ping")).status).toBe(200);
   });
 
+  it("does not use up a refresh token presented by another client", async ({ expect }) => {
+    const { refreshToken } = await connect();
+    const otherClient = await tokenRequest({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: "https://other-client.example/metadata.json",
+    });
+    expect(otherClient.status).toBe(400);
+    expect((await otherClient.json()).error).toBe("invalid_grant");
+
+    // The legitimate client can still use its token.
+    const refreshed = await tokenRequest({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: clientId,
+    });
+    expect(refreshed.status).toBe(200);
+  });
+
   it("accepts an authorization code once only, and checks PKCE", async ({ expect }) => {
     const { accessToken, code, verifier } = await connect();
     const exchangeAgain = await tokenRequest({

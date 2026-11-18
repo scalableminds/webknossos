@@ -46,7 +46,7 @@ function ConnectedApplications() {
   const disconnect = async (grant: APIOAuthGrant): Promise<void> => {
     try {
       await revokeOAuthGrant(grant.id);
-      Toast.success(`${grant.clientName} has been disconnected.`);
+      Toast.success(<>{grant.clientName} has been disconnected.</>);
     } catch (error) {
       Toast.error("Failed to disconnect the application. Please try again.");
       console.error("Failed to disconnect the application:", error);

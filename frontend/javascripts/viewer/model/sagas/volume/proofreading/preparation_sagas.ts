@@ -160,7 +160,7 @@ export function* prepareSplitOrMerge(
 
   const getUnmappedDataValue = async (position: Vector3): Promise<bigint> => {
     const { additionalCoordinates } = Store.getState().flycam;
-    const rawId = await api.data.getDataValue(
+    const rawId = await api.data.getUnmappedDataValue(
       volumeTracing.tracingId,
       position,
       agglomerateFileZoomstep,

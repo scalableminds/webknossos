@@ -248,6 +248,40 @@ describe("Proofreading (Single User)", () => {
     await task.toPromise();
   });
 
+  it("getDataValue should fetch the agglomerate id of a segment that the local mapping doesn't know (yet)", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+    const fetchAgglomerates = vi.mocked(getAgglomeratesForSegmentsFromDatastore);
+    const originalImplementation = fetchAgglomerates.getMockImplementation();
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const position = getPositionForSegmentId(1337);
+      try {
+        fetchAgglomerates.mockClear();
+        fetchAgglomerates.mockResolvedValue(new Map([[1337, 99]]));
+        // Segment 1337 is not known to the local mapping, so its agglomerate id is fetched.
+        expect(yield call(() => api.data.getDataValue(tracingId, position, 0))).toBe(99);
+        expect(fetchAgglomerates).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          new Set([1337n]),
+        );
+        expect(yield call(() => api.data.getUnmappedDataValue(tracingId, position, 0))).toBe(1337);
+
+        fetchAgglomerates.mockRejectedValue(new Error("Network error"));
+        yield call(() =>
+          expect(api.data.getDataValue(tracingId, position, 0)).rejects.toThrow("Network error"),
+        );
+      } finally {
+        fetchAgglomerates.mockImplementation(originalImplementation!);
+      }
+    });
+    await task.toPromise();
+  });
+
   it("should show a warning instead of crashing if the agglomerate id of a proofreading click can't be fetched", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const { tracingId } = Store.getState().annotation.volumes[0];
@@ -282,8 +316,8 @@ describe("Proofreading (Single User)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
       vi.mocked(Toast.warning).mockClear();
-      const getDataValueSpy = vi
-        .spyOn(api.data, "getDataValue")
+      const getMappedDataValueSpy = vi
+        .spyOn(api.data, "getMappedDataValue")
         .mockRejectedValue(new Error("Bucket 0,0,0,0, could not be loaded after 3 retries."));
       try {
         yield put(proofreadAtPosition(getPositionForSegmentId(1)));
@@ -295,7 +329,7 @@ describe("Proofreading (Single User)", () => {
           ),
         );
       } finally {
-        getDataValueSpy.mockRestore();
+        getMappedDataValueSpy.mockRestore();
       }
     });
     await task.toPromise();

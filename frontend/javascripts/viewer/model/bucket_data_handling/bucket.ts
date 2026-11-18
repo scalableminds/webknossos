@@ -160,6 +160,10 @@ export class DataBucket {
   // speed up such requests a cached set of the contained values
   // can be stored in cachedValueSet.
   cachedValueSet: Set<number> | Set<bigint> | null = null;
+  // The agglomerate mapping that the server applied to the received data (null if the data is
+  // unmapped). After the mapping changed, the bucket might still contain the data of the old
+  // mapping until the buckets of the layer are reloaded.
+  serverMappingName: string | null = null;
 
   // Events and debug visualization
   emitter: Emitter;

@@ -277,23 +277,10 @@ describe("DataCube", () => {
     expect(data[1]).toBe(43);
   });
 
-  it<TestContext>("getDataValue() should return the raw value without a mapping", async ({
-    cube,
-  }) => {
+  it<TestContext>("getDataValue() should return the raw value", async ({ cube }) => {
     const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
     await labelVoxel(cube, [0, 0, 0], value);
-    expect(cube.getDataValue([0, 0, 0], null, null)).toBe(value);
-  });
-
-  it<TestContext>("getDataValue() should return the mapping value if available", async ({
-    cube,
-  }) => {
-    await labelVoxel(cube, [0, 0, 0], 42);
-    await labelVoxel(cube, [1, 1, 1], 43);
-    const mapping = new Map();
-    mapping.set(42, 1);
-    expect(cube.getDataValue([0, 0, 0], null, mapping)).toBe(1);
-    expect(cube.getDataValue([1, 1, 1], null, mapping)).toBe(43);
+    expect(cube.getDataValue([0, 0, 0], null)).toBe(value);
   });
 
   it<TestContext>("Garbage Collection should only keep 3 buckets when possible", ({ cube }) => {

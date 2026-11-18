@@ -28,7 +28,7 @@ import {
 } from "typed-redux-saga";
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { NumberToOrthoView, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { getSegmentIdsAtPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getLayerPositionAndRenderedZoomStep } from "viewer/controller/combinations/volume_handlers";
 import {
   getAgglomerateDiffKey,
   getAgglomerateDiffReferenceForSkeleton,
@@ -465,17 +465,17 @@ function* loadAgglomerateTreeWithAtPosition(
       agglomerateId = action.agglomerateId;
     } else {
       // Ad-hoc lookup of agglomerate id after syncing in live-collab. Should be preferred over using the LoadAgglomerateTreeFromIdAction action.
-      const { mappedId: maybeAgglomerateId } = yield* call(
-        getSegmentIdsAtPositionAsync,
+      const { positionInLayer, zoomStep } = yield* call(
+        getLayerPositionAndRenderedZoomStep,
         layerName,
         action.agglomeratePosition,
       );
-      if (maybeAgglomerateId == null) {
-        throw new Error(
-          `Could not determine the agglomerate id at position ${action.agglomeratePosition}.`,
-        );
-      }
-      agglomerateId = maybeAgglomerateId;
+      agglomerateId = yield* call(
+        [api.data, api.data.getMappedDataValue],
+        layerName,
+        positionInLayer,
+        zoomStep,
+      );
     }
 
     const trees = yield* select((state) =>

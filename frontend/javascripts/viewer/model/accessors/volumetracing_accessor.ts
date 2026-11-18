@@ -1033,6 +1033,13 @@ export const getBucketRetrievalSourceFn =
     }),
   );
 
+// Returns the name of the agglomerate mapping that the server applies when buckets of the layer
+// are requested, or null if the buckets are requested unmapped.
+export function getServerMappingName(state: WebknossosState, layerName: string): string | null {
+  const bucketRetrievalSource = getBucketRetrievalSourceFn(layerName)(state);
+  return bucketRetrievalSource[0] === "REQUESTED-WITH-MAPPING" ? bucketRetrievalSource[1] : null;
+}
+
 export function getReadableNameOfVolumeLayer(
   layer: APIDataLayer,
   tracing: APIAnnotation | StoreAnnotation,

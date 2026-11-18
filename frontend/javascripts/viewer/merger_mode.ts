@@ -253,7 +253,12 @@ async function getUnmappedSegmentId(
   );
   const segmentPosition = inverseSegmentationTransform(transformedNodePosition);
 
-  return api.data.getDataValue(segmentationLayerName, segmentPosition, null, additionalCoordinates);
+  return api.data.getUnmappedDataValue(
+    segmentationLayerName,
+    segmentPosition,
+    null,
+    additionalCoordinates,
+  );
 }
 
 /* This function decreases the number of nodes associated with the segment the passed node belongs to.
@@ -444,7 +449,10 @@ async function mergeSegmentsOfAlreadyExistingTrees(
       return;
     }
 
-    const unmappedSegmentId = await api.data.getDataValue(segmentationLayerName, segmentPosition);
+    const unmappedSegmentId = await api.data.getUnmappedDataValue(
+      segmentationLayerName,
+      segmentPosition,
+    );
 
     // Comparisons like > do support mixing bigint and number. Thus, no conversion needed here.
     if (unmappedSegmentId != null && unmappedSegmentId > 0) {

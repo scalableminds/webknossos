@@ -193,8 +193,14 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
   const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  // The bucket of the seed might not be loaded yet (e.g., if the flood fill was triggered via
+  // the context menu after navigating away).
+  yield* call(
+    [cube, cube.getLoadedBucket],
+    cube.positionToZoomedAddress(seedPosition, additionalCoordinates, labeledZoomStep),
+  );
   const oldSegmentIdAtSeed = toBigInt(
-    cube.getDataValue(seedPosition, additionalCoordinates, null, labeledZoomStep),
+    cube.getDataValue(seedPosition, additionalCoordinates, labeledZoomStep),
   );
 
   if (activeCellId === oldSegmentIdAtSeed) {

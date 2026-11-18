@@ -42,7 +42,7 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { Store } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import { beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 
 const layerName = "segmentation";
@@ -52,8 +52,7 @@ const agglomerateId = 42n;
 const segmentIdAtFirstNode = 4711n;
 const storedClickedPosition = [8, 9, 10] as const;
 const segmentIdAtStoredClickedPosition = 815n;
-// vi.mock is hoisted above the module scope, so the constant has to be hoisted, too
-const { clickedAgglomerateId } = vi.hoisted(() => ({ clickedAgglomerateId: 77n }));
+const clickedAgglomerateId = 77n;
 const clickedSegmentId = 1337n;
 
 // Records the messages of the progress notifications (e.g., of loading an agglomerate skeleton)
@@ -63,16 +62,6 @@ vi.mock("libs/progress_callback", () => ({
     progressMessages.push(String(status));
     return { hideFn: () => {} };
   },
-}));
-
-// The bucket data of the segmentation layer is not available in the tests, so the (mapped) id at the
-// clicked position is mocked.
-vi.mock("viewer/controller/combinations/volume_handlers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("viewer/controller/combinations/volume_handlers")>()),
-  getSegmentIdsAtPositionAsync: async () => ({
-    unmappedId: clickedSegmentId,
-    mappedId: clickedAgglomerateId,
-  }),
 }));
 
 function makeServerTree(
@@ -288,6 +277,9 @@ describe("Agglomerate diff saga", () => {
     setAgglomerateMappingEnabled(true);
     setReferenceMappingName(referenceMappingName);
     setAgglomerateDiffEnabled(true);
+    // The mapped bucket data doesn't contain agglomerate ids, so the agglomerate id at the clicked
+    // position is mocked.
+    vi.spyOn(api.data, "getMappedDataValue").mockResolvedValue(clickedAgglomerateId);
   });
 
   it<WebknossosTestContext>("shows the diff of an agglomerate skeleton without adding trees to the annotation", async (context) => {

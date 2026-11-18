@@ -3,7 +3,7 @@ import { SoftError } from "libs/utils";
 import messages from "messages";
 import { actionChannel, call, fork, put, take, takeEvery } from "typed-redux-saga";
 import { OrthoViews, TreeTypeEnum } from "viewer/constants";
-import { getSegmentIdsAtPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getLayerPositionAndRenderedZoomStep } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
@@ -39,6 +39,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { api } from "viewer/singletons";
 import { getAdditionalCoordinatesAsString } from "../../../accessors/flycam_accessor";
 import { ensureWkInitialized } from "../../ready_sagas";
 import { takeEveryInOperationContext, takeWithBatchActionSupport } from "../../saga_helpers";
@@ -321,8 +322,21 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   yield put(updateProofreadingMarkerPositionAction(position, layerName));
 
-  const { mappedId: segmentId } = yield* call(getSegmentIdsAtPositionAsync, layerName, position);
-  if (segmentId == null) {
+  let segmentId: bigint;
+  try {
+    const { positionInLayer, zoomStep } = yield* call(
+      getLayerPositionAndRenderedZoomStep,
+      layerName,
+      position,
+    );
+    segmentId = yield* call(
+      [api.data, api.data.getMappedDataValue],
+      layerName,
+      positionInLayer,
+      zoomStep,
+    );
+  } catch (error) {
+    console.error(error);
     Toast.warning("Could not determine the segment id at the clicked position. Please try again.");
     return;
   }

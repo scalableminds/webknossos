@@ -25,7 +25,7 @@ import {
   startEditingAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { mapId, mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
+import { mapId } from "viewer/model/helpers/mapped_id_lookup";
 import {
   invertTransform,
   transformPointUnscaled,
@@ -100,13 +100,16 @@ export function handlePickCell(pos: Point2) {
 // Returns the segment ids that are currently rendered at the given position in the visible
 // segmentation layer. Nothing is loaded: if the bucket isn't loaded, both ids are 0. If the
 // local mapping doesn't know the unmapped id (yet), the mapped id is 0, because the segment
-// isn't rendered then either. Use this for interactions with what the user sees (hover,
-// clicks, context menu). See getSegmentIdsAtPositionAsync for positions that may not be loaded.
+// isn't rendered then either. If the server applied the mapping to the bucket, the unmapped id
+// is null, because it isn't known. Note that the mapped id is also mapped if the zoom limit for
+// agglomerate mappings is exceeded (although the mapping isn't rendered then). Use this for interactions with what the user sees (hover,
+// clicks, context menu). For positions that may not be loaded, use the front-end API (see
+// getLayerPositionAndRenderedZoomStep).
 // This must not be memoized on the position: the result depends on live state (loaded
 // buckets, mapping, visible layer, additional coordinates, rendered zoom step), e.g., the
 // mapped id can change due to a foreign proofreading action.
 export function getSegmentIdsAtPosition(globalPos: Vector3): {
-  unmappedId: bigint;
+  unmappedId: bigint | null;
   mappedId: bigint;
 } {
   const layer = Model.getVisibleSegmentationLayer();
@@ -121,57 +124,40 @@ export function getSegmentIdsAtPosition(globalPos: Vector3): {
     state,
   );
   const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(layer.name, posInLayerSpace);
-  const unmappedId = toBigInt(
-    Model.getCubeByLayerName(layer.name).getDataValue(
-      posInLayerSpace,
-      state.flycam.additionalCoordinates,
-      null,
+  const cube = Model.getCubeByLayerName(layer.name);
+  const { additionalCoordinates } = state.flycam;
+  const id = toBigInt(cube.getDataValue(posInLayerSpace, additionalCoordinates, renderedZoomStep));
+  const bucket = cube.getBucket(
+    cube.positionToZoomedAddress(
+      posInLayerSpace.map(Math.floor) as Vector3,
+      additionalCoordinates,
       renderedZoomStep,
     ),
   );
-  return { unmappedId, mappedId: mapId(state, layer.name, unmappedId) ?? 0n };
+  if (bucket.type === "data" && bucket.serverMappingName != null) {
+    return { unmappedId: null, mappedId: id };
+  }
+  return { unmappedId: id, mappedId: mapId(state, layer.name, id) ?? 0n };
 }
 
-// Returns the segment ids at the given position in the given layer. Awaits the loading of the
-// bucket and fetches the mapped id from the server if the local mapping doesn't know it.
-// The mapped id is null if it can't be determined. With fetchUnknownIds: false, the mapped id
-// is only looked up locally (null if unknown). Both ids are null if the bucket can't be loaded.
-export async function getSegmentIdsAtPositionAsync(
+// Returns the position in the space of the given segmentation layer and the zoom step that will
+// ultimately be rendered there. Pass both to the data value methods of the front-end API to read
+// the segment id that the user sees (once the data is loaded) at the given global position.
+export async function getLayerPositionAndRenderedZoomStep(
   layerName: string,
   globalPos: Vector3,
-  { fetchUnknownIds = true }: { fetchUnknownIds?: boolean } = {},
-): Promise<{ unmappedId: bigint | null; mappedId: bigint | null }> {
-  const posInLayerSpace = globalToLayerTransformedPosition(
+): Promise<{ positionInLayer: Vector3; zoomStep: number }> {
+  const positionInLayer = globalToLayerTransformedPosition(
     globalPos,
     layerName,
     "segmentation",
     Store.getState(),
   );
-  let unmappedId: bigint;
-  try {
-    const zoomStep = await api.data.getUltimatelyRenderedZoomStepAtPosition(
-      layerName,
-      posInLayerSpace,
-    );
-    // Use the returned value instead of reading the cube again, because the additional
-    // coordinates might change while the bucket is loading.
-    unmappedId = toBigInt(
-      await api.data.getDataValue(
-        layerName,
-        posInLayerSpace,
-        zoomStep,
-        Store.getState().flycam.additionalCoordinates,
-      ),
-    );
-  } catch (exception) {
-    // The callers handle null (e.g., with a toast), so a failed bucket load doesn't crash the sagas.
-    console.error(`Could not load the segment id at position ${globalPos}:`, exception);
-    return { unmappedId: null, mappedId: null };
-  }
-  const mappedId = fetchUnknownIds
-    ? await mapIdAsync(layerName, unmappedId)
-    : mapId(Store.getState(), layerName, unmappedId);
-  return { unmappedId, mappedId };
+  const zoomStep = await api.data.getUltimatelyRenderedZoomStepAtPosition(
+    layerName,
+    positionInLayer,
+  );
+  return { positionInLayer, zoomStep };
 }
 
 function handlePickCellFromGlobalPosition(

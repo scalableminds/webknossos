@@ -13,8 +13,8 @@ import {
 } from "viewer/controller/combinations/segmentation_handlers";
 import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinations/skeleton_handlers";
 import {
+  getLayerPositionAndRenderedZoomStep,
   getSegmentIdsAtPosition,
-  getSegmentIdsAtPositionAsync,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
 import {
@@ -55,7 +55,7 @@ import {
   toggleAllSegmentsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { Store } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import type { ContextMenuInfo } from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
@@ -177,12 +177,19 @@ export function useNoNodeContextMenuOptions(
       return;
     // Don't use the displayed segment id: the mesh file might require another mapping, which
     // is activated before this function is called (see withMappingActivationConfirmation).
-    const { mappedId: segmentId } = await getSegmentIdsAtPositionAsync(
-      visibleSegmentationLayer.name,
-      globalPosition,
-    );
-
-    if (segmentId == null) {
+    let segmentId: bigint;
+    try {
+      const { positionInLayer, zoomStep } = await getLayerPositionAndRenderedZoomStep(
+        visibleSegmentationLayer.name,
+        globalPosition,
+      );
+      segmentId = await api.data.getMappedDataValue(
+        visibleSegmentationLayer.name,
+        positionInLayer,
+        zoomStep,
+      );
+    } catch (error) {
+      console.error(error);
       Toast.info("Could not determine the segment id at the clicked position");
       return;
     }

@@ -188,6 +188,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
     val passkeysEnabled: Boolean = get[Boolean]("features.passkeysEnabled")
+    val unifiedDatasets: Boolean = get[Boolean]("features.unifiedDatasets")
     val registerToDefaultOrgaEnabled: Boolean = get[Boolean]("features.registerToDefaultOrgaEnabled")
     val supportAiAgentUrl: Option[String] = getOptional[String]("features.supportAiAgentUrl")
   }

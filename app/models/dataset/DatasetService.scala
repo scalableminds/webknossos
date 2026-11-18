@@ -858,6 +858,15 @@ class DatasetService @Inject() (
       case _ => Fox.empty
     }
 
+  // Unified datasets prototype: additional dataset fields, only written if features.unifiedDatasets is enabled.
+  private def unifiedDatasetWritesFor(dataset: Dataset, requestingUserOpt: Option[User]): Fox[JsObject] =
+    for {
+      _ <- Fox.successful(())
+    } yield Json.obj(
+      "backingAnnotationId" -> dataset._annotation,
+      "copiedFromId" -> dataset._copiedFrom
+    )
+
   def publicWrites(
       dataset: Dataset,
       requestingUserOpt: Option[User],
@@ -902,7 +911,10 @@ class DatasetService @Inject() (
           organizationDAO.getUsedStorageForDataset(dataset._id)
         else Fox.successful(0L)
       uploaderFullNameBox <- uploaderFullNameFor(dataset, requestingUserOpt).shiftBox
-    } yield Json.obj(
+      unifiedDatasetJs <-
+        if (conf.Features.unifiedDatasets) unifiedDatasetWritesFor(dataset, requestingUserOpt)
+        else Fox.successful(Json.obj())
+    } yield unifiedDatasetJs ++ Json.obj(
       "id" -> dataset._id,
       "name" -> dataset.name,
       "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("credentialId", "credentials")),

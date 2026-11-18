@@ -88,6 +88,7 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "segmentAnythingEnabled": false,
   "supportAiAgentUrl": "https://docs.webknossos.org/webhooks/webknossos-combined/ask",
   "taskReopenAllowedInSeconds": 30,
+  "unifiedDatasets": false,
   "voxelyticsEnabled": true,
 }
 `;

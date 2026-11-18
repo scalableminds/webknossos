@@ -471,6 +471,16 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption.toFox
     } yield result
 
+  // Unified datasets prototype: fallback owner of datasets that have no uploader. No access check.
+  def findOneOrganizationOwner(organizationId: String): Fox[User] =
+    for {
+      rows <- run(q"""SELECT $columns FROM $existingCollectionName
+                       WHERE _organization = $organizationId AND isOrganizationOwner AND NOT isDeactivated
+                       ORDER BY created
+                       LIMIT 1""".as[UsersRow])
+      parsed <- parseFirst(rows, organizationId)
+    } yield parsed
+
   def countOwnersForOrganization(organizationId: String): Fox[Int] =
     for {
       resultList <- run(

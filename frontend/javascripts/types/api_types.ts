@@ -255,6 +255,22 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   tags: Array<string>;
   usedStorageBytes: number;
   uploaderFullName: string | null | undefined;
+  // The following fields belong to the unified datasets prototype and are only
+  // present if features.unifiedDatasets is enabled.
+  backingAnnotationId?: string | null;
+  copiedFromId?: string | null;
+  owner?: APIUnifiedDatasetOwner | null;
+  copiedFrom?: { id: string; name: string } | null;
+  layerOrigins?: Record<string, APIDatasetLayerOrigin>;
+  copyCount?: number;
+};
+export type APIUnifiedDatasetOwner = { id: string; fullName: string };
+// Where the data of a linked data layer really lives.
+export type APIDatasetLayerOrigin = {
+  datasetId: string;
+  // null if the source dataset was deleted or is not readable by the requesting user.
+  datasetName: string | null;
+  layerName: string;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -825,6 +841,7 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
   readonly passkeysEnabled: boolean;
+  readonly unifiedDatasets?: boolean;
   readonly registerToDefaultOrgaEnabled?: boolean;
   readonly supportAiAgentUrl?: string;
 };

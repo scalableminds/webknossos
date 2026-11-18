@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(193);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(194);
 COMMIT TRANSACTION;
 
 
@@ -136,6 +136,8 @@ CREATE TABLE webknossos.datasets(
   thumbnailCacheVersion INT NOT NULL DEFAULT 0,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') UNIQUE,
+  _copiedFrom TEXT CONSTRAINT _copiedFrom_objectId CHECK (_copiedFrom ~ '^[0-9a-f]{24}$'),
   UNIQUE (directoryName, _organization),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object'),
@@ -195,6 +197,14 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)
+);
+
+CREATE TABLE webknossos.dataset_layer_origins(
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  layerName TEXT NOT NULL,
+  _sourceDataset TEXT CONSTRAINT _sourceDataset_objectId CHECK (_sourceDataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  sourceLayerName TEXT NOT NULL,
+  PRIMARY KEY (_dataset, layerName)
 );
 
 CREATE TABLE webknossos.dataset_allowedTeams(
@@ -1022,7 +1032,11 @@ ALTER TABLE webknossos.datasets
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE,
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE,
   ADD CONSTRAINT uploader_ref FOREIGN KEY(_uploader) REFERENCES webknossos.users(_id) DEFERRABLE,
-  ADD CONSTRAINT publication_ref FOREIGN KEY(_publication) REFERENCES webknossos.publications(_id) DEFERRABLE;
+  ADD CONSTRAINT publication_ref FOREIGN KEY(_publication) REFERENCES webknossos.publications(_id) DEFERRABLE,
+  ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE,
+  ADD CONSTRAINT copiedFrom_ref FOREIGN KEY(_copiedFrom) REFERENCES webknossos.datasets(_id) DEFERRABLE;
+ALTER TABLE webknossos.dataset_layer_origins
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layers
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_allowedTeams

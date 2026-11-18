@@ -92,8 +92,14 @@ case class Dataset(
     mirrorPath: Option[String] = None,
     created: Instant = Instant.now,
     isDeleted: Boolean = false,
-    thumbnailCacheVersion: Int = 0
-)
+    thumbnailCacheVersion: Int = 0,
+    // Unified datasets prototype: the annotation that holds this dataset's annotation layers, if any.
+    _annotation: Option[ObjectId] = None,
+    // Unified datasets prototype: the dataset this one was copied from, if it is a copy.
+    _copiedFrom: Option[ObjectId] = None
+) {
+  def isCopy: Boolean = _copiedFrom.isDefined
+}
 
 case class DatasetCompactInfo(
     id: ObjectId,
@@ -190,7 +196,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r.mirrorpath,
       Instant.fromSql(r.created),
       r.isdeleted,
-      r.thumbnailcacheversion
+      r.thumbnailcacheversion,
+      r._annotation.map(ObjectId(_)),
+      r._copiedfrom.map(ObjectId(_))
     )
 
   override def anonymousReadAccessQ(token: Option[String]): SqlToken = {
@@ -883,6 +891,23 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- run(DBIO.sequence(List(deleteMagsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
   }
+
+  // Unified datasets prototype: the dataset that is backed by the given annotation, if any. No access check.
+  def findOneByBackingAnnotation(annotationId: ObjectId): Fox[Option[Dataset]] =
+    for {
+      rows <- run(q"SELECT $columns FROM $existingCollectionName WHERE _annotation = $annotationId".as[DatasetsRow])
+      parsed <- parseAll(rows)
+    } yield parsed.headOption
+
+  // Unified datasets prototype: binds the annotation to the dataset unless another one was bound concurrently.
+  // Returns whether this call won.
+  def claimBackingAnnotation(datasetId: ObjectId, annotationId: ObjectId): Fox[Boolean] =
+    for {
+      updatedRows <- run(q"""UPDATE webknossos.datasets
+                              SET _annotation = $annotationId
+                              WHERE _id = $datasetId
+                              AND _annotation IS NULL""".asUpdate)
+    } yield updatedRows > 0
 
   def deleteDataset(datasetId: ObjectId, onlyMarkAsDeleted: Boolean = false): Fox[Unit] = {
     val deleteMagsQuery =

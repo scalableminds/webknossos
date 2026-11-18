@@ -1,15 +1,25 @@
 import { createTestKeystrokes, setGlobalKeystrokes } from "@rwh/keystrokes";
 import { map3 } from "libs/utils";
+import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import testRotations from "test/fixtures/test_rotations";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import {
+  createBucketResponseFunction,
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import { Euler, MathUtils, Matrix4, Quaternion } from "three";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { OrthoViewToNumber, OrthoViewValuesWithoutTDView, type Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
-import { setMappingEnabledAction } from "viewer/model/actions/settings_actions";
+import {
+  finishMappingInitializationAction,
+  setMappingAction,
+  setMappingEnabledAction,
+} from "viewer/model/actions/settings_actions";
 import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
+import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { mapId } from "viewer/model/helpers/mapped_id_lookup";
 import {
   eulerAngleToReducerInternalMatrix,
@@ -220,6 +230,68 @@ describe("API Skeleton", () => {
       bucket.trigger("bucketLoaded");
     }
     return promise;
+  });
+
+  it<WebknossosTestContext>("Data Api: getDataValue with enforceUnmapped should read the loaded bucket if no mapping is applied by the server", async ({
+    api,
+    model,
+  }) => {
+    const cube = model.getCubeByLayerName("segmentation");
+    const position: Vector3 = [100, 100, 100];
+    const bucket = cube.getOrCreateBucket(cube.positionToZoomedAddress(position, null, 0));
+    vi.spyOn(cube.pullQueue, "pull").mockReturnValue();
+    vi.spyOn(cube, "getDataValue").mockReturnValue(1337);
+
+    const promise = api.data.getDataValue("segmentation", position, 0, null, false, 0, true);
+    if (bucket.type === "data") {
+      bucket.trigger("bucketLoaded");
+    }
+    expect(await promise).toBe(1337);
+  });
+
+  it<WebknossosTestContext>("Data Api: getDataValue with enforceUnmapped should request the bucket without the mapping if the mapping is applied by the server", async ({
+    api,
+    model,
+    mocks,
+  }) => {
+    Store.dispatch(
+      setMappingAction("segmentation", sampleHdf5AgglomerateName, "AGGLOMERATE", false),
+    );
+    Store.dispatch(finishMappingInitializationAction("segmentation"));
+    const position: Vector3 = [100, 101, 102];
+    // The segmentation layer of the fixture has the element class uint32
+    const getUnmappedBuckets = createBucketResponseFunction({ segmentation: "uint32" }, 0, 0, [
+      { position, value: 1337 },
+    ]);
+    const getMappedBuckets = createBucketResponseFunction({ segmentation: "uint32" }, 42);
+    const requestedBuckets: RequestBucketInfo[] = [];
+    vi.mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders).mockImplementation(
+      (url: string, payload: { data: Array<RequestBucketInfo> }) => {
+        requestedBuckets.push(...payload.data);
+        return payload.data.some((bucket) => bucket.applyAgglomerate != null)
+          ? getMappedBuckets(url, payload)
+          : getUnmappedBuckets(url, payload);
+      },
+    );
+    const cube = model.getCubeByLayerName("segmentation");
+    const getDataValueOfCube = vi.spyOn(cube, "getDataValue");
+
+    expect(await api.data.getDataValue("segmentation", position, 0, null, false, 0, true)).toBe(
+      1337,
+    );
+    expect(requestedBuckets).toEqual([expect.objectContaining({ position: [96, 96, 96] })]);
+    expect(requestedBuckets[0].applyAgglomerate).toBeUndefined();
+    // The unmapped bucket is not added to the cube, which holds the mapped data
+    expect(getDataValueOfCube).not.toHaveBeenCalled();
+    expect(cube.getBucket(cube.positionToZoomedAddress(position, null, 0)).type).toBe("null");
+  });
+
+  it<WebknossosTestContext>("Data Api: getDataValue should throw an error if respectMapping and enforceUnmapped are combined", async ({
+    api,
+  }) => {
+    await expect(
+      api.data.getDataValue("segmentation", [1, 2, 3], 0, null, true, 0, true),
+    ).rejects.toThrow();
   });
 
   it<WebknossosTestContext>("User Api: setConfiguration should set and get a user configuration value", ({

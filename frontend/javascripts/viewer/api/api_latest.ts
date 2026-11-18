@@ -88,6 +88,7 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
+  getBucketRetrievalSourceFn,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -168,6 +169,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import type DataLayer from "viewer/model/data_layer";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
@@ -181,7 +183,10 @@ import {
   zoomedAddressToZoomedPosition,
 } from "viewer/model/helpers/position_converter";
 import { flatToNestedMatrix } from "viewer/model/helpers/transformation_helpers";
-import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
+import {
+  getConstructorForElementClass,
+  uint8ToTypedBuffer,
+} from "viewer/model/helpers/typed_buffer";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import {
@@ -1949,6 +1954,15 @@ class DataApi {
    * @example
    * // Get the segmentation id for the first volume tracing layer
    * const segmentId = await api.data.getDataValue(api.data.getVolumeTracingLayerIds()[0], position);
+   *
+   * If an agglomerate mapping is applied by the server (e.g., outside of proofreading), the loaded
+   * buckets of a segmentation layer contain the mapped ids. Pass enforceUnmapped to get the unmapped
+   * id in that case, too. Then, the bucket is requested again without the mapping (and not cached).
+   * enforceUnmapped cannot be combined with respectMapping.
+   *
+   * @example
+   * // Get the unmapped segment id even if an agglomerate mapping is active
+   * const segmentId = await api.data.getDataValue("segmentation", position, null, null, false, 0, true);
    */
   async getDataValue(
     layerName: string,
@@ -1957,7 +1971,11 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
     respectMapping: boolean = false,
     channelIndex: number = 0,
+    enforceUnmapped: boolean = false,
   ): Promise<NumberLike> {
+    if (respectMapping && enforceUnmapped) {
+      throw new Error("respectMapping and enforceUnmapped cannot be combined.");
+    }
     let zoomStep;
     const state = Store.getState();
 
@@ -1972,6 +1990,18 @@ class DataApi {
     const cube = this.model.getCubeByLayerName(layerName);
     additionalCoordinates = additionalCoordinates || state.flycam.additionalCoordinates;
     const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
+    if (
+      enforceUnmapped &&
+      getBucketRetrievalSourceFn(layerName)(state)[0] === "REQUESTED-WITH-MAPPING"
+    ) {
+      return this.getUnmappedDataValueFromServer(
+        layerName,
+        position,
+        bucketAddress,
+        zoomStep,
+        channelIndex,
+      );
+    }
     await this.getLoadedBucket(layerName, bucketAddress);
 
     let mapping = null;
@@ -1995,6 +2025,33 @@ class DataApi {
       channelIndex,
     );
     return dataValue;
+  }
+
+  // Requests the bucket that contains the position without applying the agglomerate mapping on the
+  // server (see getDataValue). The bucket is not added to the cube, as the cube holds the mapped data.
+  private async getUnmappedDataValueFromServer(
+    layerName: string,
+    position: Vector3,
+    bucketAddress: BucketAddress,
+    zoomStep: number,
+    channelIndex: number,
+  ): Promise<NumberLike> {
+    const cube = this.model.getCubeByLayerName(layerName);
+    if (!cube.magInfo.hasIndex(zoomStep)) {
+      return 0;
+    }
+    const layerInfo = getLayerByName(Store.getState().dataset, layerName);
+    const [result] = await requestWithFallback(layerInfo, [bucketAddress], {
+      applyServerMapping: false,
+    });
+    if (result.type === "failure") {
+      throw new Error(`Could not load the data of layer ${layerName} at position ${position}.`);
+    }
+    if (result.type === "empty") {
+      return 0;
+    }
+    const data = uint8ToTypedBuffer(result.data, layerInfo.elementClass);
+    return data[cube.getVoxelIndex(position.map(Math.floor) as Vector3, zoomStep, channelIndex)];
   }
 
   /**

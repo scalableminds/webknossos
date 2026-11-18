@@ -1,4 +1,5 @@
-import { getAgglomerateDiffToReference, getUnmappedSegmentIdAtPosition } from "admin/rest_api";
+import { getAgglomerateDiffToReference } from "admin/rest_api";
+import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import type { Channel } from "redux-saga";
@@ -18,7 +19,6 @@ import {
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import {
-  getMagInfo,
   getSegmentationLayerByName,
   getSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
@@ -40,6 +40,7 @@ import {
 } from "viewer/model/helpers/proto_helpers";
 import { call, type Saga, select } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
+import { api } from "viewer/singletons";
 import type {
   AgglomerateDiff,
   AgglomerateDiffDescriptor,
@@ -167,15 +168,19 @@ function* fetchAgglomerateDiff(
   const effectiveLayerName = layerInfo.fallbackLayer ?? layerName;
 
   try {
-    const segmentId = yield* call(
-      getUnmappedSegmentIdAtPosition,
-      dataset.dataStore.url,
-      dataset,
-      effectiveLayerName,
-      layerInfo.elementClass,
-      positionInLayer,
-      // The magnifications of the fallback layer might differ from the ones of the annotation layer
-      getMagInfo(layerInfo.fallbackLayerInfo?.mags ?? layerInfo.mags).getFinestMag(),
+    // The agglomerate mapping is usually applied by the server, so the unmapped id is enforced.
+    // For a volume annotation layer, this is the annotated id (which might be brushed).
+    const segmentId = toBigInt(
+      yield* call(
+        [api.data, api.data.getDataValue],
+        layerName,
+        positionInLayer,
+        null,
+        null,
+        false,
+        0,
+        true,
+      ),
     );
     const protoBuffer = yield* call(
       getAgglomerateDiffToReference,

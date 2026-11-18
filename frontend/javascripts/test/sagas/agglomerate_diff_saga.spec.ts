@@ -6,7 +6,12 @@ import { sleep } from "libs/utils";
 import { Root } from "protobufjs/light";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { tracing as serverSkeletonTracing } from "test/fixtures/skeletontracing_server_objects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import {
+  type BucketOverride,
+  createBucketResponseFunction,
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import type { ServerSkeletonTracingTree, TreeAgglomerateInfo } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import {
@@ -35,6 +40,7 @@ import {
   setTreesAgglomerateInfoTracingIdAction,
   setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { Store } from "viewer/singletons";
 import { beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
@@ -44,6 +50,8 @@ const mappingName = sampleHdf5AgglomerateName;
 const referenceMappingName = "agglomerate_view_0";
 const agglomerateId = 42n;
 const segmentIdAtFirstNode = 4711n;
+const storedClickedPosition = [8, 9, 10] as const;
+const segmentIdAtStoredClickedPosition = 815n;
 // vi.mock is hoisted above the module scope, so the constant has to be hoisted, too
 const { clickedAgglomerateId } = vi.hoisted(() => ({ clickedAgglomerateId: 77n }));
 const clickedSegmentId = 1337n;
@@ -153,7 +161,6 @@ const waitForLoadedDiff = () =>
     expect(getDiffs()[0].sourceTreeId).not.toBeNull();
   });
 const isDiffUrl = (url: URL) => url.pathname.includes("/diffToReference/");
-const isRawDataUrl = (url: URL) => url.pathname.endsWith(`/layers/${layerName}/data`);
 
 function addAgglomerateTrees(
   agglomerateIds: bigint[],
@@ -180,17 +187,41 @@ function getAgglomerateTree(id: bigint) {
     .find((tree) => tree.agglomerateInfo?.agglomerateId === id)!;
 }
 
-const getRawDataPosition = (url: URL | undefined) =>
-  ["x", "y", "z"].map((dim) => url?.searchParams.get(dim));
+// The unmapped segment ids in the buckets of the segmentation layer (uint32 in the fixture)
+const unmappedSegmentIds: BucketOverride[] = [
+  { position: [1, 0, 0], value: Number(segmentIdAtFirstNode) },
+  { position: [...storedClickedPosition], value: Number(segmentIdAtStoredClickedPosition) },
+  { position: [5, 6, 7], value: Number(clickedSegmentId) },
+];
+const getUnmappedBuckets = createBucketResponseFunction(
+  { [layerName]: "uint32" },
+  0,
+  0,
+  unmappedSegmentIds,
+);
+// Buckets that are requested with the agglomerate mapping only contain agglomerate ids, which must
+// not be used for the comparison
+const getMappedBuckets = createBucketResponseFunction({ [layerName]: "uint32" }, 1);
 
-// Answers the unmapped voxel reads with segmentIdAtFirstNode and the diff requests with the given
-// diff (one added edge by default). If pendingDiffs is passed, the diff requests are only answered
+// Answers the bucket requests with unmappedSegmentIds (if they are requested without a mapping)
+// and the diff requests with the given diff (one added edge by default). If pendingDiffs is passed, the diff requests are only answered
 // once the functions pushed to it are called. Returns a function that returns the requested urls.
 function mockDiffRequests(
   { mocks }: WebknossosTestContext,
   pendingDiffs?: Array<() => void>,
   getDiffResponse: () => Promise<ArrayBuffer> = () => Promise.resolve(diffWithOneAddedEdge()),
 ): () => URL[] {
+  const getDefaultBuckets = vi
+    .mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders)
+    .getMockImplementation()!;
+  vi.mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders).mockImplementation(
+    (url: string, payload: { data: Array<RequestBucketInfo> }) => {
+      if (!url.includes(`/layers/${layerName}/data`)) return getDefaultBuckets(url, payload);
+      return payload.data.some((bucket) => bucket.applyAgglomerate != null)
+        ? getMappedBuckets(url, payload)
+        : getUnmappedBuckets(url, payload);
+    },
+  );
   const defaultReceiveArraybuffer = vi
     .mocked(mocks.Request.receiveArraybuffer)
     .getMockImplementation()!;
@@ -198,10 +229,6 @@ function mockDiffRequests(
     if (url.includes("/diffToReference/")) {
       if (pendingDiffs == null) return getDiffResponse();
       return new Promise((resolve) => pendingDiffs.push(() => resolve(getDiffResponse())));
-    }
-    if (new URL(url, "http://localhost").searchParams.get("width") === "1") {
-      // The segmentation layer of the fixture has the element class uint32
-      return Promise.resolve(new Uint32Array([Number(segmentIdAtFirstNode)]).buffer);
     }
     return defaultReceiveArraybuffer(url, ...rest);
   });
@@ -211,7 +238,7 @@ function mockDiffRequests(
     );
 }
 
-// Answers the unmapped voxel reads with clickedSegmentId and parses the agglomerate skeleton request
+// Parses the agglomerate skeleton request
 // of clickedAgglomerateId (which is only answered once the returned resolve function is called) as
 // a single agglomerate tree. Other requests are answered by the previous mock (see mockDiffRequests).
 function mockClickedAgglomerateSkeletonRequest({ mocks }: WebknossosTestContext): {
@@ -224,9 +251,6 @@ function mockClickedAgglomerateSkeletonRequest({ mocks }: WebknossosTestContext)
       return new Promise((resolve) => {
         skeletonRequest.resolve = resolve;
       });
-    }
-    if (new URL(url, "http://localhost").searchParams.get("width") === "1") {
-      return Promise.resolve(new Uint32Array([Number(clickedSegmentId)]).buffer);
     }
     return answerOtherRequest(url, ...rest);
   });
@@ -273,11 +297,7 @@ describe("Agglomerate diff saga", () => {
     addAgglomerateTrees([agglomerateId]);
     await waitForLoadedDiff();
 
-    // The segment at the first node of the agglomerate skeleton (1, 0, 0) is compared
-    const rawDataUrl = getUrls().find(isRawDataUrl);
-    expect(rawDataUrl?.searchParams.get("x")).toBe("1");
-    // The raw data must not be mapped
-    expect(rawDataUrl?.searchParams.has("mappingName")).toBe(false);
+    // The (unmapped) segment at the first node of the agglomerate skeleton (1, 0, 0) is compared
     const diffUrl = getUrls().find(isDiffUrl);
     expect(diffUrl?.searchParams.get("segmentId")).toBe(segmentIdAtFirstNode.toString());
     expect(diffUrl?.searchParams.get("referenceMappingName")).toBe(referenceMappingName);
@@ -529,10 +549,12 @@ describe("Agglomerate diff saga", () => {
   it<WebknossosTestContext>("compares the segment at the stored clicked position of an agglomerate skeleton", async (context) => {
     // E.g., an agglomerate skeleton that was loaded by clicking before the annotation was reloaded
     const getUrls = mockDiffRequests(context);
-    addAgglomerateTrees([agglomerateId], { clickedPosition: [8, 9, 10] });
+    addAgglomerateTrees([agglomerateId], { clickedPosition: [...storedClickedPosition] });
     await waitForLoadedDiff();
 
-    expect(getRawDataPosition(getUrls().find(isRawDataUrl))).toEqual(["8", "9", "10"]);
+    expect(getUrls().find(isDiffUrl)?.searchParams.get("segmentId")).toBe(
+      segmentIdAtStoredClickedPosition.toString(),
+    );
   });
 
   it<WebknossosTestContext>("only compares an agglomerate skeleton for the layer it was loaded for", async (context) => {
@@ -563,7 +585,6 @@ describe("Agglomerate diff saga", () => {
     );
     expect(getDiffs().length).toBe(1);
     expect(getOverlay().skeleton.trees.size()).toBe(1);
-    expect(getRawDataPosition(getUrls().filter(isRawDataUrl).at(-1))).toEqual(["1", "0", "0"]);
     const lastDiffUrl = getUrls().filter(isDiffUrl).at(-1);
     expect(lastDiffUrl?.searchParams.get("segmentId")).toBe(segmentIdAtFirstNode.toString());
   });
@@ -684,7 +705,6 @@ describe("Agglomerate diff saga", () => {
     expect(getUrls().find(isDiffUrl)?.searchParams.get("segmentId")).toBe(
       clickedSegmentId.toString(),
     );
-    expect(getRawDataPosition(getUrls().find(isRawDataUrl))).toEqual(["5", "6", "7"]);
 
     // The diff is kept although its agglomerate skeleton is still loading
     await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));

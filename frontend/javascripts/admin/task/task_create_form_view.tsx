@@ -328,14 +328,6 @@ function readLastUsed(key: string): string | null {
   }
 }
 
-function rememberLastUsed(key: string, value: string) {
-  try {
-    UserLocalStorage.setItem(key, value);
-  } catch {
-    // Remembering the choice is only a convenience.
-  }
-}
-
 // The only option, or else the option the user picked when they last created tasks.
 function getPreselection(optionValues: string[], lastUsedKey: string): string | undefined {
   const onlyOption = getOnlyItem(optionValues);
@@ -483,8 +475,8 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       const confirmedTask = await updateTask(taskId, newTask);
       navigate(`/tasks/${confirmedTask.id}`);
     } else {
-      rememberLastUsed(LAST_USED_TASK_TYPE_KEY, formValues.taskTypeId);
-      rememberLastUsed(LAST_USED_PROJECT_KEY, formValues.projectName);
+      UserLocalStorage.trySetItem(LAST_USED_TASK_TYPE_KEY, formValues.taskTypeId);
+      UserLocalStorage.trySetItem(LAST_USED_PROJECT_KEY, formValues.projectName);
       setIsUploading(true);
       // or create a new one either from the form values or with an NML file
       let taskResponses: TaskCreationResponse[] = [];

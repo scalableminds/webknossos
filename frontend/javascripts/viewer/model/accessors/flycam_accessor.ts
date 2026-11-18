@@ -32,6 +32,7 @@ import {
   getMaxZoomStep,
   getUnifiedAdditionalCoordinates,
 } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
@@ -199,14 +200,14 @@ export const _getDummyFlycamMatrix = memoizeOne((voxelSize: VoxelSize) => {
 export function getMoveOffset(state: WebknossosState, timeFactor: number) {
   return (
     (state.userConfiguration.moveValue * timeFactor) /
-    getUnitPerPixel(state.dataset.dataSource.scale) /
+    getUnitPerPixel(getGlobalVoxelSizeFromState(state)) /
     constants.FPS
   );
 }
 
 export function getMoveOffset3d(state: WebknossosState, timeFactor: number) {
   const { moveValue3d } = state.userConfiguration;
-  const unitPerPixel = getUnitPerPixel(state.dataset.dataSource.scale);
+  const unitPerPixel = getUnitPerPixel(getGlobalVoxelSizeFromState(state));
   return (moveValue3d * timeFactor) / unitPerPixel / constants.FPS;
 }
 
@@ -640,7 +641,7 @@ export function getAreasFromState(state: WebknossosState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
   const rects = state.viewModeData.plane.inputCatcherRects;
   const { zoomStep } = state.flycam;
-  const voxelSize = state.dataset.dataSource.scale;
+  const voxelSize = getGlobalVoxelSizeFromState(state);
   return getAreas(rects, position, zoomStep, voxelSize);
 }
 

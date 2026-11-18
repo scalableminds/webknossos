@@ -23,6 +23,7 @@ import {
 import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
 } from "viewer/geometries/materials/plane_material_factory";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 
 const DEFAULT_POSITION_OFFSET = [0, 0, 0] as Vector3;
@@ -224,7 +225,7 @@ class Plane {
   bindToEvents(): void {
     this.storePropertyUnsubscribers = [
       listenToStoreProperty(
-        (storeState) => storeState.dataset.dataSource.scale.factor,
+        (storeState) => getGlobalVoxelSizeFromState(storeState).factor,
         (scaleFactor) => (this.datasetScaleFactor = scaleFactor),
       ),
     ];

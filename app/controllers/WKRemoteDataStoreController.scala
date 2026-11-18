@@ -70,6 +70,7 @@ class WKRemoteDataStoreController @Inject() (
     credentialDAO: CredentialDAO,
     alignmentProjectDAO: AlignmentProjectDAO,
     alignmentProjectService: AlignmentProjectService,
+    pathDeletionDAO: PathDeletionDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -556,6 +557,23 @@ class WKRemoteDataStoreController @Inject() (
         } yield Ok
       }
     }
+
+  def listPathsToDelete(name: String, key: String): Action[AnyContent] = Action.fox { _ =>
+    dataStoreService.validateAccess(name, key) { _ =>
+      for {
+        paths <- pathDeletionDAO.findAll
+      } yield Ok(Json.toJson(paths))
+    }
+  }
+
+  def markPathsAsDeleted(name: String, key: String): Action[Seq[String]] = Action.fox(validateJson[Seq[String]]) {
+    implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          _ <- Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)
+        } yield Ok
+      }
+  }
 
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.fox { _ =>
     dataStoreService.validateAccess(name, key) { _ =>

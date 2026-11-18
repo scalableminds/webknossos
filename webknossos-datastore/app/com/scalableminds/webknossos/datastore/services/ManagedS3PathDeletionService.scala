@@ -51,7 +51,7 @@ class ManagedS3PathDeletionService @Inject() (
         results <- Fox.fromFuture(Fox.serialSequence(pathLiterals) { pathLiteral =>
           for {
             path <- UPath.fromString(pathLiteral).toFox
-            _ = logger.info(s"Deleting $path ...")
+            _ = logger.info(s"Deleting $path from managed S3...")
             _ <- managedS3Service.deleteRecursively(path)
           } yield ()
         })

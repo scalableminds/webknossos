@@ -39,6 +39,7 @@ import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getMoveOffset, getPosition } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
@@ -126,7 +127,7 @@ function createDelayAwareMoveHandler(
 
     const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
     const voxelPerSecond =
-      state.userConfiguration.moveValue / state.dataset.dataSource.scale.factor[thirdDim];
+      state.userConfiguration.moveValue / getGlobalVoxelSizeFromState(state).factor[thirdDim];
 
     if (state.userConfiguration.dynamicSpaceDirection && useDynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction

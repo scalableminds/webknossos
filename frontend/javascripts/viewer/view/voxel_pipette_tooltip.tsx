@@ -12,7 +12,10 @@ import {
   getOrderedColorLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getGlobalVoxelSizeFromState,
+  globalToLayerTransformedPosition,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getCurrentMagIndex,
   getPosition,
@@ -68,7 +71,7 @@ export default function VoxelValueTooltip() {
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const globalMousePosition = useWkSelector((state) => getGlobalMousePositionFloating(state));
-  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const voxelSize = useWkSelector(getGlobalVoxelSizeFromState);
   const [tooltipRef, tooltipWidth] = useTooltipWidth();
   const dispatch = useDispatch();
   const orthoView = useWkSelector((state) => state.viewModeData.plane.activeViewport);

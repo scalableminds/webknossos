@@ -17,6 +17,7 @@ import {
   getElementClass,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   AnnotationTool,
   isBrushTool,
@@ -296,7 +297,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     if (isBrushTool(activeTool)) {
       const brushSize = yield* select((state) => state.userConfiguration.brushSize);
-      const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
+      const voxelSize = yield* select(getGlobalVoxelSizeFromState);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
       const planeAxis = dimIndices[2] as 0 | 1 | 2;
       const diameterInMag = getBrushDiameterInMag(

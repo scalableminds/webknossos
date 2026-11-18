@@ -23,6 +23,7 @@ import {
   getBoxCrossSection,
   MAX_CROSS_SECTION_CORNERS,
 } from "viewer/geometries/helpers/box_cross_section";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/throttled_store";
@@ -149,7 +150,7 @@ class Cube {
         ),
         // The cross sections of rotated planes depend on the voxel size.
         listenToStoreProperty(
-          (state) => state.dataset.dataSource.scale.factor,
+          (state) => getGlobalVoxelSizeFromState(state).factor,
           () => this.updateCrossSections(),
         ),
       );
@@ -252,7 +253,7 @@ class Cube {
     const state = Store.getState();
     const position = getPosition(state.flycam);
     const rotation = getRotationInRadian(state.flycam);
-    const voxelSize = state.dataset.dataSource.scale.factor;
+    const voxelSize = getGlobalVoxelSizeFromState(state).factor;
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const corners = getBoxCrossSection(
         this.min,

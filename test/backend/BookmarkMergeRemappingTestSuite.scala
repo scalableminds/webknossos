@@ -46,11 +46,14 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
       )
     )
 
+  private val volumeASegmentIdMap = Map(5L -> 50L)
+  private val volumeBSegmentIdMap = Map(5L -> 60L)
+
   private val remapping = BookmarkMergeRemapping(
     existingNodeIds = Set(1, 2),
     nodeIdMap = _ + 100,
     tracingIdMap = Map("skeletonA" -> "mergedSkeleton", "volumeA" -> "mergedVolume", "volumeB" -> "mergedVolume"),
-    segmentIdMapsByTracingId = Map("volumeA" -> Map(5L -> 50L), "volumeB" -> Map(5L -> 60L)),
+    segmentIdMapsByTracingId = Map("volumeA" -> volumeASegmentIdMap, "volumeB" -> volumeBSegmentIdMap),
     editableMappingIdMap = Map.empty
   )
 
@@ -83,12 +86,12 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
         bookmark(layers =
           Seq(
             BookmarkLayerStateProto("volumeA", meshes = Seq(adHocMesh(5), adHocMesh(6))),
-            BookmarkLayerStateProto("color", meshes = Seq(adHocMesh(5)))
+            BookmarkLayerStateProto("segmentation", meshes = Seq(adHocMesh(5)))
           )
         ),
         1
       )
-      assert(merged.state.layers.map(_.meshes.map(_.segmentId)) == Seq(Seq(50L, 6L), Seq(5L)))
+      assert(merged.state.layers.map(_.meshes.map(_.segmentId)) == Seq(Seq(volumeASegmentIdMap(5L), 6L), Seq(5L)))
     }
 
     "only combine meshes of merged layers that show the same segment in the same way" in {
@@ -118,7 +121,7 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
           .flatMap(_.meshes.map(_.segmentId))
       assert(remappedSegmentIds(precomputedMesh) == Seq(5L))
       assert(remappedSegmentIds(adHocMesh(5, Some("agglomerate_view_5"))) == Seq(5L))
-      assert(remappedSegmentIds(adHocMesh(5)) == Seq(50L))
+      assert(remappedSegmentIds(adHocMesh(5)) == Seq(volumeASegmentIdMap(5L)))
     }
 
     "combine layers that are merged into the same layer, keeping the settings of the first" in {
@@ -133,7 +136,7 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
       )
       assert(merged.state.layers.length == 1)
       assert(merged.state.layers.head.isDisabled.contains(true))
-      assert(merged.state.layers.head.meshes.map(_.segmentId) == Seq(50L, 60L))
+      assert(merged.state.layers.head.meshes.map(_.segmentId) == Seq(volumeASegmentIdMap(5L), volumeBSegmentIdMap(5L)))
     }
 
     "remap editable mappings, drop those that no longer exist and keep regular mappings" in {
@@ -144,7 +147,7 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
           meshes = Seq(adHocMesh(5, Some("volumeA")), adHocMesh(6))
         ),
         BookmarkLayerStateProto(
-          "color",
+          "segmentation",
           mapping = Some(BookmarkMappingProto("agglomerate_view_5", MappingTypeProto.AGGLOMERATE))
         )
       )
@@ -175,7 +178,7 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
             meshes = Seq(adHocMesh(5, Some("volumeA")), adHocMesh(6))
           ),
           BookmarkLayerStateProto(
-            "color",
+            "segmentation",
             mapping = Some(BookmarkMappingProto("agglomerate_view_5", MappingTypeProto.AGGLOMERATE))
           )
         )
@@ -183,7 +186,7 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
       val state = remapping(original.state)
       assert(state.activeNodeId.contains(3))
       assert(state.nativelyRenderedLayerName.contains("newVolume"))
-      assert(state.layers.map(_.layerName) == Seq("newVolume", "color"))
+      assert(state.layers.map(_.layerName) == Seq("newVolume", "segmentation"))
       assert(state.layers.flatMap(_.mapping.map(_.mappingName)) == Seq("newVolume", "agglomerate_view_5"))
       assert(
         state.layers.head.meshes

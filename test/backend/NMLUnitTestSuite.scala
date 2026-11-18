@@ -34,8 +34,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import models.annotation.SharedParsingParameters
 import models.annotation.nml.{
   NmlAnnotationLayerRef,
-  NmlBookmarkToWrite,
-  NmlBookmarks,
+  NmlAnnotationBookmarkToWrite,
+  NmlAnnotationBookmarks,
   NmlParseSuccessWithoutFile,
   NmlParser,
   NmlSkeletonLayerRef,
@@ -93,7 +93,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
   private def writeToXmlBytes(
       skeletonTracing: SkeletonTracing,
-      bookmarks: Seq[NmlBookmarkToWrite] = Seq.empty,
+      bookmarks: Seq[NmlAnnotationBookmarkToWrite] = Seq.empty,
       datasetLayerNames: Option[Set[String]] = None
   ): Fox[Array[Byte]] = {
     val skeletonLayer = FetchedAnnotationLayer(
@@ -375,11 +375,11 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       case Some(_)                                    => None
       case None                                       => Some(name)
     }
-    NmlBookmarks.rewriteLayerReferences(bookmark, decode, decode)
+    NmlAnnotationBookmarks.rewriteLayerReferences(bookmark, decode, decode)
   }
 
   private def writeAndParseBookmarks(
-      bookmarks: Seq[NmlBookmarkToWrite],
+      bookmarks: Seq[NmlAnnotationBookmarkToWrite],
       datasetLayerNames: Option[Set[String]] = None
   ): Fox[NmlParseSuccessWithoutFile] =
     for {
@@ -391,8 +391,8 @@ class NMLUnitTestSuite extends AsyncWordSpec {
     "yield the same bookmarks, with references to the NML layers instead of tracingIds" in
       writeAndParseBookmarks(
         Seq(
-          NmlBookmarkToWrite(fullBookmark, Map(BookmarkThumbnailSize.small -> Array[Byte](1))),
-          NmlBookmarkToWrite(minimalBookmark, Map.empty)
+          NmlAnnotationBookmarkToWrite(fullBookmark, Map(BookmarkThumbnailSize.small -> Array[Byte](1))),
+          NmlAnnotationBookmarkToWrite(minimalBookmark, Map.empty)
         )
       ).futureBox.map {
         case Full(parsed) =>
@@ -404,7 +404,9 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           )
           assert(
             parsed.bookmarks.map(_.thumbnailLocations) == Seq(
-              Map(BookmarkThumbnailSize.small -> NmlBookmarks.thumbnailLocation(3, BookmarkThumbnailSize.small)),
+              Map(
+                BookmarkThumbnailSize.small -> NmlAnnotationBookmarks.thumbnailLocation(3, BookmarkThumbnailSize.small)
+              ),
               Map.empty
             )
           )
@@ -413,7 +415,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
     "not write the versions of bookmarks" in
       writeAndParseBookmarks(
-        Seq(NmlBookmarkToWrite(minimalBookmark.withCreatedAtVersion(12).withThumbnailVersion(13), Map.empty))
+        Seq(NmlAnnotationBookmarkToWrite(minimalBookmark.withCreatedAtVersion(12).withThumbnailVersion(13), Map.empty))
       ).futureBox.map {
         case Full(parsed) => assert(parsed.bookmarks.map(_.bookmark) == Seq(minimalBookmark))
         case _            => fail()
@@ -430,7 +432,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
           )
         )
       )
-      writeAndParseBookmarks(Seq(NmlBookmarkToWrite(bookmark, Map.empty)), Some(Set("color"))).futureBox.map {
+      writeAndParseBookmarks(Seq(NmlAnnotationBookmarkToWrite(bookmark, Map.empty)), Some(Set("color"))).futureBox.map {
         case Full(parsed) =>
           val parsedState = decodeLayerReferences(parsed.bookmarks.head.bookmark).state
           assert(parsedState.nativelyRenderedLayerName.isEmpty)
@@ -441,7 +443,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
     "not write the thumbnail viewport of bookmarks without thumbnails" in
       writeAndParseBookmarks(
-        Seq(NmlBookmarkToWrite(minimalBookmark.withThumbnailViewport(ThumbnailViewportProto.XY), Map.empty))
+        Seq(NmlAnnotationBookmarkToWrite(minimalBookmark.withThumbnailViewport(ThumbnailViewportProto.XY), Map.empty))
       ).futureBox.map {
         case Full(parsed) => assert(parsed.bookmarks.map(_.bookmark) == Seq(minimalBookmark))
         case _            => fail()
@@ -451,7 +453,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       writeToXmlBytes(
         dummyTracing,
         Seq(
-          NmlBookmarkToWrite(
+          NmlAnnotationBookmarkToWrite(
             minimalBookmark.withThumbnailViewport(ThumbnailViewportProto.XY),
             Map(BookmarkThumbnailSize.small -> Array[Byte](1), BookmarkThumbnailSize.large -> Array[Byte](1))
           )
@@ -469,21 +471,24 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       val jpegStart = Array(0xff, 0xd8, 0xff, 0xe0).map(_.toByte)
       val pngStart = Array(0x89, 0x50, 0x4e, 0x47).map(_.toByte)
       val webpStart = "RIFF\u0000\u0000\u0000\u0000WEBP".getBytes("US-ASCII")
-      assert(NmlBookmarks.isJpeg(jpegStart))
-      assert(!NmlBookmarks.isJpeg(pngStart))
-      assert(!NmlBookmarks.isJpeg(webpStart))
-      assert(!NmlBookmarks.isJpeg(Array.empty))
+      assert(NmlAnnotationBookmarks.isJpeg(jpegStart))
+      assert(!NmlAnnotationBookmarks.isJpeg(pngStart))
+      assert(!NmlAnnotationBookmarks.isJpeg(webpStart))
+      assert(!NmlAnnotationBookmarks.isJpeg(Array.empty))
     }
 
     "fail for duplicate bookmark ids" in
       assertParsingFailed(
         writeAndParseBookmarks(
-          Seq(NmlBookmarkToWrite(minimalBookmark, Map.empty), NmlBookmarkToWrite(minimalBookmark, Map.empty))
+          Seq(
+            NmlAnnotationBookmarkToWrite(minimalBookmark, Map.empty),
+            NmlAnnotationBookmarkToWrite(minimalBookmark, Map.empty)
+          )
         )
       )
 
     "fail for a bookmark without position" in
-      writeToXmlBytes(dummyTracing, Seq(NmlBookmarkToWrite(minimalBookmark, Map.empty))).futureBox.flatMap {
+      writeToXmlBytes(dummyTracing, Seq(NmlAnnotationBookmarkToWrite(minimalBookmark, Map.empty))).futureBox.flatMap {
         case Full(xmlBytes) =>
           val xml = new String(xmlBytes, "UTF-8")
           val xmlWithoutPosition = xml.replaceFirst("""<position [^>]*/>""", "")

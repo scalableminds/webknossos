@@ -32,7 +32,7 @@ case class NmlParsedParameters(
     treesSplit: Seq[Tree],
     activeNodeId: Option[Int],
     treeGroupsAfterSplit: Seq[TreeGroup],
-    bookmarks: Seq[NmlParsedBookmark]
+    bookmarks: Seq[NmlParsedAnnotationBookmark]
 )
 
 case class NmlParseSuccessWithoutFile(
@@ -41,7 +41,7 @@ case class NmlParseSuccessWithoutFile(
     datasetId: ObjectId,
     description: String,
     wkUrl: Option[String],
-    bookmarks: Seq[NmlParsedBookmark]
+    bookmarks: Seq[NmlParsedAnnotationBookmark]
 )
 
 object NmlResults extends LazyLogging {
@@ -73,7 +73,7 @@ object NmlResults extends LazyLogging {
       datasetId: ObjectId,
       _description: String,
       _wkUrl: Option[String],
-      bookmarks: Seq[NmlParsedBookmark]
+      bookmarks: Seq[NmlParsedAnnotationBookmark]
   ) extends NmlParseResult {
     def succeeded = true
 

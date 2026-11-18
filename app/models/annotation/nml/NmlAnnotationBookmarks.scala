@@ -31,7 +31,7 @@ object NmlAnnotationLayerRef {
     else None
 }
 
-object NmlBookmarks {
+object NmlAnnotationBookmarks {
   // Applies the functions to all layer and mapping names of the bookmark state. References mapped to None are dropped,
   // together with what depends on them (e.g. the settings of a dropped layer, or a mesh of a dropped mapping).
   def rewriteLayerReferences(
@@ -81,7 +81,7 @@ object NmlBookmarks {
 }
 
 // A bookmark to be written to an NML, with the thumbnails that go next to it in the zip.
-case class NmlBookmarkToWrite(
+case class NmlAnnotationBookmarkToWrite(
     bookmark: AnnotationBookmarkProto,
     thumbnails: Map[BookmarkThumbnailSize.Value, Array[Byte]]
 )
@@ -89,7 +89,7 @@ case class NmlBookmarkToWrite(
 // A bookmark parsed from an NML. Its references to annotation layers are encoded (see NmlAnnotationLayerRef), and its
 // createdAtVersion and thumbnailVersion are not set yet. The thumbnail locations are paths of other files in the
 // uploaded zip.
-case class NmlParsedBookmark(
+case class NmlParsedAnnotationBookmark(
     bookmark: AnnotationBookmarkProto,
     thumbnailLocations: Map[BookmarkThumbnailSize.Value, String]
 )

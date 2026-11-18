@@ -363,9 +363,9 @@ class TSAnnotationController @Inject() (
       mergedVolumeIdOpt: Option[String],
       mergedEditableMappingIdOpt: Option[String]
   ): Seq[BookmarkMergeRemapping] = {
-    val firstSkeletonIndices = skeletonTracingsNested.map(_.length).scanLeft(0)(_ + _)
-    annotations.lazyZip(skeletonTracingsNested).lazyZip(firstSkeletonIndices).toSeq.map {
-      case (annotation, skeletonTracings, firstSkeletonIndex) =>
+    val nodeMappingIndices = skeletonTracingsNested.map(_.length).scanLeft(0)(_ + _)
+    annotations.lazyZip(skeletonTracingsNested).lazyZip(nodeMappingIndices).toSeq.map {
+      case (annotation, skeletonTracings, nodeMappingIndex) =>
         val mergedTracingIdsBySourceTracingId = annotation.annotationLayers.flatMap { layer =>
           val mergedTracingIdOpt =
             if (layer.typ == AnnotationLayerTypeProto.Skeleton) mergedSkeletonIdOpt else mergedVolumeIdOpt
@@ -375,7 +375,7 @@ class TSAnnotationController @Inject() (
           annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume).map(_.tracingId)
         BookmarkMergeRemapping(
           existingNodeIds = skeletonTracings.flatMap(_.trees.flatMap(_.nodes.map(_.id))).toSet,
-          nodeIdMap = nodeMappings.lift(firstSkeletonIndex).filter(_ => skeletonTracings.nonEmpty).getOrElse(identity),
+          nodeIdMap = nodeMappings.lift(nodeMappingIndex).filter(_ => skeletonTracings.nonEmpty).getOrElse(identity),
           tracingIdMap = mergedTracingIdsBySourceTracingId,
           segmentIdMapsByTracingId = segmentIdMapsByTracingId,
           editableMappingIdMap =

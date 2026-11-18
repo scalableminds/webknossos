@@ -43,9 +43,9 @@ import models.annotation.*
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
 import models.annotation.nml.{
   NmlAnnotationLayerRef,
-  NmlBookmarkToWrite,
-  NmlBookmarks,
-  NmlParsedBookmark,
+  NmlAnnotationBookmarkToWrite,
+  NmlAnnotationBookmarks,
+  NmlParsedAnnotationBookmark,
   NmlResults,
   NmlSkeletonLayerRef,
   NmlVolumeLayerRef,
@@ -251,16 +251,19 @@ class AnnotationIOController @Inject() (
         val datasetLayerNames = dataSource.dataLayers.map(_.name).toSet
         val nodeIds = parseSuccess.skeletonTracing.trees.flatMap(_.nodes.map(_.id)).toSet
 
-        def readThumbnail(parsedBookmark: NmlParsedBookmark, size: BookmarkThumbnailSize.Value): Option[ByteString] =
+        def readThumbnail(
+            parsedBookmark: NmlParsedAnnotationBookmark,
+            size: BookmarkThumbnailSize.Value
+        ): Option[ByteString] =
           parsedBookmark.thumbnailLocations
             .get(size)
             .flatMap(otherFiles.get)
             .flatMap(file => tryo(Files.readAllBytes(file.toPath)).toOption)
-            .filter(NmlBookmarks.isJpeg)
+            .filter(NmlAnnotationBookmarks.isJpeg)
             .map(ByteString.copyFrom)
 
         parseSuccess.bookmarks.map { parsedBookmark =>
-          val bookmarkWithResolvedLayers = NmlBookmarks.rewriteLayerReferences(
+          val bookmarkWithResolvedLayers = NmlAnnotationBookmarks.rewriteLayerReferences(
             parsedBookmark.bookmark,
             layerName = name =>
               NmlAnnotationLayerRef.decode(name) match {
@@ -610,7 +613,7 @@ class AnnotationIOController @Inject() (
     def fetchBookmarksWithThumbnails(
         tracingStoreClient: WKRemoteTracingStoreClient,
         annotationId: ObjectId
-    ): Fox[Seq[NmlBookmarkToWrite]] =
+    ): Fox[Seq[NmlAnnotationBookmarkToWrite]] =
       for {
         bookmarks <- tracingStoreClient.getBookmarks(annotationId, version)
         thumbnailRequests =
@@ -619,8 +622,7 @@ class AnnotationIOController @Inject() (
             size <- BookmarkThumbnailSize.values.toSeq
           } yield (bookmark, size)
         // One request per thumbnail, so several are made at once.
-        fetchedThumbnails <- Fox.batchCombined(thumbnailRequests, parallelity = 8) { request =>
-          val (bookmark, size) = request
+        fetchedThumbnails <- Fox.batchCombined(thumbnailRequests, parallelity = 8) { case (bookmark, size) =>
           tracingStoreClient
             .getBookmarkThumbnail(annotationId, bookmark, size)
             .map((thumbnailOpt: Option[Array[Byte]]) => thumbnailOpt.map(thumbnail => (bookmark.id, size, thumbnail)))
@@ -629,7 +631,7 @@ class AnnotationIOController @Inject() (
           .groupBy(_._1)
           .map { case (bookmarkId, thumbnails) => bookmarkId -> thumbnails.map(t => t._2 -> t._3).toMap }
       } yield bookmarks.map(bookmark =>
-        NmlBookmarkToWrite(bookmark, thumbnailsByBookmarkId.getOrElse(bookmark.id, Map.empty))
+        NmlAnnotationBookmarkToWrite(bookmark, thumbnailsByBookmarkId.getOrElse(bookmark.id, Map.empty))
       )
 
     def annotationToTemporaryFile(
@@ -706,7 +708,10 @@ class AnnotationIOController @Inject() (
           }
           _ = bookmarks.foreach { bookmarkToWrite =>
             bookmarkToWrite.thumbnails.foreach { case (size, thumbnail) =>
-              zipper.addFileFromBytes(NmlBookmarks.thumbnailLocation(bookmarkToWrite.bookmark.id, size), thumbnail)
+              zipper.addFileFromBytes(
+                NmlAnnotationBookmarks.thumbnailLocation(bookmarkToWrite.bookmark.id, size),
+                thumbnail
+              )
             }
           }
         } yield ())(zipper.close())

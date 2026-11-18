@@ -412,7 +412,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     }
   }
 
-  private def parseBookmarks(bookmarkNodes: NodeSeq): Box[Seq[NmlParsedBookmark]] =
+  private def parseBookmarks(bookmarkNodes: NodeSeq): Box[Seq[NmlParsedAnnotationBookmark]] =
     for {
       bookmarks <- Box.combined(bookmarkNodes)(parseBookmark) ?~> Msg.Nml.invalidElements("bookmark")
       bookmarkIds = bookmarks.map(_.bookmark.id)
@@ -420,7 +420,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     } yield bookmarks
 
   // createdAtVersion and thumbnailVersion are set when the annotation is created from the NML.
-  private def parseBookmark(node: XMLNode): Box[NmlParsedBookmark] = {
+  private def parseBookmark(node: XMLNode): Box[NmlParsedAnnotationBookmark] = {
     val idText = getSingleAttribute(node, "id")
     for {
       id <- Box.fromOption(idText.toIntOpt) ?~> Msg.Nml.invalidBookmarkId(idText)
@@ -436,12 +436,12 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       }.toMap
       // All thumbnails of a bookmark show the same viewport.
       thumbnailViewportNames = (node \ "thumbnail").flatMap(getSingleAttributeOpt(_, "viewport")).distinct
-      thumbnailViewports = thumbnailViewportNames.flatMap(NmlBookmarks.thumbnailViewportFromString)
+      thumbnailViewports = thumbnailViewportNames.flatMap(NmlAnnotationBookmarks.thumbnailViewportFromString)
       _ <- Box.fromBool(
         thumbnailViewports.length == thumbnailViewportNames.length && thumbnailViewports.length <= 1
       ) ?~>
         Msg.Nml.invalidBookmarkField("thumbnail viewport", id)
-    } yield NmlParsedBookmark(
+    } yield NmlParsedAnnotationBookmark(
       AnnotationBookmarkProto(
         id = id,
         created = created,

@@ -66,7 +66,7 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
       skipVolumeData: Boolean = false,
       volumeDataZipFormat: VolumeDataZipFormat,
       requestingUser: Option[User],
-      bookmarks: Seq[NmlBookmarkToWrite] = Seq.empty,
+      bookmarks: Seq[NmlAnnotationBookmarkToWrite] = Seq.empty,
       datasetLayerNames: Option[Set[String]] = None // if set, bookmark settings for other dataset layers are dropped
   ): NamedFunctionStream =
     NamedFunctionStream(
@@ -114,7 +114,7 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
       annotationTask: Option[Task],
       skipVolumeData: Boolean,
       volumeDataZipFormat: VolumeDataZipFormat,
-      bookmarks: Seq[NmlBookmarkToWrite]
+      bookmarks: Seq[NmlAnnotationBookmarkToWrite]
   )(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Xml.withinElement("things") {
@@ -463,15 +463,15 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
   // Replaces the tracingIds in the bookmark state with references to the NML layers, see NmlAnnotationLayerRef.
   // References to layers that no longer exist are dropped.
   private def encodeLayerReferences(
-      bookmarkToWrite: NmlBookmarkToWrite,
+      bookmarkToWrite: NmlAnnotationBookmarkToWrite,
       annotationLayers: List[FetchedAnnotationLayer],
       datasetLayerNames: Option[Set[String]]
-  ): NmlBookmarkToWrite = {
+  ): NmlAnnotationBookmarkToWrite = {
     val refsByTracingId: Map[String, NmlAnnotationLayerRef] = annotationLayers.map { layer =>
       val ref = if (layer.typ == AnnotationLayerType.Skeleton) NmlSkeletonLayerRef else NmlVolumeLayerRef(layer.name)
       layer.tracingId -> ref
     }.toMap
-    val encodedBookmark = NmlBookmarks.rewriteLayerReferences(
+    val encodedBookmark = NmlAnnotationBookmarks.rewriteLayerReferences(
       bookmarkToWrite.bookmark,
       layerName = name =>
         refsByTracingId
@@ -490,7 +490,7 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
     bookmarkToWrite.copy(bookmark = encodedBookmark)
   }
 
-  private def writeBookmarks(bookmarks: Seq[NmlBookmarkToWrite])(implicit writer: XMLStreamWriter): Unit =
+  private def writeBookmarks(bookmarks: Seq[NmlAnnotationBookmarkToWrite])(implicit writer: XMLStreamWriter): Unit =
     if (bookmarks.nonEmpty) {
       Xml.withinElementSync("bookmarks") {
         bookmarks.sortBy(_.bookmark.id).foreach { bookmarkToWrite =>
@@ -504,9 +504,9 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
               Xml.withinElementSync("thumbnail") {
                 writer.writeAttribute("size", size.toString)
                 bookmark.thumbnailViewport.foreach(viewport =>
-                  writer.writeAttribute("viewport", NmlBookmarks.thumbnailViewportToString(viewport))
+                  writer.writeAttribute("viewport", NmlAnnotationBookmarks.thumbnailViewportToString(viewport))
                 )
-                writer.writeAttribute("location", NmlBookmarks.thumbnailLocation(bookmark.id, size))
+                writer.writeAttribute("location", NmlAnnotationBookmarks.thumbnailLocation(bookmark.id, size))
               }
             }
             if (bookmark.metadata.nonEmpty)

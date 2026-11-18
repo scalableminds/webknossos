@@ -1,18 +1,15 @@
 # MCP Server
 
 WEBKNOSSOS provides an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server, so that AI agents such
-as Claude Code, Claude Desktop or Cursor can work with your WEBKNOSSOS instance.
+as Claude Code, Claude Desktop or Cursor can work with your WEBKNOSSOS instance via the WEBKNSOSOS python library.
 When enabled, it is reachable at `https://<your-instance>/api/mcp`, e.g. `https://webknossos.org/api/mcp`.
 
 ## Connecting
 
-The MCP server is off by default. The operator of an instance enables it with `features.mcpEnabled = true` in
-`application.conf`.
-
 The server uses the MCP Streamable HTTP transport and OAuth: you add the URL of the server to your AI assistant, and
 when it connects for the first time, WEBKNOSSOS opens in your browser. After logging in, you see which application
 asks for access and choose what it may do (see [Permissions](#permissions)). Approving sends you back to the
-assistant, which is then connected. No token has to be copied anywhere.
+assistant, which is then connected.
 
 A connection belongs to the organization that is active when you approve it. To connect another organization,
 switch to it first and connect again.
@@ -42,25 +39,6 @@ connect with an API token.
 !!! note
     With Dynamic Client Registration, an application registers itself and chooses its own name, which nothing
     verifies. The consent page points this out. Check where you will be sent back to before you approve.
-
-## Tools
-
-| Tool | Description |
-| --- | --- |
-| `get_api_token` | Creates an API token for your account, limited to the permissions of the connection and valid for one day, along with the URL of the instance and your organization ID. |
-| `list_python_library_docs` | Returns the index of the WEBKNOSSOS Python library documentation. |
-| `read_python_library_docs_page` | Returns a single page of that documentation. |
-
-The intended workflow is that the agent asks for a scoped API token, looks up the API of the
-[WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) in the documentation, and then writes and runs
-Python code against your instance, e.g.:
-
-```python
-import webknossos as wk
-
-with wk.webknossos_context(url="https://webknossos.org", token="<api_token>"):
-    dataset = wk.Dataset.open_remote("my-dataset")
-```
 
 ## Permissions
 
@@ -99,19 +77,5 @@ voxel data. An agent can never reach your API token, approve connections or chan
 ## Disconnecting
 
 The `MCP Agent Connections` tab lists the connected applications with their permission level and when they were
-last used. `Disconnect` revokes a connection immediately, including all scoped API tokens the agent obtained
-through it. Only data that the agent read or wrote in the last two minutes may stay reachable for up to two more
-minutes, because the data servers cache access checks. [Logging out everywhere](password.md#log-out-everywhere) disconnects all
-applications. [Revoking your auth token](password.md#token-revocation) ends all scoped API tokens, but keeps the
-connections.
-
-## Scoped API tokens
-
-The MCP server itself only offers a few tools. To work with your data, an agent asks it for a scoped API token,
-which it then uses with the WEBKNOSSOS Python library. These tokens act for your account, limited to the
-permissions of the connection, and expire after one day (configurable by the instance operator with
-`silhouette.tokenAuthenticator.scopedApiTokenExpiry`). A token cannot extend its own lifetime; once it has expired,
-the agent has to ask the MCP server for a new one.
-
-The OAuth tokens of the connection itself are only accepted by the MCP server. They expire after one hour and are
-renewed by the client automatically; a connection that is not used for 30 days expires.
+last used. `Disconnect` revokes a connection immediately. [Logging out everywhere](password.md#log-out-everywhere) disconnects all
+applications.

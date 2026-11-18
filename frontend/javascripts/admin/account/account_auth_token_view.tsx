@@ -48,7 +48,7 @@ function AccountAuthTokenView() {
     {
       title: "Token Revocation",
       icon: <SwapOutlined />,
-      hint: "Use if the token may have been exposed. All active sessions using it end, and so do the API tokens that MCP agents obtained. Connected agents can request new ones.",
+      hint: "Use if the token may have been exposed. All active sessions end.",
       hintType: "warning",
       content: (
         <Button icon={<SwapOutlined />} type="primary" ghost onClick={handleRevokeToken}>

@@ -11,7 +11,9 @@ import {
   Vector3,
 } from "three";
 import { OrthoViews } from "viewer/constants";
-import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getInputCatcherRect, getTDViewZoom } from "viewer/model/accessors/view_mode_accessor";
+import { getUnitPerPixel } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 
 // A LOD only switches to a coarser level once the pixel size exceeds the threshold by
@@ -19,9 +21,10 @@ import Store from "viewer/store";
 // fraction). Otherwise, segments right at a threshold would flicker while orbiting.
 const LOD_HYSTERESIS = 0.1;
 
-// Returns the voxel size (in mag-1 voxels along x) up to which the given LOD is
-// detailed enough. These values were tuned for the orthographic 3D viewport and
-// are interpreted as "how many voxels does one screen pixel cover at the mesh".
+// Returns the voxel size (in mag-1 voxels along the smallest voxel extent, like the
+// zoom of the 3D viewport) up to which the given LOD is detailed enough. These values
+// were tuned for the orthographic 3D viewport and are interpreted as "how many voxels
+// does one screen pixel cover at the mesh".
 export function getLODThresholdForLevel(level: number): number {
   if (level === 0) {
     return 0.7;
@@ -72,23 +75,20 @@ export function getWorldUnitsPerPixel(
 function getVoxelsPerPixelAtDistance(camera: Camera, distance: number): number {
   const state = Store.getState();
   const { height } = getInputCatcherRect(state, OrthoViews.TDView);
-  const voxelSizeX = state.dataset.dataSource.scale.factor[0];
-  return getWorldUnitsPerPixel(camera, distance, Math.max(height, 1)) / voxelSizeX;
+  // Like getTDViewZoom, this is relative to the smallest extent of the global voxel size.
+  const unitPerVoxel = getUnitPerPixel(getGlobalVoxelSizeFromState(state));
+  return getWorldUnitsPerPixel(camera, distance, Math.max(height, 1)) / unitPerVoxel;
 }
 
 // Same estimate as SegmentLOD.update() uses, but at the depth of the 3D viewport's
 // orbit target, where the orthographic and the perspective camera agree.
 // Used to prioritize loading LODs before a segment's position is known.
 export function getLODIndexForTDViewTarget(maxLevel: number): number {
-  const state = Store.getState();
-  const { width } = getInputCatcherRect(state, OrthoViews.TDView);
-  const { tdCamera } = state.viewModeData.plane;
-  const voxelSizeX = state.dataset.dataSource.scale.factor[0];
-  const voxelsPerPixel = (tdCamera.right - tdCamera.left) / (Math.max(width, 1) * voxelSizeX);
-  return getLODIndexForVoxelsPerPixel(voxelsPerPixel, maxLevel);
+  return getLODIndexForVoxelsPerPixel(getTDViewZoom(Store.getState()), maxLevel);
 }
 
 const _cameraPosition = new Vector3();
+const _segmentPosition = new Vector3();
 const _worldBox = new Box3();
 const _meshBox = new Box3();
 const _inverseMatrixWorld = new Matrix4();
@@ -101,7 +101,7 @@ const _meshToLocal = new Matrix4();
 // Meshes that don't support LODs (e.g., ad-hoc meshes) are always visible.
 export default class SegmentLOD extends LOD {
   noLODGroup: Group;
-  lodLevelCount: number;
+  // Only used for the perspective camera, see getLevelIndexForCamera.
   private currentLevel: number | undefined;
   // The bounding box of all meshes in the local space of this object.
   // It's null when it needs to be recomputed (e.g., after a chunk was added).
@@ -109,7 +109,6 @@ export default class SegmentLOD extends LOD {
 
   constructor() {
     super();
-    this.lodLevelCount = 0;
     this.noLODGroup = new Group();
     this.add(this.noLODGroup);
   }
@@ -118,6 +117,7 @@ export default class SegmentLOD extends LOD {
   // The VisibilityAwareRaycaster traverses into the visible levels itself.
   raycast() {}
 
+  // Must be called whenever meshes are added to or removed from this segment.
   invalidateBoundingBox() {
     this.localBoundingBox = null;
   }
@@ -144,7 +144,7 @@ export default class SegmentLOD extends LOD {
       this.localBoundingBox = this.computeLocalBoundingBox();
     }
     if (this.localBoundingBox.isEmpty()) {
-      _worldBox.makeEmpty().expandByPoint(new Vector3().setFromMatrixPosition(this.matrixWorld));
+      _worldBox.makeEmpty().expandByPoint(_segmentPosition.setFromMatrixPosition(this.matrixWorld));
     } else {
       _worldBox.copy(this.localBoundingBox).applyMatrix4(this.matrixWorld);
     }
@@ -155,14 +155,17 @@ export default class SegmentLOD extends LOD {
   }
 
   getLevelIndexForCamera(camera: Camera): number {
-    const maxIndex = this.lodLevelCount - 1;
+    const maxIndex = this.levels.length - 1;
     if (maxIndex <= 0) {
       return 0;
     }
-    const distance = (camera as PerspectiveCamera).isPerspectiveCamera
-      ? this.getDistanceToCamera(camera)
-      : 0;
-    const voxelsPerPixel = getVoxelsPerPixelAtDistance(camera, distance);
+    if (!(camera as PerspectiveCamera).isPerspectiveCamera) {
+      // With the orthographic camera, all segments share the same LOD. Hysteresis is not
+      // applied, because it depends on each segment's previous level (which may still
+      // stem from the perspective camera) and would therefore yield different LODs.
+      return getLODIndexForVoxelsPerPixel(getVoxelsPerPixelAtDistance(camera, 0), maxIndex);
+    }
+    const voxelsPerPixel = getVoxelsPerPixelAtDistance(camera, this.getDistanceToCamera(camera));
     return getLODIndexForVoxelsPerPixel(voxelsPerPixel, maxIndex, this.currentLevel);
   }
 
@@ -195,18 +198,17 @@ export default class SegmentLOD extends LOD {
     }
   }
 
+  // The added groups are filled with mesh chunks afterwards. Callers need to
+  // invalidate the bounding box once a chunk was added (see invalidateBoundingBox).
   addNoLODSupportedMesh(meshGroup: Group) {
     this.noLODGroup.add(meshGroup);
-    this.invalidateBoundingBox();
   }
 
   addLODMesh(meshGroup: Group, level: number) {
-    while (this.lodLevelCount <= level) {
-      this.addLevel(new Group(), this.lodLevelCount);
-      this.lodLevelCount++;
+    while (this.levels.length <= level) {
+      this.addLevel(new Group(), this.levels.length);
     }
     this.levels[level].object.add(meshGroup);
-    this.invalidateBoundingBox();
   }
 
   removeNoLODSupportedMesh(meshGroup: Group) {
@@ -217,12 +219,5 @@ export default class SegmentLOD extends LOD {
   removeLODMesh(meshGroup: Group, level: number) {
     this.levels[level].object.remove(meshGroup);
     this.invalidateBoundingBox();
-  }
-
-  isEmpty(): boolean {
-    return (
-      this.noLODGroup.children.length === 0 &&
-      this.levels.every((level) => level.object.children.length === 0)
-    );
   }
 }

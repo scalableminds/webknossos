@@ -403,12 +403,11 @@ export default class SegmentMeshController {
         : Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
-    const segmentLOD = this.segmentLODs.get(
-      this.getSegmentLODKey(additionalCoordKey, layerName, segmentId),
-    );
-    if (segmentLOD == null || meshGroups == null) {
+    if (meshGroups == null) {
       return;
     }
+    const segmentLODKey = this.getSegmentLODKey(additionalCoordKey, layerName, segmentId);
+    const segmentLOD = this.segmentLODs.get(segmentLODKey);
 
     forEach(meshGroups, (meshGroup, lodStr) => {
       const currentLod = Number.parseInt(lodStr, 10);
@@ -419,21 +418,22 @@ export default class SegmentMeshController {
       }
 
       if (currentLod !== NO_LOD_MESH_INDEX) {
-        segmentLOD.removeLODMesh(meshGroup, currentLod);
+        segmentLOD?.removeLODMesh(meshGroup, currentLod);
       } else {
-        segmentLOD.removeNoLODSupportedMesh(meshGroup);
+        segmentLOD?.removeNoLODSupportedMesh(meshGroup);
       }
       this.disposeMeshGroup(meshGroup);
 
       this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);
     });
     if (options?.lod == null) {
-      // If options.lod is provided, the parent group should not be removed
+      // If options.lod is provided, the parent group and the SegmentLOD should not be
+      // removed. Typically, another LOD of the segment is added right afterwards
+      // (e.g., the merged mesh replaces the chunks), and the SegmentLOD should keep its
+      // current level, so that the hysteresis prevents flickering between LODs.
       this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
-    }
-    if (options?.lod == null || segmentLOD.isEmpty()) {
-      segmentLOD.removeFromParent();
-      this.segmentLODs.delete(this.getSegmentLODKey(additionalCoordKey, layerName, segmentId));
+      segmentLOD?.removeFromParent();
+      this.segmentLODs.delete(segmentLODKey);
     }
   }
 

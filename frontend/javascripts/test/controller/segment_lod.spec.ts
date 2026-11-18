@@ -19,7 +19,8 @@ const VIEWPORT_HEIGHT_PX = 100;
 
 function mockStore() {
   vi.spyOn(Store, "getState").mockReturnValue({
-    dataset: { dataSource: { scale: { factor: [1, 1, 1] } } },
+    dataset: { dataSource: { scale: { factor: [1, 1, 1] }, dataLayers: [] } },
+    datasetConfiguration: { nativelyRenderedLayerName: null },
     viewModeData: {
       plane: {
         inputCatcherRects: {
@@ -144,6 +145,27 @@ describe("SegmentLOD", () => {
 
     nearSegment.update(camera);
     farSegment.update(camera);
+
+    expect(getVisibleLevel(nearSegment)).toBe(1);
+    expect(getVisibleLevel(farSegment)).toBe(1);
+  });
+
+  it("ignores the LOD of previous frames with an orthographic camera", () => {
+    // With the perspective camera, the segments settle on different LODs.
+    const perspectiveCamera = createPerspectiveCameraLookingDownNegativeZ();
+    const nearSegment = createSegmentLOD(new ThreeVector3(0, 0, -10), [0, 1, 2]);
+    const farSegment = createSegmentLOD(new ThreeVector3(0, 0, -2000), [0, 1, 2]);
+    nearSegment.update(perspectiveCamera);
+    farSegment.update(perspectiveCamera);
+    expect(getVisibleLevel(nearSegment)).toBe(0);
+    expect(getVisibleLevel(farSegment)).toBe(2);
+
+    // A pixel covers 0.72 voxels, which is within the hysteresis band of the
+    // threshold between LOD 0 and 1 (0.7).
+    const orthoCamera = new OrthographicCamera(-36, 36, 36, -36, 0, 100000);
+    orthoCamera.updateMatrixWorld();
+    nearSegment.update(orthoCamera);
+    farSegment.update(orthoCamera);
 
     expect(getVisibleLevel(nearSegment)).toBe(1);
     expect(getVisibleLevel(farSegment)).toBe(1);

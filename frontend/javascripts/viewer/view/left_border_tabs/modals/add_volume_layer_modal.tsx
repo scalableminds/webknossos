@@ -14,7 +14,8 @@ import messages from "messages";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import type { APIDataset, APISegmentationLayer } from "types/api_types";
+import type { Dispatch } from "redux";
+import type { APIDataset, APIMagRestrictions, APISegmentationLayer } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
 import { isEditingAnnotationLayerSetDisabled } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -104,6 +105,75 @@ export function validateReadableLayerName(
   return invalidCharactersResult;
 }
 
+// Returns baseName if no layer uses it yet, otherwise baseName with the smallest free counter
+// appended (e.g., Volume1, Volume2).
+export function getUnusedLayerName(baseName: string, allReadableLayerNames: string[]): string {
+  if (allReadableLayerNames.indexOf(baseName) === -1) {
+    return baseName;
+  }
+  let counter = 1;
+  let name = `${baseName}${counter}`;
+  while (allReadableLayerNames.indexOf(name) >= 0) {
+    // Increase number at the end of name until a valid initial name is found.
+    ++counter;
+    name = `${baseName}${counter}`;
+  }
+  return name;
+}
+
+// Adds a volume layer to the annotation, optionally based on a fallback segmentation layer of the
+// dataset, saves and hard-reloads the annotation so that the new layer is set up.
+export async function addVolumeLayerAndReload(
+  dispatch: Dispatch,
+  {
+    name,
+    fallbackLayerName,
+    magRestrictions,
+  }: {
+    name: string;
+    fallbackLayerName: string | null;
+    magRestrictions: APIMagRestrictions;
+  },
+): Promise<void> {
+  if (fallbackLayerName == null) {
+    dispatch(
+      pushSaveQueueTransactionIsolated(
+        addLayerToAnnotation({
+          typ: "Volume",
+          name,
+          fallbackLayerName: undefined,
+          magRestrictions,
+        }),
+      ),
+    );
+  } else {
+    const mappingInfo = getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      fallbackLayerName,
+    );
+    let maybeMappingName = null;
+    if (
+      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+      mappingInfo.mappingType !== "JSON"
+    ) {
+      maybeMappingName = mappingInfo.mappingName;
+    }
+    dispatch(
+      pushSaveQueueTransactionIsolated(
+        addLayerToAnnotation({
+          typ: "Volume",
+          name,
+          fallbackLayerName,
+          magRestrictions,
+          mappingName: maybeMappingName,
+        }),
+      ),
+    );
+  }
+  await Model.ensureSavedState();
+  await api.tracing.hardReload();
+}
+
 export default function AddVolumeLayerModal({
   dataset,
   onCancel,
@@ -132,18 +202,7 @@ export default function AddVolumeLayerModal({
     if (preselectedLayerName) {
       return preselectedLayerName;
     }
-    if (allReadableLayerNames.indexOf("Volume") === -1) {
-      return "Volume";
-    } else {
-      let counter = 1;
-      let name = `Volume${counter}`;
-      while (allReadableLayerNames.indexOf(name) >= 0) {
-        // Increase number at the end of name until a valid initial name is found.
-        ++counter;
-        name = `Volume${counter}`;
-      }
-      return name;
-    }
+    return getUnusedLayerName("Volume", allReadableLayerNames);
   }, [dataset, annotation]);
   const selectedSegmentationLayer =
     selectedSegmentationLayerName != null
@@ -179,57 +238,14 @@ export default function AddVolumeLayerModal({
     const minMagAllowed = Math.max(...magInfo.getMagByIndexOrThrow(magIndices[0]));
     const maxMagAllowed = Math.max(...magInfo.getMagByIndexOrThrow(magIndices[1]));
 
-    if (selectedSegmentationLayerName == null) {
-      dispatch(
-        pushSaveQueueTransactionIsolated(
-          addLayerToAnnotation({
-            typ: "Volume",
-            name: newLayerName,
-            fallbackLayerName: undefined,
-            magRestrictions: {
-              min: minMagAllowed,
-              max: maxMagAllowed,
-            },
-          }),
-        ),
-      );
-      await Model.ensureSavedState();
-    } else {
-      if (selectedSegmentationLayer == null) {
-        throw new Error("Segmentation layer is null");
-      }
-      const fallbackLayerName = selectedSegmentationLayer.name;
-
-      const mappingInfo = getMappingInfo(
-        Store.getState().temporaryConfiguration.activeMappingByLayer,
-        selectedSegmentationLayerName,
-      );
-      let maybeMappingName = null;
-      if (
-        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType !== "JSON"
-      ) {
-        maybeMappingName = mappingInfo.mappingName;
-      }
-
-      dispatch(
-        pushSaveQueueTransactionIsolated(
-          addLayerToAnnotation({
-            typ: "Volume",
-            name: newLayerName,
-            fallbackLayerName,
-            magRestrictions: {
-              min: minMagAllowed,
-              max: maxMagAllowed,
-            },
-            mappingName: maybeMappingName,
-          }),
-        ),
-      );
-      await Model.ensureSavedState();
+    if (selectedSegmentationLayerName != null && selectedSegmentationLayer == null) {
+      throw new Error("Segmentation layer is null");
     }
-
-    await api.tracing.hardReload();
+    await addVolumeLayerAndReload(dispatch, {
+      name: newLayerName,
+      fallbackLayerName: selectedSegmentationLayer?.name ?? null,
+      magRestrictions: { min: minMagAllowed, max: maxMagAllowed },
+    });
   };
 
   return (

@@ -32,6 +32,10 @@ import {
   getVisibleSegmentationLayers,
   is2dDataset,
 } from "viewer/model/accessors/dataset_accessor";
+import {
+  isUnifiedDatasetView,
+  mayEditUnifiedDataset,
+} from "viewer/model/accessors/unified_dataset_accessor";
 import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
@@ -43,6 +47,8 @@ import TracingActionsView, {
   getLayoutMenu,
   type LayoutProps,
 } from "viewer/view/action_bar/tracing_actions_view";
+import UnifiedCopyDatasetModal from "viewer/view/action_bar/unified_copy_dataset_modal";
+import UnifiedReadOnlyBanner from "viewer/view/action_bar/unified_read_only_banner";
 import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
 import {
   addNewLayout,
@@ -76,6 +82,8 @@ type StateProps = {
   showVersionRestore: boolean;
   is2d: boolean;
   viewMode: ViewMode;
+  isUnifiedDatasetView: boolean;
+  mayEditUnifiedDataset: boolean;
 };
 type OwnProps = {
   layoutProps: LayoutProps;
@@ -445,7 +453,11 @@ class ActionBarView extends PureComponent<Props, State> {
           {getIsAIAnalysisEnabled() && isAdminOrManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
-          {isViewMode ? this.renderStartTracingButton() : null}
+          {isViewMode && !this.props.isUnifiedDatasetView ? this.renderStartTracingButton() : null}
+          {this.props.isUnifiedDatasetView && !this.props.mayEditUnifiedDataset ? (
+            <UnifiedReadOnlyBanner />
+          ) : null}
+          {this.props.isUnifiedDatasetView ? <UnifiedCopyDatasetModal /> : null}
           <ModesView />
           {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
         </div>
@@ -473,6 +485,8 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
   showVersionRestore: state.uiInformation.showVersionRestore,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
+  isUnifiedDatasetView: isUnifiedDatasetView(state),
+  mayEditUnifiedDataset: mayEditUnifiedDataset(state),
 });
 
 const connector = connect(mapStateToProps);

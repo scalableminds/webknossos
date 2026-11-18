@@ -24,6 +24,7 @@ import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
+import { isBackingAnnotationLoaded } from "viewer/model/accessors/unified_dataset_accessor";
 import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { GlobalMeshChunkProvider } from "viewer/model/sagas/meshes/mesh_chunk_provider";
@@ -455,7 +456,11 @@ function mapStateToProps(state: WebknossosState) {
     storedLayouts: state.uiInformation.storedLayouts,
     datasetId: state.dataset.id,
     is2d: is2dDataset(state.dataset),
-    displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
+    // A backing annotation of a unified dataset is not an object of its own, so show the dataset name.
+    displayName:
+      state.annotation.name && !isBackingAnnotationLoaded(state)
+        ? state.annotation.name
+        : state.dataset.name,
     organization: state.dataset.owningOrganization,
     activeTool: state.uiInformation.activeTool,
     additionalCoordinates: state.flycam.additionalCoordinates,

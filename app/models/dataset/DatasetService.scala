@@ -25,7 +25,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team.*
-import models.user.{MultiUserDAO, User, UserService}
+import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
@@ -64,6 +64,8 @@ class DatasetService @Inject() (
     teamService: TeamService,
     thumbnailCachingService: ThumbnailCachingService,
     userService: UserService,
+    userDAO: UserDAO,
+    datasetLayerOriginDAO: DatasetLayerOriginDAO,
     pathDeletionService: PathDeletionService,
     jobDAO: JobDAO,
     annotationDAO: AnnotationDAO,
@@ -117,15 +119,17 @@ class DatasetService @Inject() (
       user: User,
       isVirtual: Boolean,
       creationType: DatasetCreationType,
-      importURLOpt: Option[String]
+      importURLOpt: Option[String],
+      // Unified datasets prototype: copies are created in the source's folder without a folder write check (D3).
+      skipFolderAccessCheck: Boolean = false
   ): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext) ?~> Msg.Organization
         .notFound(user._organization)
       folderIdWithFallback = folderId.getOrElse(organization._rootFolder)
-      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(using
-        AuthorizedAccessContext(user)
+      _ <- Fox.runIf(!skipFolderAccessCheck)(
+        folderDAO.assertUpdateAccess(folderIdWithFallback)(using AuthorizedAccessContext(user))
       ) ?~> Msg.Folder.noWriteAccess
       newDatasetId = ObjectId.generate
       directoryName = generateDirectoryName(datasetName, newDatasetId)
@@ -657,8 +661,13 @@ class DatasetService @Inject() (
         } yield user.isAdminOf(dataset._organization)
           || user.isDatasetManagerOf(dataset._organization)
           || teamManagerMemberships.map(_.teamId).intersect(datasetAllowedTeams).nonEmpty
+          || isOwnCopy(dataset, user)
       case _ => Fox.successful(false)
     }
+
+  // Unified datasets prototype (B4): users may edit and delete the copies they made. Does not apply to originals.
+  private def isOwnCopy(dataset: Dataset, user: User): Boolean =
+    conf.Features.unifiedDatasets && dataset.isCopy && dataset._uploader.contains(user._id)
 
   def assertEditableBy(dataset: Dataset, user: User): Fox[Unit] =
     Fox.assertTrue(isEditableBy(dataset, Some(user))) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -782,7 +791,8 @@ class DatasetService @Inject() (
     for {
       existingDatasetBox <- datasetDAO.findOne(datasetId)(using GlobalAccessContext).shiftBox
       _ <- existingDatasetBox match {
-        case Full(dataset) =>
+        case Full(dataset) if conf.Features.unifiedDatasets => deleteUnifiedDatasetFromDB(dataset)
+        case Full(dataset)                                  =>
           for {
             annotationCount <- annotationDAO.countAllByDatasetIncludingDeleted(dataset._id)
             _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
@@ -790,6 +800,21 @@ class DatasetService @Inject() (
           } yield ()
         case _ => Fox.successful(())
       }
+    } yield ()
+
+  // Unified datasets prototype (B7): the backing annotation does not keep its dataset from being deleted, but other
+  // annotations and copies (whose _copiedFrom points here) do; then the dataset is only marked as deleted.
+  private def deleteUnifiedDatasetFromDB(dataset: Dataset): Fox[Unit] =
+    for {
+      annotationCount <- annotationDAO.countAllByDatasetIncludingDeleted(dataset._id, dataset._annotation)
+      copyCount <- datasetDAO.countCopiesOf(dataset._id)
+      onlyMarkAsDeleted = annotationCount > 0 || copyCount > 0
+      _ <- Fox.runOptional(dataset._annotation) { annotationId =>
+        if (onlyMarkAsDeleted) annotationDAO.deleteOne(annotationId)(using GlobalAccessContext)
+        else annotationDAO.hardDeleteBackingAnnotation(annotationId)
+      }
+      _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = onlyMarkAsDeleted)
+      _ <- usedStorageService.refreshStorageReportForDataset(dataset)
     } yield ()
 
   def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
@@ -858,13 +883,49 @@ class DatasetService @Inject() (
       case _ => Fox.empty
     }
 
+  // Unified datasets prototype (D1): the uploader, or the organization owner for datasets without one (disk scans,
+  // old data).
+  def ownerFor(dataset: Dataset): Fox[User] =
+    dataset._uploader match {
+      case Some(uploaderId) =>
+        userDAO
+          .findOne(uploaderId)(using GlobalAccessContext)
+          .orElse(userDAO.findOneOrganizationOwner(dataset._organization))
+      case None => userDAO.findOneOrganizationOwner(dataset._organization)
+    }
+
   // Unified datasets prototype: additional dataset fields, only written if features.unifiedDatasets is enabled.
   private def unifiedDatasetWritesFor(dataset: Dataset, requestingUserOpt: Option[User]): Fox[JsObject] =
     for {
-      _ <- Fox.successful(())
+      ownerBox <- ownerFor(dataset).shiftBox
+      // Like the uploader's name, the owner's name is only shown to users of the same organization.
+      ownerJsBox <- (ownerBox.toOption match {
+        case Some(owner) if requestingUserOpt.exists(_._organization == owner._organization) =>
+          multiUserDAO
+            .findOneById(owner._multiUser)(using GlobalAccessContext)
+            .map(multiUser => Json.obj("id" -> owner._id, "fullName" -> multiUser.fullName))
+        case _ => Fox.empty
+      }).shiftBox
+      copiedFromNameBox <- Fox
+        .runOptional(dataset._copiedFrom)(id => datasetDAO.getNameById(id)(using GlobalAccessContext))
+        .shiftBox
+      origins <- datasetLayerOriginDAO.findAllWithSourceNamesForDataset(dataset._id)
+      copyCount <- datasetDAO.countCopiesOf(dataset._id)
     } yield Json.obj(
       "backingAnnotationId" -> dataset._annotation,
-      "copiedFromId" -> dataset._copiedFrom
+      "copiedFromId" -> dataset._copiedFrom,
+      "owner" -> ownerJsBox.toOption,
+      "copiedFrom" -> dataset._copiedFrom.map(id =>
+        Json.obj("id" -> id, "name" -> copiedFromNameBox.toOption.flatten.getOrElse[String]("deleted dataset"))
+      ),
+      "layerOrigins" -> Json.toJson(origins.map { o =>
+        o.origin.layerName -> Json.obj(
+          "datasetId" -> o.origin._sourceDataset,
+          "datasetName" -> o.sourceDatasetName,
+          "layerName" -> o.origin.sourceLayerName
+        )
+      }.toMap),
+      "copyCount" -> copyCount
     )
 
   def publicWrites(

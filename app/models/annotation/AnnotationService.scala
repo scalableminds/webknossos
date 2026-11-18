@@ -44,6 +44,7 @@ import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import org.apache.pekko.stream.Materializer
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.WkConf
 
@@ -521,6 +522,47 @@ class AnnotationService @Inject() (
       name = name.getOrElse(""),
       typ = annotationType
     )
+
+  // The caller must have checked that the user may read the annotation. The copy belongs to targetDatasetOpt if given
+  // (unified datasets prototype: copying a dataset copies its annotation layers), else to the annotation's dataset.
+  def duplicateAnnotation(
+      annotation: Annotation,
+      user: User,
+      targetDatasetOpt: Option[Dataset] = None
+  ): Fox[Annotation] =
+    for {
+      // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
+      sourceDataset <- datasetDAO.findOne(annotation._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
+        .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
+      dataset = targetDatasetOpt.getOrElse(sourceDataset)
+      _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
+      dataSource <-
+        if (annotation._task.isDefined)
+          datasetService.usableDataSourceFor(dataset).map(Some(_))
+        else Fox.successful(None)
+      tracingStoreClient <- tracingStoreService.clientFor(sourceDataset)
+      newAnnotationId = ObjectId.generate
+      newAnnotationProto <- tracingStoreClient.duplicateAnnotation(
+        annotation._id,
+        newAnnotationId,
+        annotation._user,
+        user._id,
+        version = None,
+        isFromTask = annotation._task.isDefined,
+        datasetBoundingBox = dataSource.map(_.boundingBox)
+      )
+      newAnnotationLayers = newAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
+      clonedAnnotation = createFrom(
+        user,
+        dataset,
+        newAnnotationLayers,
+        AnnotationType.Explorational,
+        None,
+        annotation.description,
+        newAnnotationId
+      )
+      _ <- annotationDAO.insertOne(clonedAnnotation)
+    } yield clonedAnnotation
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(using
       ctx: DBAccessContext

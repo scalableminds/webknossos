@@ -3,6 +3,8 @@ import type { ItemType } from "antd/es/menu/interface";
 // The viewer's "Menu" dropdown is organized into these sections. Both the dataset view and the
 // annotation view use them, so that entries appear in the same place in every mode.
 export const MenuGroupKeys = {
+  // Only used by the unified datasets prototype, in place of ANNOTATION.
+  DATASET: "dataset",
   ANNOTATION: "annotation",
   SHARE_AND_EXPORT: "share-and-export",
   CUSTOMIZE: "customize",
@@ -11,6 +13,7 @@ export const MenuGroupKeys = {
 type MenuGroupKey = (typeof MenuGroupKeys)[keyof typeof MenuGroupKeys];
 
 const menuGroupLabels: Record<MenuGroupKey, string> = {
+  [MenuGroupKeys.DATASET]: "Dataset",
   [MenuGroupKeys.ANNOTATION]: "Annotation",
   [MenuGroupKeys.SHARE_AND_EXPORT]: "Share & Export",
   [MenuGroupKeys.CUSTOMIZE]: "Customize",

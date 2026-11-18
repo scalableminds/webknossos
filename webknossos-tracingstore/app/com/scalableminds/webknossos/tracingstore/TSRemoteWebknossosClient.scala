@@ -52,7 +52,8 @@ class TSRemoteWebknossosClient @Inject() (
 
   private val webknossosUri: String = config.Tracingstore.WebKnossos.uri
 
-  private lazy val datasetIdByAnnotationIdCache: AlfuCache[ObjectId, ObjectId] = AlfuCache()
+  // Expires so that annotations moved to another dataset (unified datasets prototype conversion) are picked up.
+  private lazy val datasetIdByAnnotationIdCache: AlfuCache[ObjectId, ObjectId] = AlfuCache(timeToLive = 5 minutes)
   private lazy val annotationIdByTracingIdCache: AlfuCache[String, ObjectId] =
     AlfuCache(maxCapacity = 10000, timeToLive = 5 minutes)
   private lazy val voxelSizeCache: AlfuCache[ObjectId, VoxelSize] = AlfuCache(timeToLive = 10 minutes)

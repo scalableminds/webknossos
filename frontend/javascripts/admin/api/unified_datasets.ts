@@ -20,3 +20,35 @@ export function getBackingAnnotation(
     method: "POST",
   });
 }
+
+export type CopyDatasetRequest = {
+  name: string;
+  // All data layers if omitted.
+  layerNames?: string[];
+  includeAnnotationLayers: boolean;
+};
+
+export function copyDataset(
+  datasetId: string,
+  request: CopyDatasetRequest,
+  sharingToken?: string | null,
+): Promise<{ newDatasetId: string }> {
+  const params = new URLSearchParams();
+  if (sharingToken != null) {
+    params.set("sharingToken", sharingToken);
+  }
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/copy?${params}`, {
+    method: "POST",
+    data: request,
+  });
+}
+
+export function convertAnnotationToDataset(
+  annotationId: string,
+): Promise<{ datasetId: string | null; datasetName: string | null }> {
+  return Request.receiveJSON(`/api/annotations/${annotationId}/convertToDataset`, {
+    method: "POST",
+    // Task annotations and annotations without access fall back to the legacy view, so don't toast.
+    showErrorToast: false,
+  });
+}

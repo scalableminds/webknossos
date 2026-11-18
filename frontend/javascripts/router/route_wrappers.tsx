@@ -3,7 +3,7 @@ import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
-import { getBackingAnnotation } from "admin/api/unified_datasets";
+import { convertAnnotationToDataset, getBackingAnnotation } from "admin/api/unified_datasets";
 import Onboarding from "admin/onboarding";
 import { createExplorational, getShortLink } from "admin/rest_api";
 import { Button, Result, Typography } from "antd";
@@ -192,13 +192,51 @@ export function TracingViewRouteWrapper() {
   const { type, id } = useParams();
   const initialMaybeCompoundType = type != null ? coalesce(APICompoundTypeEnum, type) : null;
   useEffect(markTracingViewLoadStartEffect, []);
-  return (
+  const annotationView = (
     <TracingLayoutView
       initialMaybeCompoundType={initialMaybeCompoundType}
       initialCommandType={{
         type: ControlModeEnum.TRACE,
         annotationId: id || "",
       }}
+    />
+  );
+  if (features().unifiedDatasets && initialMaybeCompoundType == null && id != null) {
+    return <ConvertedAnnotationRedirect annotationId={id} fallback={annotationView} />;
+  }
+  return annotationView;
+}
+
+// Unified datasets prototype: explorational annotations are converted to datasets when opened, so
+// that old links keep working. Task annotations (and anything that fails) open as today.
+function ConvertedAnnotationRedirect({
+  annotationId,
+  fallback,
+}: {
+  annotationId: string;
+  fallback: React.ReactElement;
+}) {
+  const location = useLocation();
+  const { data, isError } = useQuery({
+    queryKey: ["convertAnnotationToDataset", annotationId],
+    queryFn: () => convertAnnotationToDataset(annotationId),
+    meta: { persist: false },
+    gcTime: 0,
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  if (isError || (data != null && data.datasetId == null)) {
+    return fallback;
+  }
+  if (data == null) {
+    return <BrainSpinner />;
+  }
+  return (
+    <Navigate
+      replace
+      to={`/datasets/${data.datasetName}-${data.datasetId}/view${location.search}${location.hash}`}
     />
   );
 }

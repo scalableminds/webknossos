@@ -315,6 +315,15 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   annotationCount?: number;
   // Most recently modified of those annotations that are owned by the user. Only present if requested.
   latestOwnAnnotationId?: string;
+  // The following fields belong to the unified datasets prototype and are only present if
+  // features.unifiedDatasets is enabled.
+  // The owner's name is only present for users of the owner's organization.
+  ownerName?: string | null;
+  copiedFromId?: string | null;
+  backingAnnotationId?: string | null;
+  annotationLayers?: Array<{ name: string; typ: AnnotationLayerType }>;
+  // Last change of the annotation layers, else the dataset's creation time.
+  modified?: number;
 };
 
 export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {

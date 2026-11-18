@@ -411,7 +411,10 @@ class AnnotationController @Inject() (
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
       _ <- Fox.assertTrue(restrictions.allowAccess(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
-      newAnnotation <- duplicateAnnotation(annotation, request.identity) ?~> Msg.Annotation.duplicateFailed
+      newAnnotation <- annotationService.duplicateAnnotation(
+        annotation,
+        request.identity
+      ) ?~> Msg.Annotation.duplicateFailed
       json <- annotationService.publicWrites(
         newAnnotation,
         Some(request.identity),
@@ -499,40 +502,6 @@ class AnnotationController @Inject() (
         }
       } yield Ok
     }
-
-  private def duplicateAnnotation(annotation: Annotation, user: User): Fox[Annotation] =
-    for {
-      // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
-      dataset <- datasetDAO.findOne(annotation._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
-        .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
-      _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
-      dataSource <-
-        if (annotation._task.isDefined)
-          datasetService.usableDataSourceFor(dataset).map(Some(_))
-        else Fox.successful(None)
-      tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      newAnnotationId = ObjectId.generate
-      newAnnotationProto <- tracingStoreClient.duplicateAnnotation(
-        annotation._id,
-        newAnnotationId,
-        annotation._user,
-        user._id,
-        version = None,
-        isFromTask = annotation._task.isDefined,
-        datasetBoundingBox = dataSource.map(_.boundingBox)
-      )
-      newAnnotationLayers = newAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
-      clonedAnnotation = annotationService.createFrom(
-        user,
-        dataset,
-        newAnnotationLayers,
-        AnnotationType.Explorational,
-        None,
-        annotation.description,
-        newAnnotationId
-      )
-      _ <- annotationDAO.insertOne(clonedAnnotation)
-    } yield clonedAnnotation
 
   def tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>

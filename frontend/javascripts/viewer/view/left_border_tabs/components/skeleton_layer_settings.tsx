@@ -18,6 +18,10 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  isUnifiedDatasetView,
+  mayEditUnifiedDataset,
+} from "viewer/model/accessors/unified_dataset_accessor";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
@@ -55,6 +59,9 @@ export default function SkeletonLayerSettings() {
   const { isDisabled: mayNotEditLayerSet, explanation: reasonForCantEditLayerSet } = useWkSelector(
     (state) => isEditingAnnotationLayerSetDisabled(state),
   );
+
+  const isUnifiedView = useWkSelector(isUnifiedDatasetView);
+  const mayEditUnified = useWkSelector(mayEditUnifiedDataset);
 
   const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
 
@@ -149,10 +156,15 @@ export default function SkeletonLayerSettings() {
     return null;
   }
 
-  const readableName = "Skeleton";
   const skeletonTracing = enforceSkeletonTracing(annotation);
-  const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
   const { tracingId } = skeletonTracing;
+  // In unified mode, skeleton layers are named by the user when they are added.
+  const readableName =
+    (isUnifiedView
+      ? annotation.annotationLayers.find((layer) => layer.tracingId === tracingId)?.name
+      : null) ?? "Skeleton";
+  const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
+  const mayRemoveLayer = !isOnlyAnnotationLayer && (!isUnifiedView || mayEditUnified);
   const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
   const isClippingDistanceDisabled =
     userConfiguration.clipSkeletonToCurrentSection && isSectionClippingAvailable;
@@ -207,7 +219,7 @@ export default function SkeletonLayerSettings() {
           }}
         >
           <LayerTransformationIcon layer={{ category: "skeleton", name: tracingId }} />
-          {!isOnlyAnnotationLayer ? (
+          {mayRemoveLayer ? (
             <ButtonComponent
               variant="text"
               color="default"
@@ -222,7 +234,11 @@ export default function SkeletonLayerSettings() {
               }
               icon={<DeleteOutlined />}
               title={
-                mayNotEditLayerSet ? reasonForCantEditLayerSet : "Delete this annotation layer."
+                mayNotEditLayerSet
+                  ? reasonForCantEditLayerSet
+                  : isUnifiedView
+                    ? "Remove this annotation layer."
+                    : "Delete this annotation layer."
               }
             />
           ) : null}

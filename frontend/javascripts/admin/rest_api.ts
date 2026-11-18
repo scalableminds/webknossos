@@ -1460,6 +1460,7 @@ export async function getDatasetLegacy(
 
 export type DatasetUpdater = {
   description?: string | null;
+  name?: string;
   displayName?: string | null;
   sortingKey?: number;
   isPublic?: boolean;

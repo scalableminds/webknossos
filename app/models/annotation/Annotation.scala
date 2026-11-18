@@ -694,13 +694,37 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
 
   // Counts all annotations in the db that reference this dataset. Independent of isDeleted or user read access
   // This is used during dataset deletion to prevent foreign key constraints blocking the deletion.
-  def countAllByDatasetIncludingDeleted(datasetId: ObjectId): Fox[Int] =
+  def countAllByDatasetIncludingDeleted(
+      datasetId: ObjectId,
+      excludedAnnotationId: Option[ObjectId] = None
+  ): Fox[Int] = {
+    val exclusion = excludedAnnotationId.map(id => q"AND _id != $id").getOrElse(q"")
     for {
       countList <- run(q"""SELECT COUNT(*)
                            FROM webknossos.annotations
-                           WHERE _dataset = $datasetId""".as[Int])
+                           WHERE _dataset = $datasetId
+                           $exclusion""".as[Int])
       count <- countList.headOption.toFox
     } yield count
+  }
+
+  // Unified datasets prototype: removes a dataset's backing annotation from the database so that the dataset itself
+  // can be deleted. Its FossilDB data is left behind.
+  def hardDeleteBackingAnnotation(annotationId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(
+        DBIO
+          .sequence(
+            List(
+              q"UPDATE webknossos.datasets SET _annotation = NULL WHERE _annotation = $annotationId".asUpdate,
+              q"DELETE FROM webknossos.annotation_privateLinks WHERE _annotation = $annotationId".asUpdate,
+              q"DELETE FROM webknossos.annotation_layers WHERE _annotation = $annotationId".asUpdate,
+              q"DELETE FROM webknossos.annotations WHERE _id = $annotationId".asUpdate
+            )
+          )
+          .transactionally
+      )
+    } yield ()
 
   // update operations
 

@@ -16,6 +16,7 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getTracingType } from "viewer/model/accessors/tracing_accessor";
+import { isBackingAnnotationLoaded } from "viewer/model/accessors/unified_dataset_accessor";
 import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
 import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import { api, Model } from "viewer/singletons";
@@ -129,11 +130,14 @@ function SaveActions() {
     (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,
   );
   const isBusy = useWkSelector(isUserInterfaceBlocked);
+  const isBackingAnnotation = useWkSelector(isBackingAnnotationLoaded);
 
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
 
   if (!isUpdatingCurrentlyAllowed) {
+    // Unified datasets prototype: the action bar shows "Read-only" and "Copy to edit" instead.
+    if (isBackingAnnotation) return null;
     return <ReadOnlyActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />;
   }
 

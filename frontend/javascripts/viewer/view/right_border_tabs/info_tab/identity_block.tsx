@@ -62,6 +62,7 @@ export function AnnotationIdentity({
   onChangeName,
   onChangeDescription,
   hideEmptyDescription = false,
+  objectNoun = "annotation",
 }: {
   name: string;
   description: string;
@@ -69,6 +70,8 @@ export function AnnotationIdentity({
   onChangeDescription?: (newDescription: string) => void;
   // Skips the "No description" placeholder if the description is empty and not editable.
   hideEmptyDescription?: boolean;
+  // What the name and description belong to, used in tooltips (unified datasets prototype: "dataset").
+  objectNoun?: "annotation" | "dataset";
 }) {
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -121,8 +124,8 @@ export function AnnotationIdentity({
         {mayEditName && !isEditingName ? (
           <InlineIconButton
             icon={<EditOutlined />}
-            tooltip="Rename annotation"
-            ariaLabel="Rename annotation"
+            tooltip={`Rename ${objectNoun}`}
+            ariaLabel={`Rename ${objectNoun}`}
             onClick={() => setIsEditingName(true)}
           />
         ) : null}
@@ -157,7 +160,7 @@ export function AnnotationIdentity({
 
       {mayEditDescription ? (
         <MarkdownModal
-          label="Annotation Description"
+          label={objectNoun === "dataset" ? "Dataset Description" : "Annotation Description"}
           placeholder="[No description]"
           source={description}
           isOpen={isMarkdownModalOpen}

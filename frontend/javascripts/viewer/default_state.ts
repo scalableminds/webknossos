@@ -288,6 +288,7 @@ const defaultState: WebknossosState = {
     showKeyboardShortcutConfigModal: false,
     showPythonClientModal: false,
     showDuplicateAnnotationModal: false,
+    showCopyDatasetModal: false,
     aIJobDrawerState: "invisible",
     showRenderAnimationModal: false,
     showShareModal: false,

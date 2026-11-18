@@ -1,12 +1,8 @@
-import { Alert, Modal, Space, Spin, Table } from "antd";
-import { saveAsCSV, transformToCSVRow } from "libs/csv";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import { pluralize } from "libs/utils";
 import capitalize from "lodash-es/capitalize";
 import { useCallback, useMemo } from "react";
-import { ModalWidth } from "theme";
-import type { APISegmentationLayer, SegmentCovarianceMatrix } from "types/api_types";
+import type { APISegmentationLayer } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import {
   getAdditionalCoordinatesAsString,
@@ -15,113 +11,45 @@ import {
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import type { Segment, SegmentGroup } from "viewer/store";
-import { findGroup, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
-import { useSegmentStatistics } from "./hooks/use_segment_statistics";
-import { covarianceMatrixToPrincipalExtents } from "./segment_statistics_helpers";
+import { findGroup, MISSING_GROUP_ID } from "../../shared/tree_hierarchy_view_helpers";
+import {
+  type CsvValue,
+  covarianceMatrixToPrincipalExtents,
+  type SegmentStatisticsRow,
+  type StatisticSpec,
+} from "../segment_statistics_helpers";
+import { useSegmentStatistics } from "./use_segment_statistics";
 
 const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 
-type Props = {
-  onCancel: (...args: Array<any>) => any;
-  tracingId: string | undefined;
-  visibleSegmentationLayer: APISegmentationLayer;
-  relevantSegments: Segment[];
-  /** Appended to the exported filename to tell exports of the same layer apart. */
-  csvFilenameSuffix: string | null;
+type Options = {
+  layer: APISegmentationLayer;
+  segments: Segment[];
   segmentGroups: SegmentGroup[];
+  // Set to false to defer fetching, e.g. until the user asks for the statistics.
+  enabled?: boolean;
 };
-
-type SegmentInfo = {
-  key: string;
-  additionalCoordinates: string;
-  segmentId: bigint;
-  segmentName: string;
-  groupId: number | undefined | null;
-  groupName: string;
-  volumeInUnit3: number | undefined;
-  formattedSize: string | undefined;
-  volumeInVoxel: number | undefined;
-  surfaceAreaInUnit2: number | undefined;
-  formattedSurfaceArea: string | undefined;
-  boundingBoxTopLeft: Vector3 | undefined;
-  boundingBoxTopLeftAsString: string | undefined;
-  boundingBoxPosition: Vector3 | undefined;
-  boundingBoxPositionAsString: string | undefined;
-  maxDistanceInUnit: number | undefined;
-  formattedMaxDistance: string | undefined;
-  sphericity: number | undefined;
-  formattedSphericity: string | undefined;
-  centerOfMass: Vector3 | undefined;
-  centerOfMassAsString: string | undefined;
-  principalExtents: Vector3 | undefined;
-  formattedPrincipalExtents: string | undefined;
-  covarianceMatrix: SegmentCovarianceMatrix | undefined;
-};
-
-type CsvValue = string | number | bigint | undefined;
 
 /*
- * Describes one statistic in both of its representations, so that the rendered table and the
- * exported CSV cannot drift apart when columns are shown conditionally. A spec without a `title`
- * is exported but not rendered; `csvHeaders` and the array returned by `getCsvValues` always have
- * the same length, so missing values keep the CSV columns aligned.
+ * Turns the raw, positional results of useSegmentStatistics into one row per segment, together with
+ * the specs that describe how each statistic is rendered and exported. Views (table, CSV export)
+ * should build on this instead of on the raw statistics.
  */
-type StatisticSpec = {
-  key: string;
-  title?: string;
-  dataIndex?: keyof SegmentInfo;
-  width?: number;
-  isLoading?: boolean;
-  isError?: boolean;
-  csvHeaders: string[];
-  getCsvValues: (row: SegmentInfo) => CsvValue[];
-};
-
-const exportStatisticsToCSV = (
-  segmentInformation: SegmentInfo[],
-  specs: StatisticSpec[],
-  tracingIdOrDatasetName: string,
-  filenameSuffix: string | null,
-) => {
-  const csvHeader = specs.flatMap((spec) => spec.csvHeaders);
-  const segmentStatisticsAsRows = segmentInformation.map((row) =>
-    // Fill missing statistics with "" to also include incomplete statistic rows.
-    transformToCSVRow(specs.flatMap((spec) => spec.getCsvValues(row)).map((value) => value ?? "")),
-  );
-
-  const filename =
-    filenameSuffix == null
-      ? `segmentStatistics_${tracingIdOrDatasetName}.csv`
-      : `segmentStatistics_${tracingIdOrDatasetName}_${filenameSuffix}.csv`;
-  saveAsCSV(csvHeader, segmentStatisticsAsRows, filename);
-};
-
-export function SegmentStatisticsModal({
-  onCancel,
-  tracingId,
-  visibleSegmentationLayer,
-  relevantSegments: segments,
-  csvFilenameSuffix,
-  segmentGroups,
-}: Props) {
+export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabled }: Options) {
   const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = dataset.dataSource.scale;
   const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
 
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
-  const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
-    additionalCoordinates,
-    ", ",
-  );
-
   const segmentIds = useMemo(() => segments.map((s) => s.id), [segments]);
 
   const additionalCoordStringForCsv = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-  // Omit checking that all prerequisites for segment stats (such as a segment index) are
-  // met right here because that should happen before opening the modal.
+  // Whether statistics are available at all (e.g. a segment index exists) is expected to be
+  // checked by the caller before rendering a statistics view.
   const {
+    areSegmentStatisticsAvailable,
     fileInfo,
     statisticsMag,
     boundingBoxMag,
@@ -136,7 +64,7 @@ export function SegmentStatisticsModal({
     sphericities,
     centersOfMass,
     covarianceMatrices,
-  } = useSegmentStatistics({ layer: visibleSegmentationLayer, segmentIds });
+  } = useSegmentStatistics({ layer, segmentIds, enabled });
 
   const getGroupIdForSegment = useCallback(
     // Segments without a groupId belong to the (virtual) root group.
@@ -246,7 +174,7 @@ export function SegmentStatisticsModal({
         ...sphericityStats,
         ...centerOfMassStats,
         ...covarianceStats,
-      } as SegmentInfo;
+      } as SegmentStatisticsRow;
     });
   }, [
     segments,
@@ -431,73 +359,13 @@ export function SegmentStatisticsModal({
     centersOfMass.isError,
   ]);
 
-  const columns = statisticSpecs
-    .filter((spec) => spec.title != null)
-    .map((spec) => {
-      // Only the fetched statistics have a loading and error state; segment id and name are
-      // rendered as plain values.
-      const isFetchedStatistic = spec.isLoading !== undefined;
-      return {
-        title: spec.title,
-        dataIndex: spec.dataIndex,
-        key: spec.key,
-        width: spec.width,
-        render: isFetchedStatistic
-          ? (text: string) => {
-              if (spec.isLoading) return <Spin size="small" />;
-              if (spec.isError) return "n/a";
-              return text;
-            }
-          : undefined,
-      };
-    });
-
   const isAnyStatisticLoading = statisticSpecs.some((spec) => spec.isLoading);
 
-  return (
-    <Modal
-      open
-      title="Segment Statistics"
-      onCancel={onCancel}
-      width={ModalWidth.ExtraLarge}
-      onOk={() =>
-        exportStatisticsToCSV(
-          statisticsList,
-          statisticSpecs,
-          tracingId || dataset.name,
-          csvFilenameSuffix,
-        )
-      }
-      okText="Export to CSV"
-      okButtonProps={{ disabled: isAnyStatisticLoading }}
-    >
-      <Space vertical size="small" style={{ width: "100%" }} styles={{ item: { minWidth: 0 } }}>
-        {hasAdditionalCoords && (
-          <Alert
-            title={`These statistics only refer to the current additional ${pluralize(
-              "coordinate",
-              additionalCoordinates?.length || 0,
-            )} ${additionalCoordinateStringForModal}.`}
-            type="info"
-            showIcon
-          />
-        )}
-        {fileInfo != null && (
-          <Alert
-            title={`Statistics are read from a precomputed segment statistics file, which was computed for mag ${fileInfo.mag.join(
-              "-",
-            )}.`}
-            type="info"
-            showIcon
-          />
-        )}
-        <Table
-          dataSource={statisticsList}
-          columns={columns}
-          style={{ whiteSpace: "pre" }}
-          scroll={{ x: "max-content" }}
-        />
-      </Space>
-    </Modal>
-  );
+  return {
+    rows: statisticsList,
+    statisticSpecs,
+    isAnyStatisticLoading,
+    fileInfo,
+    areSegmentStatisticsAvailable,
+  };
 }

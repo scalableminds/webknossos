@@ -1,3 +1,4 @@
+import { saveAsCSV, transformToCSVRow } from "libs/csv";
 import { EigenvalueDecomposition, Matrix } from "ml-matrix";
 import type {
   SegmentCovarianceMatrix,
@@ -95,3 +96,68 @@ export function covarianceMatrixToPrincipalExtents(
   const [first, second, third] = eigenvalues.sort((a, b) => b - a);
   return [first, second, third];
 }
+
+export type SegmentStatisticsRow = {
+  key: string;
+  additionalCoordinates: string;
+  segmentId: bigint;
+  segmentName: string;
+  groupId: number | undefined | null;
+  groupName: string;
+  volumeInUnit3: number | undefined;
+  formattedSize: string | undefined;
+  volumeInVoxel: number | undefined;
+  surfaceAreaInUnit2: number | undefined;
+  formattedSurfaceArea: string | undefined;
+  boundingBoxTopLeft: Vector3 | undefined;
+  boundingBoxTopLeftAsString: string | undefined;
+  boundingBoxPosition: Vector3 | undefined;
+  boundingBoxPositionAsString: string | undefined;
+  maxDistanceInUnit: number | undefined;
+  formattedMaxDistance: string | undefined;
+  sphericity: number | undefined;
+  formattedSphericity: string | undefined;
+  centerOfMass: Vector3 | undefined;
+  centerOfMassAsString: string | undefined;
+  principalExtents: Vector3 | undefined;
+  formattedPrincipalExtents: string | undefined;
+  covarianceMatrix: SegmentCovarianceMatrix | undefined;
+};
+
+export type CsvValue = string | number | bigint | undefined;
+
+/*
+ * Describes one statistic in both of its representations, so that the rendered table and the
+ * exported CSV cannot drift apart when columns are shown conditionally. A spec without a `title`
+ * is exported but not rendered; `csvHeaders` and the array returned by `getCsvValues` always have
+ * the same length, so missing values keep the CSV columns aligned.
+ */
+export type StatisticSpec = {
+  key: string;
+  title?: string;
+  dataIndex?: keyof SegmentStatisticsRow;
+  width?: number;
+  isLoading?: boolean;
+  isError?: boolean;
+  csvHeaders: string[];
+  getCsvValues: (row: SegmentStatisticsRow) => CsvValue[];
+};
+
+export const exportStatisticsToCSV = (
+  segmentInformation: SegmentStatisticsRow[],
+  specs: StatisticSpec[],
+  tracingIdOrDatasetName: string,
+  filenameSuffix: string | null,
+) => {
+  const csvHeader = specs.flatMap((spec) => spec.csvHeaders);
+  const segmentStatisticsAsRows = segmentInformation.map((row) =>
+    // Fill missing statistics with "" to also include incomplete statistic rows.
+    transformToCSVRow(specs.flatMap((spec) => spec.getCsvValues(row)).map((value) => value ?? "")),
+  );
+
+  const filename =
+    filenameSuffix == null
+      ? `segmentStatistics_${tracingIdOrDatasetName}.csv`
+      : `segmentStatistics_${tracingIdOrDatasetName}_${filenameSuffix}.csv`;
+  saveAsCSV(csvHeader, segmentStatisticsAsRows, filename);
+};

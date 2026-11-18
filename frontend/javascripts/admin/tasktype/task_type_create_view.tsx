@@ -3,6 +3,11 @@ import { createTaskType, getEditableTeams, getTaskType, updateTaskType } from "a
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
+import {
+  getOnlyItem,
+  useIsFetchedSinceMount,
+  usePreselectFormValue,
+} from "admin/use_preselect_form_value";
 import { Button, Col, Form, Input, InputNumber, Radio, Row, Select, Typography, theme } from "antd";
 import type { RuleObject } from "antd/es/form";
 import {
@@ -12,7 +17,7 @@ import {
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { jsonStringify } from "libs/utils";
 import merge from "lodash-es/merge";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   type APIAllowedMode,
@@ -32,7 +37,7 @@ type FormValues = {
   isMagRestricted: boolean;
   summary: string;
   teamId: string;
-  description: string;
+  description?: string;
   tracingType: TracingType;
   settings: {
     somaClickingAllowed: boolean;
@@ -50,6 +55,11 @@ const VIEW_MODE_OPTIONS: Array<{ value: APIAllowedMode; label: string }> = [
   { value: "orthogonal", label: "Orthogonal" },
   { value: "flight", label: "Flight" },
 ];
+
+// Mirrors the backend's AnnotationSettings.defaultFor.
+function getDefaultAllowedModes(tracingType: TracingType): APIAllowedMode[] {
+  return tracingType === TracingTypeEnum.volume ? ["orthogonal"] : ["orthogonal", "flight"];
+}
 
 function isValidMagnification(_rule: RuleObject, value: number | undefined) {
   if (value && (Math.log(value) / Math.log(2)) % 1 === 0) {
@@ -84,14 +94,26 @@ function TaskTypeCreateView() {
 
   const navigate = useNavigate();
   const [useRecommendedConfiguration, setUseRecommendedConfiguration] = useState(false);
+  // antd's isFieldTouched can't tell this apart: it also counts values set by code as touched.
+  const hasUserPickedAllowedModes = useRef(false);
   const [form] = Form.useForm<FormValues>();
   const allowedModes: APIAllowedMode[] = Form.useWatch(["settings", "allowedModes"], form) ?? [];
 
-  const { data: teams = [], isLoading: isFetchingTeams } = useQueryWithErrorHandling({
+  const {
+    data: teams = [],
+    isLoading: isFetchingTeams,
+    dataUpdatedAt: teamsUpdatedAt,
+  } = useQueryWithErrorHandling({
     queryKey: ["editableTeams"],
     queryFn: getEditableTeams,
     refetchOnWindowFocus: false,
   });
+  const hasFreshTeams = useIsFetchedSinceMount(teamsUpdatedAt);
+  usePreselectFormValue(
+    form,
+    "teamId",
+    taskTypeId == null && hasFreshTeams ? getOnlyItem(teams)?.id : undefined,
+  );
 
   const { data: taskType } = useQueryWithErrorHandling({
     queryKey: ["taskTypeForEditing", taskTypeId],
@@ -127,6 +149,10 @@ function TaskTypeCreateView() {
 
     // Use merge which is deep _.extend
     const defaultFormValues: Partial<FormValues> = merge({}, defaultValues, taskType);
+    if (taskType == null && defaultFormValues.settings != null) {
+      // Not part of defaultValues, because merge would combine the arrays index by index.
+      defaultFormValues.settings.allowedModes = getDefaultAllowedModes(TracingTypeEnum.skeleton);
+    }
     form.setFieldsValue(defaultFormValues);
 
     if (taskType?.recommendedConfiguration) {
@@ -164,6 +190,8 @@ function TaskTypeCreateView() {
 
     const newTaskType: Omit<APITaskType, "id" | "teamName"> = {
       ...rest,
+      // The description is optional, but the API expects the field to be present.
+      description: rest.description ?? "",
       teamId,
       settings,
       recommendedConfiguration:
@@ -180,6 +208,16 @@ function TaskTypeCreateView() {
     }
 
     navigate("/taskTypes");
+  }
+
+  // The preferred mode must be one of the allowed modes, so clear it once it isn't anymore.
+  function clearPreferredModeIfNotAllowed(newAllowedModes: APIAllowedMode[]) {
+    const preferredMode = form.getFieldValue(["settings", "preferredMode"]);
+    if (preferredMode != null && !newAllowedModes.includes(preferredMode)) {
+      form.setFieldValue(["settings", "preferredMode"], undefined);
+      // setFieldValue doesn't revalidate, so an error from the old value would stay visible.
+      form.validateFields([["settings", "preferredMode"]]).catch(() => {});
+    }
   }
 
   function onChangeUseRecommendedConfiguration(useRecommendedConfiguration: boolean) {
@@ -204,16 +242,19 @@ function TaskTypeCreateView() {
           form={form}
           onFinish={onFinish}
           onValuesChange={(changedValues: Partial<FormValues>) => {
-            // The preferred mode must be one of the allowed modes, so clear it once it isn't anymore.
-            if (changedValues.settings == null || !("allowedModes" in changedValues.settings)) {
-              return;
+            if (
+              changedValues.tracingType != null &&
+              !isEditingMode &&
+              !hasUserPickedAllowedModes.current
+            ) {
+              // Follow the annotation type with the default modes until the user picks some.
+              const defaultAllowedModes = getDefaultAllowedModes(changedValues.tracingType);
+              form.setFieldValue(["settings", "allowedModes"], defaultAllowedModes);
+              clearPreferredModeIfNotAllowed(defaultAllowedModes);
             }
-            const newAllowedModes = changedValues.settings.allowedModes ?? [];
-            const preferredMode = form.getFieldValue(["settings", "preferredMode"]);
-            if (preferredMode != null && !newAllowedModes.includes(preferredMode)) {
-              form.setFieldValue(["settings", "preferredMode"], undefined);
-              // setFieldValue doesn't revalidate, so an error from the old value would stay visible.
-              form.validateFields([["settings", "preferredMode"]]).catch(() => {});
+            if (changedValues.settings != null && "allowedModes" in changedValues.settings) {
+              hasUserPickedAllowedModes.current = true;
+              clearPreferredModeIfNotAllowed(changedValues.settings.allowedModes ?? []);
             }
           }}
           layout="vertical"
@@ -283,20 +324,14 @@ function TaskTypeCreateView() {
             label="Description"
             description={
               <>
-                Instructions shown to annotators when they start a task and in the viewer&apos;s
-                info tab. Supports{" "}
+                Optional. Instructions shown to annotators when they start a task and in the
+                viewer&apos;s info tab. Supports{" "}
                 <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
                   Markdown
                 </a>
                 .
               </>
             }
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
           >
             <TextArea rows={10} />
           </FormItemWithDescription>

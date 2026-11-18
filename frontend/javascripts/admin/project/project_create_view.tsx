@@ -6,6 +6,11 @@ import {
   getUsers,
   updateProject,
 } from "admin/rest_api";
+import {
+  getOnlyItem,
+  useIsFetchedSinceMount,
+  usePreselectFormValue,
+} from "admin/use_preselect_form_value";
 import { Button, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
 import {
   CheckboxFormItemWithDescription,
@@ -32,12 +37,22 @@ function ProjectCreateView() {
     queryFn: () => getUsers(),
     refetchOnWindowFocus: false,
   });
-  const { data: teams = [], isLoading: isLoadingTeams } = useQueryWithErrorHandling({
+  const {
+    data: teams = [],
+    isLoading: isLoadingTeams,
+    dataUpdatedAt: teamsUpdatedAt,
+  } = useQueryWithErrorHandling({
     queryKey: ["editableTeams"],
     queryFn: getEditableTeams,
     refetchOnWindowFocus: false,
   });
   const isFetchingData = isLoadingUsers || isLoadingTeams;
+  const hasFreshTeams = useIsFetchedSinceMount(teamsUpdatedAt);
+  usePreselectFormValue(
+    form,
+    "team",
+    projectId == null && hasFreshTeams ? getOnlyItem(teams)?.id : undefined,
+  );
 
   const { data: project } = useQueryWithErrorHandling({
     queryKey: ["projectForEditing", projectId],

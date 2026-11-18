@@ -14,13 +14,13 @@ import {
   type AgglomerateState,
   getActiveSegmentationTracing,
   getRenderableMagForSegmentationTracing,
+  getTransformForSegmentationTracing,
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
   type VolumeAnnotationZoomState,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 import {
   AnnotationTool,
@@ -63,7 +63,9 @@ export const DISABLED_EXPLANATION = {
     "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.",
   EDITABLE_MAPPING_ACTIVE: "Volume annotation is disabled because an editable mapping is active.",
   SEGMENTATION_LAYER_TRANSFORMED:
-    "Volume annotation is disabled because the visible segmentation layer is transformed. Use the left sidebar to render the segmentation layer without any transformations.",
+    "This tool is disabled because the visible segmentation layer is transformed. Only the brush supports transformed layers. To use this tool, render the segmentation layer without any transformations via the left sidebar.",
+  SEGMENTATION_LAYER_TRANSFORMED_NON_AFFINE:
+    "Volume annotation is disabled because the visible segmentation layer is transformed with a thin plate spline. Use the left sidebar to render the segmentation layer without any transformations.",
   JSON_MAPPING_ACTIVE:
     "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation.",
   UNEDITABLE_MAPPING_LOCKED:
@@ -83,7 +85,9 @@ type Params = {
   isOnly3DViewportVisible: boolean;
   isZoomInvalidForTracing: boolean;
   isEditableMappingActive: boolean;
-  isSegmentationTracingTransformed: boolean;
+  // "affine" if the segmentation tracing layer is rendered with an affine transform,
+  // "other" for other transforms (thin plate splines).
+  segmentationTracingTransform: "none" | "affine" | "other";
   isJSONMappingActive: boolean;
   isFlycamRotated: boolean;
   isConcurrentCollabMode: boolean;
@@ -162,10 +166,21 @@ const editableMappingActiveRule = new DisableRule(VolumeTools, ({ isEditableMapp
   isEditableMappingActive ? DISABLED_EXPLANATION.EDITABLE_MAPPING_ACTIVE : null,
 );
 
+// The brush works under any affine transform of the segmentation layer (see
+// rasterizeTransformedCapsule). The other volume tools work in axis-aligned planes of
+// the layer and don't support transforms yet.
+const BrushTools = [AnnotationTool.BRUSH, AnnotationTool.ERASE_BRUSH] as AnnotationTool[];
 const segmentationTransformedRule = new DisableRule(
   VolumeToolsWithProofreading,
-  ({ isSegmentationTracingTransformed }) =>
-    isSegmentationTracingTransformed ? DISABLED_EXPLANATION.SEGMENTATION_LAYER_TRANSFORMED : null,
+  ({ segmentationTracingTransform }, tool) => {
+    if (segmentationTracingTransform === "none") {
+      return null;
+    }
+    if (segmentationTracingTransform === "other") {
+      return DISABLED_EXPLANATION.SEGMENTATION_LAYER_TRANSFORMED_NON_AFFINE;
+    }
+    return BrushTools.includes(tool) ? null : DISABLED_EXPLANATION.SEGMENTATION_LAYER_TRANSFORMED;
+  },
 );
 
 const jsonMappingActiveRule = new DisableRule(
@@ -353,11 +368,16 @@ const _getDisabledInfoForTools = (
   const isSegmentationTracingVisibleForMag = labeledMag != null;
   const isOnly3DViewportVisible = isOnlyTDViewportVisible(state);
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-  const isSegmentationTracingTransformed =
-    segmentationTracingLayer != null &&
-    getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
-      segmentationTracingLayer.tracingId
-    ] !== IdentityTransform;
+  const segmentationTracingLayerTransform =
+    segmentationTracingLayer != null
+      ? getTransformForSegmentationTracing(state, segmentationTracingLayer)
+      : IdentityTransform;
+  const segmentationTracingTransform =
+    segmentationTracingLayerTransform === IdentityTransform
+      ? "none"
+      : segmentationTracingLayerTransform.type === "affine"
+        ? "affine"
+        : "other";
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&
     visibleSegmentationLayer != null &&
@@ -378,7 +398,7 @@ const _getDisabledInfoForTools = (
     isOnly3DViewportVisible,
     isZoomInvalidForTracing,
     isEditableMappingActive,
-    isSegmentationTracingTransformed,
+    segmentationTracingTransform,
     isJSONMappingActive,
     isFlycamRotated,
     isConcurrentCollabMode,

@@ -186,6 +186,9 @@ describe("Annotation Tool Disabled Info", () => {
       AnnotationTool.LINE_MEASUREMENT,
       AnnotationTool.AREA_MEASUREMENT,
       AnnotationTool.VOXEL_PIPETTE,
+      // The brush supports affine transforms of the segmentation layer.
+      AnnotationTool.BRUSH,
+      AnnotationTool.ERASE_BRUSH,
     ] as AnnotationTool[];
     const disabledInfo = getDisabledInfoForTools(rotatedState);
     for (const tool of Object.values(AnnotationTool)) {

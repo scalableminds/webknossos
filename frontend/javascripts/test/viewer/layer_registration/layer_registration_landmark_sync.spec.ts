@@ -231,6 +231,20 @@ describe("Layer registration landmark sync", () => {
     expect(readStoredLandmarks(COLOR_2_FIXED_SIDE)).toEqual([LANDMARK_1, LANDMARK_2]);
   });
 
+  it("writes the current landmarks right away when flushing, but not while stopped", async () => {
+    const { landmarkIframes, landmarkSync } = await startSession(COLOR_2_PAIR);
+    // E.g. "Save now" right after placing a landmark, before the next run.
+    landmarkIframes.fixed.landmarks = [LANDMARK_1];
+    await landmarkSync.flush();
+    expect(readStoredLandmarks(COLOR_2_FIXED_SIDE)).toEqual([LANDMARK_1]);
+
+    // E.g. a landmark iframe was reloaded and lost its landmarks.
+    landmarkSync.stop();
+    landmarkIframes.fixed.landmarks = [];
+    await landmarkSync.flush();
+    expect(readStoredLandmarks(COLOR_2_FIXED_SIDE)).toEqual([LANDMARK_1]);
+  });
+
   it("doesn't write the result of a run that was still running when the sync was stopped", async () => {
     const { landmarkIframes, landmarkSync } = await startSession(COLOR_2_PAIR);
     landmarkIframes.fixed.landmarks = [LANDMARK_1];

@@ -23,6 +23,7 @@ export function useLandmarkSync(
   hasUnsyncedLandmarks: boolean;
   fetchLandmarks: () => Promise<Record<Side, Landmark[]>>;
   stopSync: () => void;
+  flushLandmarks: () => Promise<void>;
   flushAndStopSync: () => Promise<void>;
   resumeSync: () => void;
 } {
@@ -64,6 +65,7 @@ export function useLandmarkSync(
     hasUnsyncedLandmarks,
     fetchLandmarks: landmarkSync.fetchLandmarks,
     stopSync: landmarkSync.stop,
+    flushLandmarks: landmarkSync.flush,
     flushAndStopSync: landmarkSync.flushAndStop,
     resumeSync: landmarkSync.resume,
   };

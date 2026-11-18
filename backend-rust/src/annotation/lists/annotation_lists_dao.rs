@@ -47,6 +47,25 @@ pub(crate) fn push_list_grant<'a>(q: &mut Sql, requester: Requester<'a>, shared:
     crate::dataset::access::push_read_predicate(q, requester.id, None);
     q.push(")))");
 }
+/// AnnotationDAO.listAccessWithCandidatesQ: narrows the annotations to those
+/// owned by, shared with or contributed to by the user before the list grant.
+/// Each UNION branch uses an index, whereas the ORs of the grant make postgres
+/// scan and filter all annotations (1840 ms -> 130 ms in #10419).
+fn push_shared_candidates<'a>(q: &mut Sql, requester: Requester<'a>) {
+    q.push("a._id IN (SELECT _id FROM webknossos.annotations_ WHERE _user=")
+        .push_arg(requester.id)
+        .push(
+            " UNION SELECT shared._annotation FROM webknossos.annotation_sharedTeams shared \
+            JOIN webknossos.user_team_roles role ON role._team=shared._team WHERE role._user=",
+        )
+        .push_arg(requester.id)
+        .push(
+            " UNION SELECT contributor._annotation FROM webknossos.annotation_contributors contributor \
+            WHERE contributor._user=",
+        )
+        .push_arg(requester.id)
+        .push(") AND ");
+}
 /// The number of annotations of type `typ` the user may list.
 pub(crate) async fn count(
     connection: &mut PgConnection,
@@ -81,6 +100,9 @@ pub(crate) async fn find_all_compact(
         JOIN webknossos.datasets_ d ON d._id=a._dataset JOIN webknossos.organizations_ organization ON organization._id=d._organization
         WHERE a.typ='Explorational' AND "#,
     );
+    if shared {
+        push_shared_candidates(&mut q, user.into());
+    }
     push_list_grant(&mut q, user.into(), shared);
     push_optional_filters(&mut q, owner, filters);
     q.push(

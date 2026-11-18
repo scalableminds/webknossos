@@ -1033,3 +1033,43 @@ async fn auth_finalize_logs_in_and_rejects_bad_assertions() {
     );
     database.cleanup().await;
 }
+
+/// PasskeyTestSuite "log in repeatedly with a passkey without sign counter":
+/// authenticators that always report 0 (synced passkeys) log in every time.
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn auth_finalize_accepts_repeated_zero_counters() {
+    let database = TestDb::new().await;
+    let fixture = database.fixture().await;
+    let multi_user = fixture.multi_user_id.clone();
+    let app = auth_app(&database, PUBLIC_URI, true);
+    let authenticator = Authenticator::new(&[0xce; 24]);
+
+    let (options, session) = start(&app, &fixture.token).await;
+    let body = authenticator.registration(&options, Tweak::default());
+    let reply = finalize(&app, &fixture.token, &session, body).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.body);
+    // The test authenticator registers with counter 3; reset it to "no counter".
+    sqlx::query(
+        "UPDATE webknossos.webauthnCredentials SET signatureCount = 0 WHERE _multiUser = $1",
+    )
+    .bind(&multi_user)
+    .execute(&database.pool)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE webknossos.multiUsers SET _lastLoggedInIdentity = $2 WHERE _id = $1")
+        .bind(&multi_user)
+        .bind(&fixture.user_id)
+        .execute(&database.pool)
+        .await
+        .unwrap();
+
+    for _ in 0..3 {
+        let (options, session) = auth_start(&app).await;
+        let body = authenticator.assertion(&options, &multi_user, AssertTweak::default());
+        let reply = auth_finalize(&app, &session, body).await;
+        assert_eq!((reply.status, &reply.body), (StatusCode::OK, &Value::Null));
+        assert_eq!(stored_sign_count(&database, &multi_user).await, 0);
+    }
+    database.cleanup().await;
+}

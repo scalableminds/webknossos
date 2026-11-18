@@ -381,17 +381,6 @@
     "user_handle_from": "regOptions",
     "origin": "https://localhost:19590",
     "sign_count": 3
-   },
-   "expected_divergence": {
-    "reason": "Play bug: AuthenticationController.webauthnAuthFinalize reads oldSignCount after webauthn4j's verify has already set the record's counter, so `oldSignCount < newSignCount` never holds and every login of an authenticator with a signature counter (> 0, e.g. hardware security keys) fails with 401 after the new counter was stored. Authenticators that always report 0 (synced passkeys) are unaffected. Rust accepts increasing counters; both store the same counter.",
-    "paths": [
-     "$"
-    ],
-    "status_differs": true,
-    "headers": [
-     "content-type",
-     "set-cookie"
-    ]
    }
   },
   {

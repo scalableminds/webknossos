@@ -168,7 +168,8 @@ class UserTokenController @Inject() (
       case None             => Fox.successful(ScopeCheck.Allowed) // Not a scoped token, no scope restrictions.
       case Some(tokenValue) =>
         scopedApiTokenService.findValid(tokenValue).shiftBox.flatMap {
-          // The scopes are read from the grant per request, so that changing them takes effect at once.
+          // The scopes come from the token's grant rather than the token, so that changing them takes effect at once.
+          // See ScopedApiTokenService for how its cache keeps it that way.
           case Full(scopedApiToken) =>
             val allowed = Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
               scopedApiToken.scopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))

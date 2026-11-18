@@ -58,13 +58,17 @@ When you approve a connection, you choose one of three permission levels:
 | --- | --- |
 | Read | Look at datasets, annotations and tasks, but change nothing. |
 | Create/modify | Additionally upload and edit datasets, create annotations, tasks, projects and teams, and edit users (see the warning below). |
-| Delete | Additionally delete datasets, annotations, tasks and teams. |
+| Delete | Additionally delete datasets, tasks and teams. |
 
 The level belongs to the connection. To change it, [disconnect](#disconnecting) the application, then connect it
 again and choose another level. Applications that are still signed in do not ask for consent again by themselves.
 In Claude Code, run `/mcp` after disconnecting and authenticate `webknossos` again. Only data that the agent read or
 wrote in the last two minutes may stay accessible at the old level for up to two more minutes, because the data
 servers cache access checks.
+
+There is one connection per application and user. If an application identifies itself the same way each time, as
+those with a client ID metadata document do, connecting it again (e.g. from a second computer) does not add a
+connection but replaces the level of the existing one. Disconnecting then disconnects all of its sessions.
 
 The levels cover everything the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) can do, so
 an agent granted `Delete` can use the whole library. The organization itself stays read-only at every level.

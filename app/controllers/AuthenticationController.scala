@@ -89,6 +89,7 @@ class AuthenticationController @Inject() (
     slackNotificationService: SlackNotificationService,
     tokenDAO: TokenDAO,
     oauthService: OAuthService,
+    scopedApiTokenService: ScopedApiTokenService,
     multiUserDAO: MultiUserDAO,
     accountEmailService: AccountEmailService,
     organizationEmailService: OrganizationEmailService,
@@ -433,7 +434,7 @@ class AuthenticationController @Inject() (
 
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
-      _ <- tokenDAO.deleteAllByUserIdAndType(request.identity._id, TokenType.ScopedApi)
+      _ <- scopedApiTokenService.revokeAllForUser(request.identity._id)
       tokenOpt <- Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id))
       result <- tokenOpt match {
         case Some(token) =>

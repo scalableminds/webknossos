@@ -23,6 +23,7 @@ import java.util.Base64
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 /** An authorization request as sent by an MCP client to the authorization endpoint, after validation. */
 case class ValidatedAuthorizationRequest(
@@ -95,7 +96,15 @@ class OAuthService @Inject() (
     * non-browser clients usually do not, so a missing header is fine.
     */
   def isForeignOrigin(request: RequestHeader): Boolean =
-    request.headers.get(HeaderNames.ORIGIN).exists(!_.equalsIgnoreCase(instanceOrigin))
+    request.headers.get(HeaderNames.ORIGIN).exists { origin =>
+      !origin.equalsIgnoreCase(instanceOrigin) && !hostOfOrigin(origin).exists(_.equalsIgnoreCase(request.host))
+    }
+
+  // host[:port] as in the Host header. None for "null" and other origins that are no URI with a host.
+  private def hostOfOrigin(origin: String): Option[String] =
+    Try(new URI(origin)).toOption.flatMap { uri =>
+      Option(uri.getHost).map(host => if (uri.getPort == -1) host else s"$host:${uri.getPort}")
+    }
 
   private val authorizationCodeExpiry: FiniteDuration = 2.minutes
   private val accessTokenExpiry: FiniteDuration = 1.hour
@@ -202,8 +211,15 @@ class OAuthService @Inject() (
   def denyRedirect(request: ValidatedAuthorizationRequest): String =
     errorRedirect(request.redirectUri, request.state, "access_denied", "The user denied the request")
 
+  // Changes the scopes of a live grant, if there is one already. Its scoped API tokens then get the new scopes, so the
+  // cached ones must go.
   private def upsertGrant(user: User, client: OAuthClientMetadata, level: ScopeMode.Value): Fox[OAuthGrant] =
-    grantDAO.upsertLive(OAuthGrant(ObjectId.generate, user._id, client.clientId, client.clientName, level.toString))
+    for {
+      grant <- grantDAO.upsertLive(
+        OAuthGrant(ObjectId.generate, user._id, client.clientId, client.clientName, level.toString)
+      )
+      _ = scopedApiTokenService.clearCache()
+    } yield grant
 
   private def redirectWith(redirectUri: String, state: Option[String], params: (String, String)*): String = {
     val builder = new URIBuilder(redirectUri)
@@ -373,6 +389,7 @@ class OAuthService @Inject() (
   def revokeGrant(grantId: ObjectId): Fox[Unit] =
     for {
       _ <- grantDAO.markDeleted(grantId)
+      _ = scopedApiTokenService.clearCache()
       _ <- codeDAO.deleteAllByGrant(grantId)
       _ <- tokenDAO.deleteAllByGrant(grantId)
       _ <- scopedApiTokenService.revokeAllForGrant(grantId)

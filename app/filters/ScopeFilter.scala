@@ -51,7 +51,8 @@ class ScopeFilter @Inject() (scopedApiTokenService: ScopedApiTokenService)(impli
             InternalServerError(Json.obj("messages" -> Json.arr(Json.obj("error" -> "Could not check token scopes."))))
           )
         case Full(tokens) =>
-          // The scopes come from the tokens' grants, read per request, so that changing them takes effect at once.
+          // The scopes come from the tokens' grants rather than the tokens, so that changing them takes effect at once.
+          // See ScopedApiTokenService for how its cache keeps it that way.
           requiredScopeFor(request) match {
             case None =>
               deny(request, tokens.head.scopes, "This endpoint cannot be used with a scoped token")

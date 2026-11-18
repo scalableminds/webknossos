@@ -74,6 +74,48 @@ export type SegmentsHierarchy = {
   nodesByKey: Map<string, SegmentsUiNode>;
 };
 
+// All nodes that are currently rendered by the tree (i.e., not inside of a collapsed group)
+// in their display order, including the root group.
+export function getRenderedNodes(hierarchy: SegmentsHierarchy): SegmentsUiNode[] {
+  const expandedKeys = new Set(hierarchy.expandedKeys);
+  const renderedNodes: SegmentsUiNode[] = [];
+  const collect = (node: SegmentsUiNode) => {
+    renderedNodes.push(node);
+    if (node.type === "group" && expandedKeys.has(node.key)) {
+      node.children.forEach(collect);
+    }
+  };
+  hierarchy.roots.forEach(collect);
+  return renderedNodes;
+}
+
+/*
+ * Returns the segment that should be selected after the given segments were removed from the
+ * list: the first remaining segment below the removed ones, or otherwise the last remaining one
+ * above the last removed one (which may lie between removed ones). Only segments that are currently rendered (i.e., not in a collapsed group) are
+ * considered. Returns null if there is no such segment.
+ */
+export function findSegmentToSelectAfterRemoval(
+  hierarchy: SegmentsHierarchy,
+  removedSegmentIds: bigint[],
+): SegmentUiNode | null {
+  const removedIds = new Set(removedSegmentIds);
+  const renderedSegments = getRenderedNodes(hierarchy).filter(
+    (node): node is SegmentUiNode => node.type === "segment",
+  );
+
+  const isRemoved = (node: SegmentUiNode) => removedIds.has(node.segment.id);
+  const lastRemovedIndex = renderedSegments.findLastIndex(isRemoved);
+  if (lastRemovedIndex === -1) {
+    return null;
+  }
+  return (
+    renderedSegments.slice(lastRemovedIndex + 1).find((node) => !isRemoved(node)) ??
+    renderedSegments.slice(0, lastRemovedIndex).findLast((node) => !isRemoved(node)) ??
+    null
+  );
+}
+
 export function buildSegmentHierarchy(
   segments: SegmentMap | null | undefined,
   segmentGroups: SegmentGroup[],
@@ -149,4 +191,42 @@ export function buildSegmentHierarchy(
     expandedKeys,
     nodesByKey,
   };
+}
+
+/*
+ * Returns the ids of all segments between (and including) the two given segments,
+ * in rendered order. Like the range selection in the skeleton tab, this only works
+ * for segments within the same group. Otherwise, null is returned.
+ */
+export function getSegmentIdsInRange(
+  hierarchy: SegmentsHierarchy,
+  anchorSegmentId: bigint,
+  targetSegmentId: bigint,
+): bigint[] | null {
+  const anchorNode = hierarchy.nodesByKey.get(getSegmentUiNodeKey(anchorSegmentId));
+  const targetNode = hierarchy.nodesByKey.get(getSegmentUiNodeKey(targetSegmentId));
+  if (anchorNode?.type !== "segment" || targetNode?.type !== "segment") {
+    return null;
+  }
+  // Mirrors the grouping in createGroupToSegmentsMap.
+  const groupId = anchorNode.segment.groupId || MISSING_GROUP_ID;
+  if ((targetNode.segment.groupId || MISSING_GROUP_ID) !== groupId) {
+    return null;
+  }
+  const parentNode = hierarchy.nodesByKey.get(getGroupUiNodeKey(groupId));
+  if (parentNode?.type !== "group") {
+    return null;
+  }
+
+  const siblings = parentNode.children;
+  const anchorIndex = siblings.indexOf(anchorNode);
+  const targetIndex = siblings.indexOf(targetNode);
+  if (anchorIndex < 0 || targetIndex < 0) {
+    return null;
+  }
+  const [start, end] =
+    anchorIndex < targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
+  return siblings
+    .slice(start, end + 1)
+    .flatMap((sibling) => (sibling.type === "segment" ? [sibling.segment.id] : []));
 }

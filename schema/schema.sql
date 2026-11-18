@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(192);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(194);
 COMMIT TRANSACTION;
 
 
@@ -318,8 +318,8 @@ CREATE TABLE webknossos.tasks(
   _project TEXT CONSTRAINT _project_objectId CHECK (_project ~ '^[0-9a-f]{24}$') NOT NULL,
   _script TEXT CONSTRAINT _script_objectId CHECK (_script ~ '^[0-9a-f]{24}$'),
   _taskType TEXT CONSTRAINT _taskType_objectId CHECK (_taskType ~ '^[0-9a-f]{24}$') NOT NULL,
-  neededExperience_domain TEXT NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
-  neededExperience_value INT NOT NULL,
+  neededExperience_domain TEXT CHECK (neededExperience_domain ~* '^.{2,}$'), -- NULL if any member of the project's team may get the task
+  neededExperience_value INT,
   totalInstances BIGINT NOT NULL,
   pendingInstances BIGINT NOT NULL,
   tracingTime BIGINT,
@@ -329,7 +329,8 @@ CREATE TABLE webknossos.tasks(
   creationInfo TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
-  CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0)
+  CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0),
+  CONSTRAINT neededExperienceIsCompleteCheck CHECK ((neededExperience_domain IS NULL) = (neededExperience_value IS NULL))
 );
 
 CREATE TABLE webknossos.experienceDomains(
@@ -411,12 +412,13 @@ CREATE TABLE webknossos.organization_plan_updates(
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
-CREATE TABLE webknossos.organization_planExpiryReminders(
+CREATE TYPE webknossos.EMAIL_THRESHOLD_TYPE AS ENUM ('PlanExpiry', 'StorageWarning');
+CREATE TABLE webknossos.organization_notifiedEmailThresholds(
   _organization TEXT NOT NULL,
-  paidUntil TIMESTAMPTZ NOT NULL, -- the expiry date the reminder was sent for, so that extending the plan re-arms the reminders
-  leadTimeDays INT NOT NULL,
+  emailThresholdType webknossos.EMAIL_THRESHOLD_TYPE NOT NULL,
+  threshold INT NOT NULL, -- PlanExpiry: lead time in days, StorageWarning: used storage in percent. Deleted again to re-arm the email.
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (_organization, paidUntil, leadTimeDays),
+  PRIMARY KEY (_organization, emailThresholdType, threshold),
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
@@ -1097,7 +1099,7 @@ ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_plan_updates
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.organization_planExpiryReminders
+ALTER TABLE webknossos.organization_notifiedEmailThresholds
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;

@@ -40,12 +40,13 @@ jobs:
         run: |
           # Only wait for runs of the head commit. Runs of older commits won't deploy on completion,
           # because check-build-smoketest-push-result skips commits that aren't the PR head.
+          # Any status but completed: a run waiting for a runner can also be pending, waiting or requested.
           run_id=$(gh run list \
             --repo "${{ github.repository }}" \
             --branch "$HEAD_REF" \
             --workflow "CI Pipeline" \
             --json databaseId,status,event,headSha \
-            --jq "first(.[] | select((.status == \"in_progress\" or .status == \"queued\") and .event == \"push\" and .headSha == \"$HEAD_SHA\") | .databaseId) // empty")
+            --jq "first(.[] | select(.status != \"completed\" and .event == \"push\" and .headSha == \"$HEAD_SHA\") | .databaseId) // empty")
           if [ -n "$run_id" ]; then
             echo "CI run $run_id is in progress and will trigger deployment on completion — skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"

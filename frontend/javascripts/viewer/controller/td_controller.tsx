@@ -23,10 +23,11 @@ import {
   SkeletonToolController,
 } from "viewer/controller/combinations/tool_controls";
 import CustomLOD from "viewer/controller/custom_lod";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { getInputCatcherRect, getViewportScale } from "viewer/model/accessors/view_mode_accessor";
+import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
@@ -36,9 +37,8 @@ import { updateMeshOpacityAction } from "viewer/model/actions/annotation_actions
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { toggleSegmentInPartitionAction } from "viewer/model/actions/proofread_actions";
 import {
+  moveTDViewByPixelDeltaAction,
   moveTDViewByVectorWithoutTimeTrackingAction,
-  moveTDViewXAction,
-  moveTDViewYAction,
   setTDCameraAction,
   setTDCameraWithoutTimeTrackingAction,
   setViewportAction,
@@ -119,8 +119,8 @@ class TDController extends PureComponent<Props> {
   isStarted: boolean = false;
 
   componentDidMount() {
-    const { dataset, flycam } = Store.getState();
-    this.oldUnitPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
+    const state = Store.getState();
+    this.oldUnitPos = voxelToUnit(getGlobalVoxelSizeFromState(state), getPosition(state.flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -405,10 +405,12 @@ class TDController extends PureComponent<Props> {
       // has initialized oldUnitPos.
       return;
     }
-    const { flycam } = Store.getState();
+    const state = Store.getState();
     const { controls } = this;
-    position = position || getPosition(flycam);
-    const nmPosition = voxelToUnit(this.props.voxelSize, position);
+    position = position || getPosition(state.flycam);
+    // Read the voxel size from the same state as the position, since this is also called
+    // from store listeners, before the props are updated.
+    const nmPosition = voxelToUnit(getGlobalVoxelSizeFromState(state), position);
 
     if (controls != null) {
       controls.target.set(...nmPosition);
@@ -452,9 +454,7 @@ class TDController extends PureComponent<Props> {
   }
 
   moveTDView(delta: Point2): void {
-    const [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView);
-    Store.dispatch(moveTDViewXAction((delta.x / scaleX) * -1));
-    Store.dispatch(moveTDViewYAction((delta.y / scaleY) * -1));
+    Store.dispatch(moveTDViewByPixelDeltaAction(delta));
   }
 
   onTDCameraChanged = (userTriggered: boolean = true) => {
@@ -482,7 +482,7 @@ class TDController extends PureComponent<Props> {
 
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
-    voxelSize: state.dataset.dataSource.scale,
+    voxelSize: getGlobalVoxelSizeFromState(state),
     activeTool: state.uiInformation.activeTool,
   };
 }

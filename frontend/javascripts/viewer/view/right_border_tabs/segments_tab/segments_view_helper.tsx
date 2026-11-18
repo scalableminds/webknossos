@@ -13,6 +13,10 @@ import {
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { setMappingAction, setMappingEnabledAction } from "viewer/model/actions/settings_actions";
+import {
+  type RemoveSegmentAction,
+  removeSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import type {
   ActiveMappingInfo,
   Segment,
@@ -89,6 +93,29 @@ export async function hasSegmentIndex(
   );
 }
 
+/*
+ * Returns whether the mapping could be activated. If loading the mapping fails, the mapping saga
+ * disables it again. If another mapping was requested in the meantime, false is returned, too.
+ */
+export async function activateAgglomerateMappingAndWait(
+  layerName: string,
+  mappingName: string,
+): Promise<boolean> {
+  const getActiveMapping = () =>
+    getMappingInfo(Store.getState().temporaryConfiguration.activeMappingByLayer, layerName);
+  Store.dispatch(setMappingAction(layerName, mappingName, "AGGLOMERATE", false));
+  await waitForCondition(
+    () => getActiveMapping().mappingStatus !== MappingStatusEnum.ACTIVATING,
+    100,
+  );
+  const activeMapping = getActiveMapping();
+  return (
+    activeMapping.mappingStatus === MappingStatusEnum.ENABLED &&
+    activeMapping.mappingName === mappingName &&
+    activeMapping.mappingType === "AGGLOMERATE"
+  );
+}
+
 export function withMappingActivationConfirmation(
   originalOnClick: MenuProps["onClick"],
   mappingName: string | null | undefined,
@@ -115,7 +142,7 @@ export function withMappingActivationConfirmation(
   const recommendationStr =
     editableMapping == null
       ? ""
-      : "This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active mesh file instead.";
+      : `This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active ${descriptor} instead.`;
 
   const confirmMappingActivation: MenuProps["onClick"] = (menuClickEvent) => {
     confirm({
@@ -125,15 +152,10 @@ export function withMappingActivationConfirmation(
           return;
         }
         if (mappingName != null) {
-          Store.dispatch(setMappingAction(layerName, mappingName, "AGGLOMERATE", false));
-          await waitForCondition(
-            () =>
-              getMappingInfo(
-                Store.getState().temporaryConfiguration.activeMappingByLayer,
-                layerName,
-              ).mappingStatus === MappingStatusEnum.ENABLED,
-            100,
-          );
+          const wasActivated = await activateAgglomerateMappingAndWait(layerName, mappingName);
+          if (!wasActivated) {
+            return;
+          }
         } else {
           Store.dispatch(setMappingEnabledAction(layerName, false));
           await waitForCondition(
@@ -178,3 +200,13 @@ export const getSegmentsOfGroupRecursively = (
     .filter((x) => x != null);
   return segmentIdsNested.flat() as Segment[];
 };
+
+export function removeSegmentsFromList(
+  dispatch: (action: RemoveSegmentAction) => void,
+  layerName: string,
+  segmentIds: bigint[],
+) {
+  for (const segmentId of segmentIds) {
+    dispatch(removeSegmentAction(segmentId, layerName));
+  }
+}

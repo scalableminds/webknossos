@@ -21,8 +21,9 @@ import {
   Vector2,
 } from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import Dimensions from "viewer/model/dimensions";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 
 export const CONTOUR_COLOR_NORMAL = new Color(0x0000ff);
@@ -204,8 +205,8 @@ export class QuickSelectGeometry {
     });
     this.rectangle = new Mesh(geometry, material);
 
-    const baseWidth = getBaseVoxelInUnit(Store.getState().dataset.dataSource.scale.factor);
-    const centerGeometry = new PlaneGeometry(baseWidth, baseWidth);
+    // The marker is scaled in rotateToViewport so that it covers one pixel at zoom step 1.
+    const centerGeometry = new PlaneGeometry(1, 1);
     const centerMaterial = new MeshBasicMaterial({
       color: this.centerMarkerColor,
       side: DoubleSide,
@@ -247,7 +248,7 @@ export class QuickSelectGeometry {
 
   rotateToViewport() {
     const { activeViewport } = Store.getState().viewModeData.plane;
-    const { factor: scaleFactor } = Store.getState().dataset.dataSource.scale;
+    const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(Store.getState()));
     const rotation = rotations[activeViewport];
     if (!rotation) {
       return;
@@ -256,9 +257,7 @@ export class QuickSelectGeometry {
     this.rectangle.setRotationFromEuler(rotation);
     this.centerMarker.setRotationFromEuler(rotation);
     this.centerMarker.scale.copy(
-      new ThreeVector3(
-        ...Dimensions.transDim(scaleFactor.map((el) => 1 / el) as Vector3, activeViewport),
-      ),
+      new ThreeVector3(...Dimensions.transDim(voxelPerPixel, activeViewport)),
     );
   }
 

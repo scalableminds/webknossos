@@ -255,12 +255,16 @@ export enum TreeTypeEnum {
 export type TreeType = keyof typeof TreeTypeEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
-const VIEWPORT_WIDTH = 376;
+// Width of the flight mode plane in the flycam's local coordinates (multiples of the
+// smallest voxel extent). Since the plane always fills the viewport, this defines how
+// many voxels are visible at zoom step 1. The spherical cap radius, the flight clipping
+// distance and the camera's near/far values are measured relative to it.
+export const FLIGHT_PLANE_WIDTH = 376;
 
 // FLIGHT_CAM_DISTANCE has to be calculated such that with cam
-// angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
+// angle 45°, the plane of width FLIGHT_PLANE_WIDTH fits exactly in the
 // viewport.
-export const FLIGHT_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+export const FLIGHT_CAM_DISTANCE = FLIGHT_PLANE_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
 // A subdivision of 100 means that there will be 100 segments per axis
 // and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
@@ -294,7 +298,8 @@ const Constants = {
   BUCKET_SIZE: 32 ** 3,
   BUCKET_SIZE_2D: 32 ** 2,
   BUCKET_SHAPE: [32, 32, 32] as Vector3,
-  VIEWPORT_WIDTH,
+  // Used for the viewports until their actual size is measured.
+  DEFAULT_VIEWPORT_SIZE_IN_PX: 376,
   DEFAULT_NAVBAR_HEIGHT: 48,
   BANNER_HEIGHT: 38,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to

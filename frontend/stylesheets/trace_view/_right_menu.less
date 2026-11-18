@@ -71,21 +71,41 @@
     }
 
     // The action bar and the "compute mesh" button are hover-only, but have to stay
-    // reachable without a mouse: antd marks the row that keyboard navigation is on
-    // with -active.
+    // reachable without a mouse (see also the keyboard-focus rules below).
     &:hover .list-row__on-hover,
-    &:focus-within .list-row__on-hover,
-    &.ant-tree-treenode-active .list-row__on-hover {
+    &:focus-within .list-row__on-hover {
       visibility: visible;
     }
 
     // The item count and the row's actions share one slot, so the count makes way for
     // them while the row is hovered.
     &:hover .list-row__off-hover,
-    &:focus-within .list-row__off-hover,
-    &.ant-tree-treenode-active .list-row__off-hover {
+    &:focus-within .list-row__off-hover {
       visibility: hidden;
     }
+  }
+
+  // While the list is focused via the keyboard, antd marks the row that keyboard navigation is
+  // on with -active (the segment list keeps it on the selected row). Only then the row shows its
+  // actions. Outside of keyboard focus, the -active class must not have any effect, so that a
+  // selected row looks the same as after a click.
+  .ant-tree-list:focus-visible .ant-tree-treenode-active {
+    .list-row__on-hover {
+      visibility: visible;
+    }
+
+    .list-row__off-hover {
+      visibility: hidden;
+    }
+  }
+
+  // While the list is focused via the keyboard, antd outlines the "active" node. In lists that keep
+  // the active node on the selected one (the segment list), the selection highlight is enough.
+  &.list-tree--active-is-selected
+    .ant-tree-list:focus-visible
+    .ant-tree-treenode-active
+    .ant-tree-node-content-wrapper {
+    outline: none;
   }
 
   // antd wraps titleRender's output in a plain block element that shrink-wraps its

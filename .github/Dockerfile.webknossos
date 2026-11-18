@@ -2,7 +2,7 @@ FROM eclipse-temurin:21-jre-jammy
 ARG VERSION_NODE="22.x"
 
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
-  && apt-get -y install libbrotli1 postgresql-client libdraco4 nodejs \
+  && apt-get -y install postgresql-client nodejs \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos \
@@ -19,7 +19,7 @@ RUN chmod +x bin/webknossos \
   && chmod +x tools/postgres/dbtool.js \
   && chmod go+w .
 
-RUN echo '#!/bin/bash\numask 002\nbin/webknossos "$@"\n' > /docker-entrypoint.sh \
+RUN echo '#!/bin/bash\numask 002\nbin/webknossos -J-XX:-UseBASE64Intrinsics "$@"\n' > /docker-entrypoint.sh \
   && chmod +x /docker-entrypoint.sh
 
 HEALTHCHECK \

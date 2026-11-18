@@ -5,6 +5,7 @@ import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -16,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.webknossos.datastore.services.mapping.MappingService
+import com.scalableminds.webknossos.datastore.services.mapping.{JsonMapping, MappingService}
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool
@@ -114,21 +115,20 @@ class AdHocMeshService(
       dataTypeFunctors: DataTypeFunctors[T, B]
   )(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
-    def applyJsonMappingIfNeeded(data: Array[T]): Fox[Array[T]] =
-      request.mapping match {
-        case Some(mappingName) =>
-          request.mappingType match {
-            case Some(MappingType.JSON) =>
-              mappingService.applyMapping(
-                DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName),
-                data,
-                dataTypeFunctors.fromLong
-              )
-            case _ => Fox.successful(data)
-          }
-        case _ =>
-          Fox.successful(data)
+    val jsonMappingRequestOpt: Option[DataServiceMappingRequest] =
+      (request.mapping, request.mappingType) match {
+        case (Some(mappingName), Some(MappingType.JSON)) =>
+          Some(DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName))
+        case _ => None
       }
+
+    val elementClass = request.dataLayer.elementClass
+
+    def applyJsonMappingIfNeeded(jsonMappingOpt: Option[JsonMapping], data: Array[Byte]): Fox[Array[Byte]] =
+      jsonMappingOpt.map(mappingService.applyMapping(_, data, elementClass).toFox).getOrElse(Fox.successful(data))
+
+    def mapSegmentIdIfNeeded(jsonMappingOpt: Option[JsonMapping], segmentId: Long): Long =
+      jsonMappingOpt.map(mappingService.mapSegmentId(_, segmentId, elementClass)).getOrElse(segmentId)
 
     def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
       request.mapping match {
@@ -214,16 +214,19 @@ class AdHocMeshService(
       cuboid.topLeft.voxelZInMag.toFloat
     )
     val scale = Vec3Float(cuboid.topLeft.mag) * Vec3Float(request.voxelSizeFactor)
-    val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
     val vertexBuffer = mutable.ArrayBuffer[Float]()
+
+    // Started right away, so that loading the mapping runs concurrently with loading the data.
+    val jsonMappingOptFox = Fox.runOptional(jsonMappingRequestOpt)(mappingService.loadMapping)
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
       agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
-      typedData = convertData(agglomerateMappedData)
-      mappedData <- applyJsonMappingIfNeeded(typedData)
-      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head)
+      jsonMappingOpt <- jsonMappingOptFox ?~> "failed to load json mapping"
+      mappedBytes <- applyJsonMappingIfNeeded(jsonMappingOpt, agglomerateMappedData) ?~> "failed to apply json mapping"
+      mappedData = convertData(mappedBytes)
+      mappedSegmentId = dataTypeFunctors.fromLong(mapSegmentIdIfNeeded(jsonMappingOpt, request.segmentId))
       neighbors =
         if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) }
         else {

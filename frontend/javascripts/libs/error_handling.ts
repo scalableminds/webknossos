@@ -215,11 +215,10 @@ class ErrorHandling {
       this.notify(error);
 
       if (error.toString() === "Error: Script error.") {
-        // Safari and the newest antd version don't play well together. Often, "ResizeObserver loop completed with undelivered notifications." is triggered
-        // but that message is lost. Instead, a "Script error." is thrown. Since that error is benign and can be frequent, we will
-        // ignore it here to not annoy the user. The message wasn't added to BLACKLISTED_ERROR_MESSAGES so that the error can still be seen via airbrake.
-        // Unfortunately, this workaround can mean that we won't show error toasts about other "real" errors.
-        // Follow-up: https://github.com/scalableminds/webknossos/issues/5372
+        // Browsers replace the details of errors thrown by cross-origin scripts with "Script error.".
+        // Our own code is served from the same origin as a module script, so its errors always keep their message.
+        // A "Script error." therefore comes from third-party code such as browser extensions. It carries no
+        // information the user could act on, so we don't show a toast for it. It is still reported to airbrake above.
         return;
       }
 

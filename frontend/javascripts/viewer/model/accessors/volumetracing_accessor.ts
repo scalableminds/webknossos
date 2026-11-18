@@ -31,6 +31,7 @@ import {
   getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -707,7 +708,7 @@ export function getEffectiveBrushDiameterInMag(
   mag: Vector3,
   isEraseShortcutPressed: boolean = false,
 ): Vector3 {
-  const voxelPerPixel = getVoxelPerPixel(state.dataset.dataSource.scale);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state));
   const diameterInMag = getBrushDiameterInMag(
     state.userConfiguration.brushSize,
     voxelPerPixel,

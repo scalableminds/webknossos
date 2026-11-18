@@ -184,6 +184,27 @@ export async function isWorkflowAccessibleBySwitching(
   };
 }
 
+export async function isAiModelAccessibleBySwitching(
+  aiModelId: string,
+): Promise<APIOrganization | null> {
+  const organization = await Request.receiveJSON(
+    `/api/auth/accessibleBySwitching?aiModelId=${aiModelId}`,
+    {
+      showErrorToast: false,
+    },
+  );
+  if (!organization) {
+    return organization;
+  }
+  return {
+    ...organization,
+    aiPlan: organization.aiPlan ?? null,
+    paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
+}
+
 export type UpgradeRequest = {
   // Matches the plans the backend accepts for an upgrade request.
   plan?: PricingPlanEnum.Team | PricingPlanEnum.Power;

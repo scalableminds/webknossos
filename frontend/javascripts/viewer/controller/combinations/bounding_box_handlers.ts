@@ -6,6 +6,7 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   calculateGlobalDelta,
@@ -300,7 +301,7 @@ export function getClosestHoveredBoundingBox(
     userBoundingBoxes,
     globalPosition.rounded,
     Dimension.getIndices(plane),
-    getVoxelPerPixel(state.dataset.dataSource.scale, state.flycam.zoomStep),
+    getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep),
     MAX_DISTANCE_TO_SELECTION,
   );
 }

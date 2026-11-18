@@ -44,6 +44,7 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getGlobalVoxelSizeFromState,
   getTransformsForLayer,
   getTransformsPerLayer,
   invertAndTranspose,
@@ -992,6 +993,8 @@ class PlaneMaterialFactory {
         },
         true,
       ),
+      // The voxel size is inserted into the shader code as a constant (see main_data_shaders.glsl.ts).
+      listenToStoreProperty(getGlobalVoxelSizeFromState, () => this.recomputeShaders()),
     );
   }
 
@@ -1231,8 +1234,7 @@ class PlaneMaterialFactory {
     );
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = state;
-    const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const voxelSizeFactor = getGlobalVoxelSizeFromState(state).factor;
     const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const { interpolation } = state.datasetConfiguration;
     const code = getMainFragmentShader({
@@ -1275,8 +1277,7 @@ class PlaneMaterialFactory {
       this.getLayersToRender(maximumLayerCountToRender);
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = state;
-    const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const voxelSizeFactor = getGlobalVoxelSizeFromState(state).factor;
     const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const { interpolation } = state.datasetConfiguration;
 

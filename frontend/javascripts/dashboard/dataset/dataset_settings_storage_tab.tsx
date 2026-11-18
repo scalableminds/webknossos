@@ -4,16 +4,22 @@ import { useQuery } from "@tanstack/react-query";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getDatasetUsedStorageDetails } from "admin/rest_api";
-import { Col, Collapse, Row, Spin, Table, Tag, Tooltip, Typography } from "antd";
+import { Col, Collapse, Row, Spin, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FastTooltip from "components/fast_tooltip";
-import { ZeroStorageReasonList } from "dashboard/storage_info";
+import { UsedStorageAmount, ZeroStorageReasonList } from "dashboard/storage_info";
+import { copyToClipboard } from "libs/clipboard";
 import { stringToTagColor } from "libs/colors";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import capitalize from "lodash-es/capitalize";
-import groupBy from "lodash-es/groupBy";
 import sumBy from "lodash-es/sumBy";
-import type { APIDataset, APIStorageDetailEntry, LayerAttachmentType } from "types/api_types";
+import type {
+  APIDataLayer,
+  APIDataLayerAttachments,
+  APIDataset,
+  LayerAttachmentType,
+} from "types/api_types";
+import type { Vector3 } from "viewer/constants";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 const { Text } = Typography;
@@ -30,21 +36,119 @@ type StorageEntry = {
   key: string;
   name: string;
   type: LayerAttachmentType | "mag";
+  path: string | undefined;
+  mag: Vector3 | undefined;
   usedStorageBytes: number;
 };
+
+const ATTACHMENT_TYPE_BY_KEY: Record<keyof APIDataLayerAttachments, LayerAttachmentType> = {
+  meshes: "mesh",
+  agglomerates: "agglomerate",
+  segmentIndex: "segmentIndex",
+  connectomes: "connectome",
+  cumsum: "cumsum",
+  segmentStatistics: "segmentStatistics",
+};
+
+// Mags are named like this in the used storage table, e.g. "2-2-1".
+function magToName(mag: Vector3): string {
+  return mag.join("-");
+}
+
+function getUsedStorageKey(
+  layerName: string,
+  type: LayerAttachmentType | "mag",
+  name: string,
+): string {
+  return JSON.stringify([layerName, type, name]);
+}
+
+function compareMags(a: Vector3, b: Vector3): number {
+  const maxDiff = Math.max(...a) - Math.max(...b);
+  if (maxDiff !== 0) return maxDiff;
+  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+}
+
+function compareStorageEntries(a: StorageEntry, b: StorageEntry): number {
+  const aIsMag = a.type === "mag";
+  const bIsMag = b.type === "mag";
+  if (aIsMag !== bIsMag) return aIsMag ? -1 : 1;
+  if (a.mag != null && b.mag != null) return compareMags(a.mag, b.mag);
+  const typeOrder = a.type.localeCompare(b.type);
+  if (typeOrder !== 0) return typeOrder;
+  return b.usedStorageBytes - a.usedStorageBytes;
+}
+
+// Lists all mags and attachments of the layer. Their used storage is taken from the used
+// storage table. Where it has no entry (yet), zero is assumed.
+function getStorageEntriesForLayer(
+  layer: APIDataLayer,
+  usedStorageByKey: Map<string, number>,
+): StorageEntry[] {
+  const getUsedStorage = (type: LayerAttachmentType | "mag", name: string) =>
+    usedStorageByKey.get(getUsedStorageKey(layer.name, type, name)) ?? 0;
+
+  const magEntries: StorageEntry[] = layer.mags.map(({ mag, path }) => {
+    const name = magToName(mag);
+    return {
+      key: getUsedStorageKey(layer.name, "mag", name),
+      name,
+      type: "mag",
+      path,
+      mag,
+      usedStorageBytes: getUsedStorage("mag", name),
+    };
+  });
+
+  const attachmentEntries: StorageEntry[] = Object.entries(layer.attachments ?? {}).flatMap(
+    ([attachmentKey, attachmentOrAttachments]) => {
+      const type = ATTACHMENT_TYPE_BY_KEY[attachmentKey as keyof APIDataLayerAttachments];
+      if (type == null || attachmentOrAttachments == null) return [];
+      const attachments = Array.isArray(attachmentOrAttachments)
+        ? attachmentOrAttachments
+        : [attachmentOrAttachments];
+      return attachments.map((attachment) => ({
+        key: getUsedStorageKey(layer.name, type, attachment.name),
+        name: attachment.name,
+        type,
+        path: attachment.path,
+        mag: undefined,
+        usedStorageBytes: getUsedStorage(type, attachment.name),
+      }));
+    },
+  );
+
+  return [...magEntries, ...attachmentEntries].sort(compareStorageEntries);
+}
 
 const storageColumns: ColumnsType<StorageEntry> = [
   {
     key: "entry",
     render: (_: unknown, record: StorageEntry) => {
       const isMag = record.type === "mag";
-      const tooltipTitle = isMag
+      const typeLabel = isMag
         ? "Magnification/Image Data"
         : `${capitalize(record.type)} Attachment`;
       const icon = isMag ? <Icon component={IconDownsampling} /> : <PaperClipOutlined />;
+      const { path } = record;
       return (
         <span>
-          <Tooltip title={tooltipTitle}>{icon}</Tooltip> {record.name}
+          <FastTooltip title={typeLabel}>{icon}</FastTooltip>{" "}
+          {path != null ? (
+            <FastTooltip
+              dynamicRenderer={() => (
+                <div style={{ maxWidth: 600 }}>
+                  <code style={{ wordBreak: "break-all" }}>{path}</code>
+                  <br />
+                  (Click to copy)
+                </div>
+              )}
+            >
+              <span onClick={() => copyToClipboard(path, "path")}>{record.name}</span>
+            </FastTooltip>
+          ) : (
+            <FastTooltip title="No explicit path">{record.name}</FastTooltip>
+          )}
         </span>
       );
     },
@@ -53,9 +157,7 @@ const storageColumns: ColumnsType<StorageEntry> = [
     key: "storage",
     width: 80,
     render: (_: unknown, record: StorageEntry) => (
-      <FastTooltip title={`${new Intl.NumberFormat().format(record.usedStorageBytes)} bytes`}>
-        {formatCountToDataAmountUnit(record.usedStorageBytes, true)}
-      </FastTooltip>
+      <UsedStorageAmount bytes={record.usedStorageBytes} />
     ),
     align: "right" as const,
   },
@@ -67,46 +169,44 @@ const fixedTableComponents = {
   ),
 };
 
-function StorageBreakdownCard({ datasetId }: { datasetId: string }) {
-  const { data: storageDetails, isLoading } = useQuery({
-    queryKey: ["datasetStorageDetails", datasetId],
-    queryFn: () => getDatasetUsedStorageDetails(datasetId),
+function StorageBreakdownCard({ dataset }: { dataset: APIDataset }) {
+  const {
+    data: storageDetails,
+    isPending,
+    isError,
+  } = useQuery({
+    queryKey: ["datasetStorageDetails", dataset.id],
+    queryFn: () => getDatasetUsedStorageDetails(dataset.id),
     refetchOnWindowFocus: false,
   });
 
-  const layerGroups = groupBy(storageDetails ?? [], (e: APIStorageDetailEntry) => e.layerName);
-  const sortedLayerNames = Object.keys(layerGroups).sort();
+  const usedStorageByKey = new Map<string, number>();
+  for (const entry of storageDetails ?? []) {
+    const key = getUsedStorageKey(entry.layerName, entry.attachmentType ?? "mag", entry.name);
+    usedStorageByKey.set(key, (usedStorageByKey.get(key) ?? 0) + entry.usedStorageBytes);
+  }
 
-  const collapseItems = sortedLayerNames.map((layerName) => {
-    const entries = layerGroups[layerName];
-    // Sort by type (mag vs attachment) first, then by attachment type, then by usedStorageBytes
-    const sortedEntries = [...entries].sort((a, b) => {
-      const aIsMag = !a.attachmentType;
-      const bIsMag = !b.attachmentType;
-      if (aIsMag !== bIsMag) return aIsMag ? -1 : 1;
-      if (aIsMag) return b.usedStorageBytes - a.usedStorageBytes;
-      const typeOrder = (a.attachmentType ?? "").localeCompare(b.attachmentType ?? "");
-      if (typeOrder !== 0) return typeOrder;
-      return b.usedStorageBytes - a.usedStorageBytes;
-    });
-    const totalBytes = sumBy(entries, (e: APIStorageDetailEntry) => e.usedStorageBytes);
-    const tableData: StorageEntry[] = sortedEntries.map((e, i) => ({
-      key: `${e.name}-${e.attachmentType ?? ""}-${i}`,
-      name: e.name,
-      type: e.attachmentType ?? "mag",
-      usedStorageBytes: e.usedStorageBytes,
-    }));
+  const layers = [...dataset.dataSource.dataLayers].sort((a, b) => a.name.localeCompare(b.name));
+  const entriesByLayer = layers.map((layer) => ({
+    layer,
+    entries: getStorageEntriesForLayer(layer, usedStorageByKey),
+  }));
+
+  const collapseItems = entriesByLayer.map(({ layer, entries }) => {
+    const layerBytes = sumBy(entries, (e: StorageEntry) => e.usedStorageBytes);
     return {
-      key: layerName,
+      key: layer.name,
       label: (
         <span>
-          Layer: {layerName}{" "}
-          <Text type="secondary">({formatCountToDataAmountUnit(totalBytes, true)})</Text>
+          Layer: {layer.name}{" "}
+          <Text type="secondary">
+            (<UsedStorageAmount bytes={layerBytes} />)
+          </Text>
         </span>
       ),
       children: (
         <Table<StorageEntry>
-          dataSource={tableData}
+          dataSource={entries}
           columns={storageColumns}
           components={fixedTableComponents}
           pagination={false}
@@ -118,27 +218,31 @@ function StorageBreakdownCard({ datasetId }: { datasetId: string }) {
   });
 
   let content: React.ReactNode;
-  if (isLoading) {
+  if (isPending) {
     content = <Spin />;
-  } else if (sortedLayerNames.length === 0) {
-    content = <Text type="secondary">No storage data available yet.</Text>;
+  } else if (isError) {
+    content = <Text type="danger">Could not load the used storage of this dataset.</Text>;
+  } else if (layers.length === 0) {
+    content = <Text type="secondary">This dataset has no layers.</Text>;
   } else {
-    content = <Collapse items={collapseItems} defaultActiveKey={sortedLayerNames} />;
+    content = <Collapse items={collapseItems} defaultActiveKey={layers.map((l) => l.name)} />;
   }
 
-  const totalBytes = sumBy(storageDetails ?? [], (e: APIStorageDetailEntry) => e.usedStorageBytes);
+  const totalBytes = sumBy(entriesByLayer, ({ entries }) =>
+    sumBy(entries, (e: StorageEntry) => e.usedStorageBytes),
+  );
   const title =
-    storageDetails != null && storageDetails.length > 0
-      ? `Used Storage (${formatCountToDataAmountUnit(totalBytes, true)})`
-      : "Used Storage";
+    isPending || isError
+      ? "Used Storage"
+      : `Used Storage (${formatCountToDataAmountUnit(totalBytes, true)})`;
 
   return (
     <SettingsCard
       title={title}
       tooltip={
         <>
-          Storage used by this dataset within your organization. Parts of the dataset may not count
-          to your used storage, and be skipped here because:
+          Storage used by this dataset within your organization, per mag and attachment. Some
+          entries may show zero because:
           {ZeroStorageReasonList}
         </>
       }
@@ -265,11 +369,9 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
             />
           </Col>
         )}
-        {dataset.usedStorageBytes != null && dataset.usedStorageBytes > 0 && (
-          <Col span={24}>
-            <StorageBreakdownCard datasetId={dataset.id} />
-          </Col>
-        )}
+        <Col span={24}>
+          <StorageBreakdownCard dataset={dataset} />
+        </Col>
       </Row>
     </div>
   );

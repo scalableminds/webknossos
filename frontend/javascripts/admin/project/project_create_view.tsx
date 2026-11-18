@@ -36,7 +36,7 @@ function ProjectCreateView() {
   const {
     data: teams = [],
     isLoading: isLoadingTeams,
-    isFetchedAfterMount: hasFetchedTeams,
+    dataUpdatedAt: teamsUpdatedAt,
   } = useQueryWithErrorHandling({
     queryKey: ["editableTeams"],
     queryFn: getEditableTeams,
@@ -47,7 +47,7 @@ function ProjectCreateView() {
     form,
     "team",
     projectId == null ? getOnlyItem(teams)?.id : undefined,
-    hasFetchedTeams,
+    teamsUpdatedAt,
   );
 
   const { data: project } = useQueryWithErrorHandling({

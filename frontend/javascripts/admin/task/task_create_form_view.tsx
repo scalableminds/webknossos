@@ -346,7 +346,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const {
     data: taskTypes = [],
     isFetching: isFetchingTaskTypes,
-    isFetchedAfterMount: hasFetchedTaskTypes,
+    dataUpdatedAt: taskTypesUpdatedAt,
     refetch: refetchTaskTypes,
   } = useQueryWithErrorHandling({
     queryKey: ["taskTypes"],
@@ -356,7 +356,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const {
     data: projects = [],
     isFetching: isFetchingProjects,
-    isFetchedAfterMount: hasFetchedProjects,
+    dataUpdatedAt: projectsUpdatedAt,
     refetch: refetchProjects,
   } = useQueryWithErrorHandling({
     queryKey: ["projects"],
@@ -376,13 +376,13 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     form,
     "taskTypeId",
     taskId == null ? getOnlyItem(taskTypes)?.id : undefined,
-    hasFetchedTaskTypes,
+    taskTypesUpdatedAt,
   );
   usePreselectFormValue(
     form,
     "projectName",
     taskId == null ? getOnlyItem(projects)?.name : undefined,
-    hasFetchedProjects,
+    projectsUpdatedAt,
   );
   const [specificationType, setSpecificationType] = useState<Specification>(
     SpecificationEnum.Manual,

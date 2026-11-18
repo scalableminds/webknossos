@@ -52,16 +52,7 @@ const localStoragePersister = createAsyncStoragePersister({
   key: "query-cache-v4",
 });
 // Queries whose data must never be written to localStorage, identified by the first key segment.
-// Besides secrets, these are option lists that forms preselect from: a restored list may contain
-// items deleted since, and restoring would also make react-query's isFetchedAfterMount true
-// without any fetch, because the restored state includes the fetch count.
-const NEVER_PERSISTED_QUERY_KEYS = [
-  "authToken",
-  "datasetSharingToken",
-  "taskTypes",
-  "projects",
-  "editableTeams",
-];
+const NEVER_PERSISTED_QUERY_KEYS = ["authToken", "datasetSharingToken"];
 
 async function tryToLoadActiveUser() {
   // Try to retrieve the currently active user if logged in

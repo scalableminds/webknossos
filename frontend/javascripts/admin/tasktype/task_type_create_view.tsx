@@ -98,7 +98,7 @@ function TaskTypeCreateView() {
   const {
     data: teams = [],
     isLoading: isFetchingTeams,
-    isFetchedAfterMount: hasFetchedTeams,
+    dataUpdatedAt: teamsUpdatedAt,
   } = useQueryWithErrorHandling({
     queryKey: ["editableTeams"],
     queryFn: getEditableTeams,
@@ -108,7 +108,7 @@ function TaskTypeCreateView() {
     form,
     "teamId",
     taskTypeId == null ? getOnlyItem(teams)?.id : undefined,
-    hasFetchedTeams,
+    teamsUpdatedAt,
   );
 
   const { data: taskType } = useQueryWithErrorHandling({

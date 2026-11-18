@@ -1,18 +1,8 @@
 import { DownloadOutlined } from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Empty,
-  Flex,
-  Spin,
-  Table,
-  type TableColumnsType,
-  Tag,
-  Typography,
-} from "antd";
+import { Alert, Button, Empty, Flex, Tag, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
@@ -30,38 +20,11 @@ import { setSegmentStatisticsScopeAction } from "viewer/model/actions/ui_actions
 import type { Segment, SegmentGroup, SegmentStatisticsScope } from "viewer/store";
 import { findGroup, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 import { useSegmentStatisticsRows } from "./hooks/use_segment_statistics_rows";
-import { exportStatisticsToCSV, type SegmentStatisticsRow } from "./segment_statistics_helpers";
+import { exportStatisticsToCSV } from "./segment_statistics_helpers";
+import { SegmentStatisticsTable } from "./segment_statistics_table";
 import { getSegmentsOfGroupRecursively } from "./segments_view_helper";
 
-const DEFAULT_COLUMN_WIDTH = 130;
 const MAX_SEGMENT_COUNT_FOR_AUTOMATIC_COMPUTATION = 50;
-
-/*
- * Reports how much vertical space is left for the body of the table inside of the referenced
- * container. antd's virtual table needs an explicit pixel height and cannot simply fill its parent.
- */
-function useTableBodyHeight() {
-  // Held in state instead of a ref object, because the container is not rendered right away and
-  // the measuring has to start once it appears.
-  const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  const [bodyHeight, setBodyHeight] = useState(0);
-
-  useLayoutEffect(() => {
-    if (container == null) {
-      return;
-    }
-    const measure = () => {
-      const headerHeight = container.querySelector(".ant-table-header")?.clientHeight ?? 0;
-      setBodyHeight(Math.max(0, container.clientHeight - headerHeight));
-    };
-    measure();
-    const resizeObserver = new ResizeObserver(measure);
-    resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
-  }, [container]);
-
-  return { containerRef: setContainer, bodyHeight };
-}
 
 function getScopeLabel(scope: SegmentStatisticsScope, segmentGroups: SegmentGroup[]): string {
   if (scope.kind === "group") {
@@ -143,35 +106,6 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
       enabled: isComputationConfirmed,
     });
 
-  const { containerRef, bodyHeight } = useTableBodyHeight();
-
-  const columns: TableColumnsType<SegmentStatisticsRow> = useMemo(
-    () =>
-      statisticSpecs
-        .filter((spec) => spec.title != null)
-        .map((spec, index) => {
-          // Only the fetched statistics have a loading and error state; segment id and name are
-          // rendered as plain values.
-          const isFetchedStatistic = spec.isLoading !== undefined;
-          return {
-            title: spec.title,
-            dataIndex: spec.dataIndex,
-            key: spec.key,
-            width: spec.width ?? DEFAULT_COLUMN_WIDTH,
-            fixed: index === 0 ? ("left" as const) : undefined,
-            render: isFetchedStatistic
-              ? (text: string) => {
-                  if (spec.isLoading) return <Spin size="small" />;
-                  if (spec.isError) return "n/a";
-                  return text;
-                }
-              : undefined,
-          };
-        }),
-    [statisticSpecs],
-  );
-  const totalColumnWidth = columns.reduce((sum, column) => sum + Number(column.width), 0);
-
   if (!areSegmentStatisticsAvailable && !isAnyStatisticLoading) {
     return (
       <Empty
@@ -240,17 +174,7 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
           showIcon
         />
       ) : null}
-      <div ref={containerRef} style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <Table
-          dataSource={rows}
-          columns={columns}
-          size="small"
-          virtual
-          pagination={false}
-          scroll={{ x: totalColumnWidth, y: bodyHeight }}
-          style={{ whiteSpace: "pre" }}
-        />
-      </div>
+      <SegmentStatisticsTable rows={rows} statisticSpecs={statisticSpecs} layerName={layer.name} />
     </Flex>
   );
 }

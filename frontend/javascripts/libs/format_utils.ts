@@ -218,6 +218,30 @@ const nmFactorToUnit = new Map([
   [1e33, "Ym"],
 ]);
 
+/*
+ * Returns the unit that represents the given value best, together with the factor by which values
+ * in the passed unit have to be divided to convert them. In contrast to the formatNumberTo...
+ * functions, this allows to format many values (e.g. a table column) in one common unit.
+ * The dimension distinguishes lengths (1), areas (2) and volumes (3).
+ */
+export function getBestUnitForValue(
+  value: number,
+  unit: UnitShort,
+  dimension: 1 | 2 | 3,
+): { factor: number; unit: string } {
+  if (value === 0 || !Number.isFinite(value)) {
+    return { factor: 1, unit: adjustUnitToDimension(unit, dimension) };
+  }
+  const unitMap =
+    dimension === 1 ? nmFactorToUnit : dimension === 2 ? nmFactorToUnit2D : nmFactorToUnit3D;
+  const [factor, bestUnit] = findBestUnitForFormatting(
+    Math.abs(value),
+    { unit, dimension },
+    unitMap,
+  );
+  return { factor, unit: bestUnit };
+}
+
 // Accepts a length that is interpreted in the given unit and returns a string
 // that uses a readable unit to represent the length.
 // E.g. formatNumberToLength(0.003, Unit.m) == "3.0 mm"

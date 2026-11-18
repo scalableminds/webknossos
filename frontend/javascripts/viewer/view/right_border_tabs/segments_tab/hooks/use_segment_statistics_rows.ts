@@ -1,9 +1,8 @@
-import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import capitalize from "lodash-es/capitalize";
 import { useCallback, useMemo } from "react";
 import type { APISegmentationLayer } from "types/api_types";
-import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
+import type { Vector3 } from "viewer/constants";
 import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
@@ -38,7 +37,6 @@ type Options = {
 export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabled }: Options) {
   const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = dataset.dataSource.scale;
-  const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
 
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
@@ -82,99 +80,48 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
   );
 
   const statisticsList = useMemo(() => {
-    return segments.map((segment, i) => {
+    return segments.map((segment, i): SegmentStatisticsRow => {
       const currentGroupId = getGroupIdForSegment(segment);
-
-      let volumeStats = {};
-      if (volumes.data) {
-        const volumeInVoxel = volumes.data[i];
-        const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, statisticsMag, volumeInVoxel);
-        volumeStats = {
-          volumeInVoxel,
-          volumeInUnit3,
-          formattedSize: formatNumberToVolume(volumeInUnit3, shortUnit),
-        };
-      }
-
-      let bboxStats = {};
-      if (boundingBoxes.data) {
-        const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxes.data[i], boundingBoxMag);
-        bboxStats = {
-          boundingBoxTopLeft: boundingBoxInMag1.topLeft,
-          boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
-          boundingBoxPosition: [
-            boundingBoxInMag1.width,
-            boundingBoxInMag1.height,
-            boundingBoxInMag1.depth,
-          ] as Vector3,
-          boundingBoxPositionAsString: `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`,
-        };
-      }
-
-      let surfaceStats = {};
-      if (surfaceAreas.data) {
-        const surfaceAreaInUnit2 = surfaceAreas.data[i];
-        surfaceStats = {
-          surfaceAreaInUnit2,
-          formattedSurfaceArea: formatNumberToArea(surfaceAreaInUnit2, shortUnit),
-        };
-      }
-
-      let maxDistanceStats = {};
-      if (maxDistances.data) {
-        const maxDistanceInUnit = maxDistances.data[i];
-        maxDistanceStats = {
-          maxDistanceInUnit,
-          formattedMaxDistance: formatNumberToLength(maxDistanceInUnit, shortUnit),
-        };
-      }
-
-      let sphericityStats = {};
-      if (sphericities.data) {
-        const sphericity = sphericities.data[i];
-        sphericityStats = {
-          sphericity,
-          formattedSphericity: sphericity.toFixed(3),
-        };
-      }
-
-      let centerOfMassStats = {};
-      if (centersOfMass.data) {
-        const centerOfMass = centersOfMass.data[i];
-        centerOfMassStats = {
-          centerOfMass,
-          centerOfMassAsString: `(${centerOfMass.map((value) => Math.round(value)).join(", ")})`,
-        };
-      }
-
-      let covarianceStats = {};
-      if (covarianceMatrices.data) {
-        const covarianceMatrix = covarianceMatrices.data[i];
-        const principalExtents = covarianceMatrixToPrincipalExtents(covarianceMatrix, voxelSize);
-        covarianceStats = {
-          covarianceMatrix,
-          principalExtents,
-          formattedPrincipalExtents: principalExtents
-            .map((extent) => formatNumberToLength(extent, shortUnit))
-            .join(" × "),
-        };
-      }
-
-      return {
+      const row: SegmentStatisticsRow = {
         key: segment.id.toString(),
+        segment,
         additionalCoordinates: additionalCoordStringForCsv,
         segmentId: segment.id,
         segmentName: segment.name == null ? `Segment ${segment.id}` : segment.name,
         groupId: currentGroupId,
         groupName: getGroupNameForId(currentGroupId),
-        ...volumeStats,
-        ...bboxStats,
-        ...surfaceStats,
-        ...maxDistanceStats,
-        ...sphericityStats,
-        ...centerOfMassStats,
-        ...covarianceStats,
-      } as SegmentStatisticsRow;
+      };
+
+      if (volumes.data) {
+        row.volumeInVoxel = volumes.data[i];
+        row.volumeInUnit3 = voxelToVolumeInUnit(voxelSize, statisticsMag, row.volumeInVoxel);
+      }
+      if (boundingBoxes.data) {
+        const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxes.data[i], boundingBoxMag);
+        row.boundingBoxTopLeft = boundingBoxInMag1.topLeft;
+        row.boundingBoxSize = [
+          boundingBoxInMag1.width,
+          boundingBoxInMag1.height,
+          boundingBoxInMag1.depth,
+        ];
+      }
+      if (surfaceAreas.data) {
+        row.surfaceAreaInUnit2 = surfaceAreas.data[i];
+      }
+      if (maxDistances.data) {
+        row.maxDistanceInUnit = maxDistances.data[i];
+      }
+      if (sphericities.data) {
+        row.sphericity = sphericities.data[i];
+      }
+      if (centersOfMass.data) {
+        row.centerOfMass = centersOfMass.data[i];
+      }
+      if (covarianceMatrices.data) {
+        row.covarianceMatrix = covarianceMatrices.data[i];
+        row.principalExtents = covarianceMatrixToPrincipalExtents(row.covarianceMatrix, voxelSize);
+      }
+      return row;
     });
   }, [
     segments,
@@ -189,13 +136,13 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
     getGroupNameForId,
     additionalCoordStringForCsv,
     voxelSize,
-    shortUnit,
     statisticsMag,
     boundingBoxMag,
   ]);
 
   const statisticSpecs: StatisticSpec[] = useMemo(() => {
     const capitalizedUnit = capitalize(voxelSize.unit);
+    const emptyVector: CsvValue[] = [undefined, undefined, undefined];
     const specs: StatisticSpec[] = [];
 
     if (hasAdditionalCoords) {
@@ -206,18 +153,15 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
       });
     }
 
+    // The segment itself is rendered by the table in a dedicated column.
     specs.push(
       {
         key: "segmentId",
-        title: "Segment ID",
-        dataIndex: "segmentId",
         csvHeaders: ["segmentId"],
         getCsvValues: (row) => [row.segmentId],
       },
       {
         key: "segmentName",
-        title: "Segment Name",
-        dataIndex: "segmentName",
         csvHeaders: ["segmentName"],
         getCsvValues: (row) => [row.segmentName],
       },
@@ -229,22 +173,38 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
     );
 
     if (isVolumeAvailable) {
-      specs.push({
-        key: "volume",
-        title: "Volume",
-        dataIndex: "formattedSize",
-        isLoading: volumes.isLoading,
-        isError: volumes.isError,
-        csvHeaders: ["volumeInVoxel", `volumeIn${capitalizedUnit}3`],
-        getCsvValues: (row) => [row.volumeInVoxel, row.volumeInUnit3],
-      });
+      specs.push(
+        {
+          key: "voxelCount",
+          title: "Voxel Count",
+          value: {
+            kind: "number",
+            unit: "vx",
+            fractionDigits: 0,
+            get: (row) => row.volumeInVoxel,
+          },
+          isLoading: volumes.isLoading,
+          isError: volumes.isError,
+          csvHeaders: ["volumeInVoxel"],
+          getCsvValues: (row) => [row.volumeInVoxel],
+        },
+        {
+          key: "volume",
+          title: "Volume",
+          value: { kind: "number", unit: { dimension: 3 }, get: (row) => row.volumeInUnit3 },
+          isLoading: volumes.isLoading,
+          isError: volumes.isError,
+          csvHeaders: [`volumeIn${capitalizedUnit}3`],
+          getCsvValues: (row) => [row.volumeInUnit3],
+        },
+      );
     }
 
     if (isSurfaceAreaAvailable) {
       specs.push({
         key: "surfaceArea",
         title: "Surface Area",
-        dataIndex: "formattedSurfaceArea",
+        value: { kind: "number", unit: { dimension: 2 }, get: (row) => row.surfaceAreaInUnit2 },
         isLoading: surfaceAreas.isLoading,
         isError: surfaceAreas.isError,
         csvHeaders: [`surfaceAreaIn${capitalizedUnit}2`],
@@ -256,7 +216,7 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
       specs.push({
         key: "maxDistance",
         title: "Max Distance",
-        dataIndex: "formattedMaxDistance",
+        value: { kind: "number", unit: { dimension: 1 }, get: (row) => row.maxDistanceInUnit },
         isLoading: maxDistances.isLoading,
         isError: maxDistances.isError,
         csvHeaders: [`maxDistanceIn${capitalizedUnit}`],
@@ -268,7 +228,7 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
       specs.push({
         key: "sphericity",
         title: "Sphericity",
-        dataIndex: "formattedSphericity",
+        value: { kind: "number", unit: "0–1", fractionDigits: 3, get: (row) => row.sphericity },
         isLoading: sphericities.isLoading,
         isError: sphericities.isError,
         csvHeaders: ["sphericity"],
@@ -281,12 +241,16 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
         {
           key: "principalExtents",
           title: "Principal Extents",
-          dataIndex: "formattedPrincipalExtents",
-          width: 200,
+          value: {
+            kind: "vector",
+            unit: { dimension: 1 },
+            sortBy: "first",
+            get: (row) => row.principalExtents,
+          },
           isLoading: covarianceMatrices.isLoading,
           isError: covarianceMatrices.isError,
           csvHeaders: [1, 2, 3].map((index) => `principalExtent${index}In${capitalizedUnit}`),
-          getCsvValues: (row) => row.principalExtents ?? [undefined, undefined, undefined],
+          getCsvValues: (row) => row.principalExtents ?? emptyVector,
         },
         {
           key: "covarianceMatrix",
@@ -301,23 +265,34 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
       specs.push(
         {
           key: "boundingBoxTopLeft",
-          title: "Bounding Box\nTop Left Position",
-          dataIndex: "boundingBoxTopLeftAsString",
-          width: 150,
+          title: "Bounding Box Position",
+          value: {
+            kind: "vector",
+            unit: "vx",
+            fractionDigits: 0,
+            sortBy: "first",
+            isPosition: true,
+            get: (row) => row.boundingBoxTopLeft,
+          },
           isLoading: boundingBoxes.isLoading,
           isError: boundingBoxes.isError,
           csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxTopLeftPosition${axis}`),
-          getCsvValues: (row) => row.boundingBoxTopLeft ?? [undefined, undefined, undefined],
+          getCsvValues: (row) => row.boundingBoxTopLeft ?? emptyVector,
         },
         {
-          key: "boundingBoxPosition",
-          title: "Bounding Box\nSize in vx",
-          dataIndex: "boundingBoxPositionAsString",
-          width: 150,
+          key: "boundingBoxSize",
+          title: "Bounding Box Size",
+          value: {
+            kind: "vector",
+            unit: "vx",
+            fractionDigits: 0,
+            sortBy: "product",
+            get: (row) => row.boundingBoxSize,
+          },
           isLoading: boundingBoxes.isLoading,
           isError: boundingBoxes.isError,
           csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxSize${axis}`),
-          getCsvValues: (row) => row.boundingBoxPosition ?? [undefined, undefined, undefined],
+          getCsvValues: (row) => row.boundingBoxSize ?? emptyVector,
         },
       );
     }
@@ -325,13 +300,19 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
     if (availableFileMetrics.centerOfMass) {
       specs.push({
         key: "centerOfMass",
-        title: "Center of Mass\nin vx",
-        dataIndex: "centerOfMassAsString",
-        width: 150,
+        title: "Center of Mass",
+        value: {
+          kind: "vector",
+          unit: "vx",
+          fractionDigits: 0,
+          sortBy: "first",
+          isPosition: true,
+          get: (row) => row.centerOfMass?.map(Math.round) as Vector3 | undefined,
+        },
         isLoading: centersOfMass.isLoading,
         isError: centersOfMass.isError,
         csvHeaders: ["X", "Y", "Z"].map((axis) => `centerOfMass${axis}`),
-        getCsvValues: (row) => row.centerOfMass ?? [undefined, undefined, undefined],
+        getCsvValues: (row) => row.centerOfMass ?? emptyVector,
       });
     }
 

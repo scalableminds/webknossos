@@ -39,16 +39,18 @@ class FullMeshHelperTestSuite extends AnyWordSpec with FullMeshHelper {
       val stl = ByteBuffer.wrap(adHocMeshToStl(vertexBuffer.toArray)).order(ByteOrder.LITTLE_ENDIAN)
       def readVec(offset: Int): Vec =
         (stl.getFloat(offset).toDouble, stl.getFloat(offset + 4).toDouble, stl.getFloat(offset + 8).toDouble)
-      val faces = (0 until stl.capacity / 50).map { faceIndex =>
+      val numFaces = vertexBuffer.length / 9
+      assert(numFaces > 8 && stl.capacity == numFaces * 50)
+      val faces = (0 until numFaces).map { faceIndex =>
         val base = faceIndex * 50
         (readVec(base), (readVec(base + 12), readVec(base + 24), readVec(base + 36)))
       }
-      assert(faces.length == vertexBuffer.length / 9 && faces.length > 8)
       val storedCoordinates = faces.flatMap { case (_, (a, b, c)) => Seq(a, b, c) }.flatMap(v => Seq(v._1, v._2, v._3))
       assert(storedCoordinates == vertexBuffer.map(_.toDouble))
 
       faces.foreach { case (normal, (a, b, c)) =>
         val faceNormal = cross(sub(b, a), sub(c, a))
+        assert(Math.abs(dot(normal, normal) - 1) < 1e-5, s"stored normal $normal is not normalized")
         val cosine = dot(normal, faceNormal) / Math.sqrt(dot(faceNormal, faceNormal))
         assert(cosine > 0.9999, s"stored normal $normal does not belong to face ($a, $b, $c)")
       }

@@ -216,7 +216,12 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
       specs.push({
         key: "maxDistance",
         title: "Max Distance",
-        value: { kind: "number", unit: { dimension: 1 }, get: (row) => row.maxDistanceInUnit },
+        value: {
+          kind: "number",
+          unit: { dimension: 1 },
+          aggregation: "max",
+          get: (row) => row.maxDistanceInUnit,
+        },
         isLoading: maxDistances.isLoading,
         isError: maxDistances.isError,
         csvHeaders: [`maxDistanceIn${capitalizedUnit}`],
@@ -228,7 +233,13 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
       specs.push({
         key: "sphericity",
         title: "Sphericity",
-        value: { kind: "number", unit: "0–1", fractionDigits: 3, get: (row) => row.sphericity },
+        value: {
+          kind: "number",
+          unit: "0–1",
+          fractionDigits: 3,
+          aggregation: "mean",
+          get: (row) => row.sphericity,
+        },
         isLoading: sphericities.isLoading,
         isError: sphericities.isError,
         csvHeaders: ["sphericity"],

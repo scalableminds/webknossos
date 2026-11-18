@@ -131,10 +131,14 @@ export type StatisticUnit = string | { dimension: 1 | 2 | 3 };
  * get a bar that relates them to the other rows. Vectors are sorted by their first component or by
  * the product of their components (e.g. the volume of a bounding box).
  */
+export type StatisticAggregation = "sum" | "mean" | "max";
+
 export type StatisticValue =
   | {
       kind: "number";
       unit: StatisticUnit;
+      // How the values of the segments of a group are combined. Defaults to "sum".
+      aggregation?: StatisticAggregation;
       // How many decimal places are shown. Defaults to 2.
       fractionDigits?: number;
       get: (row: SegmentStatisticsRow) => number | undefined;

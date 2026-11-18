@@ -44,9 +44,8 @@ class FullMeshHelperTestSuite extends AnyWordSpec with FullMeshHelper {
         (readVec(base), (readVec(base + 12), readVec(base + 24), readVec(base + 36)))
       }
       assert(faces.length == vertexBuffer.length / 9 && faces.length > 8)
-      assert(faces.flatMap { case (_, (a, b, c)) =>
-        Seq(a, b, c)
-      }.flatMap(v => Seq(v._1, v._2, v._3)) == vertexBuffer.map(_.toDouble))
+      val storedCoordinates = faces.flatMap { case (_, (a, b, c)) => Seq(a, b, c) }.flatMap(v => Seq(v._1, v._2, v._3))
+      assert(storedCoordinates == vertexBuffer.map(_.toDouble))
 
       faces.foreach { case (normal, (a, b, c)) =>
         val faceNormal = cross(sub(b, a), sub(c, a))

@@ -449,7 +449,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
         case _            => fail()
       }
 
-    "fail for thumbnails with different viewports" in
+    "ignore different or unknown thumbnail viewports, but keep the thumbnails" in
       writeToXmlBytes(
         dummyTracing,
         Seq(
@@ -462,8 +462,20 @@ class NMLUnitTestSuite extends AsyncWordSpec {
         case Full(xmlBytes) =>
           val xml = new String(xmlBytes, "UTF-8")
           val xmlWithDifferentViewports = xml.replaceFirst("viewport=\"xy\"", "viewport=\"yz\"")
-          assert(xmlWithDifferentViewports != xml)
-          assertParsingFailed(parseXmlBytes(xmlWithDifferentViewports.getBytes("UTF-8")))
+          val xmlWithUnknownViewports = xml.replace("viewport=\"xy\"", "viewport=\"unknown\"")
+          assert(xmlWithDifferentViewports != xml && xmlWithUnknownViewports != xml)
+          for {
+            parsedWithDifferent <- parseXmlBytes(xmlWithDifferentViewports.getBytes("UTF-8")).futureBox
+            parsedWithUnknown <- parseXmlBytes(xmlWithUnknownViewports.getBytes("UTF-8")).futureBox
+          } yield (parsedWithDifferent, parsedWithUnknown) match {
+            case (Full(different), Full(unknown)) =>
+              Seq(different, unknown).foreach { parsed =>
+                assert(parsed.bookmarks.map(_.bookmark.thumbnailViewport) == Seq(None))
+                assert(parsed.bookmarks.head.thumbnailLocations.size == 2)
+              }
+              succeed
+            case _ => fail("failed to parse bookmarks with invalid thumbnail viewports")
+          }
         case _ => Future.successful(fail("failed to write bookmark to XML"))
       }
 

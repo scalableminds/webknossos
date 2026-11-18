@@ -192,7 +192,8 @@ class AnnotationIOController @Inject() (
             mergedSkeletonLayers,
             usableDataSource,
             parsedFiles.otherFiles,
-            earliestAccessibleVersion
+            // The version of the uploaded annotation, the first save of the user is the next one.
+            version = math.max(earliestAccessibleVersion - 1, 0L)
           )
           // Saved before the AnnotationProto that lists their ids.
           _ <- Fox.runIf(uploadedBookmarks.nonEmpty)(
@@ -227,7 +228,7 @@ class AnnotationIOController @Inject() (
   // Bookmarks are only imported if a single NML was uploaded. Merging several NMLs may change node and segment ids,
   // which the bookmarks would then need to be adapted to. The references to annotation layers are resolved to the
   // new tracingIds, references to things that do not exist (anymore) are dropped. The bookmarks count as created at
-  // the first accessible version, together with their thumbnails.
+  // the version of the uploaded annotation, together with their thumbnails.
   private def bookmarksForUpload(
       parseSuccesses: List[NmlParseSuccess],
       uploadedVolumeLayers: List[UploadedVolumeLayer],

@@ -268,8 +268,6 @@ case class AnnotationWithTracings(
       updatedBookmarks = updatedBookmarks.updated(a.id, a.toProto)
     )
 
-  // Used when the annotation is replaced by an older version (revert, reset), so that ids of bookmarks that were
-  // added later are still not reused.
   def withLargestBookmarkIdOf(other: AnnotationProto): AnnotationWithTracings =
     (AnnotationWithTracings.largestBookmarkId(annotation) ++ AnnotationWithTracings.largestBookmarkId(other)).maxOption
       .fold(this)(largestId => this.copy(annotation = annotation.withLargestBookmarkId(largestId)))

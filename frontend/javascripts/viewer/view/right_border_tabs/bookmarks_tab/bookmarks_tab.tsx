@@ -113,6 +113,11 @@ function useBookmarkThumbnailSrc(
       (url) => {
         if (!isCancelled) setServerUrl(url);
       },
+      (error) => {
+        // Thumbnails are optional, so the bookmark is shown without one.
+        console.warn(`Could not load the thumbnail of bookmark ${id}:`, error);
+        if (!isCancelled) setServerUrl(null);
+      },
     );
     return () => {
       isCancelled = true;

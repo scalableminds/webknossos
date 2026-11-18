@@ -434,13 +434,11 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
           location <- getSingleAttributeOpt(thumbnailNode, "location")
         } yield size -> location
       }.toMap
-      // All thumbnails of a bookmark show the same viewport.
-      thumbnailViewportNames = (node \ "thumbnail").flatMap(getSingleAttributeOpt(_, "viewport")).distinct
-      thumbnailViewports = thumbnailViewportNames.flatMap(NmlAnnotationBookmarks.thumbnailViewportFromString)
-      _ <- Box.fromBool(
-        thumbnailViewports.length == thumbnailViewportNames.length && thumbnailViewports.length <= 1
-      ) ?~>
-        Msg.Nml.invalidBookmarkField("thumbnail viewport", id)
+      // All thumbnails of a bookmark show the same viewport. An unknown or ambiguous one is ignored, too.
+      thumbnailViewport = (node \ "thumbnail").flatMap(getSingleAttributeOpt(_, "viewport")).distinct match {
+        case Seq(viewportName) => NmlAnnotationBookmarks.thumbnailViewportFromString(viewportName)
+        case _                 => None
+      }
     } yield NmlParsedAnnotationBookmark(
       AnnotationBookmarkProto(
         id = id,
@@ -450,7 +448,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
         state = state,
         createdAtVersion = 0L,
         metadata = parseMetadata(node \ "metadata" \ "metadataEntry"),
-        thumbnailViewport = thumbnailViewports.headOption
+        thumbnailViewport = thumbnailViewport
       ),
       thumbnailLocations
     )

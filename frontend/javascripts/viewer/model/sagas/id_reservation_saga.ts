@@ -87,7 +87,6 @@ function getMaxExistingId(
     return getMaximumGroupId(tracing.segmentGroups);
   }
   if (domain === "Bookmark") {
-    // Also counts deleted bookmarks, so that their ids are not reused (see Annotation.proto).
     return Math.max(
       state.annotation.largestBookmarkIdOnLoad,
       ...getExistingIds(state, tracingId, domain),

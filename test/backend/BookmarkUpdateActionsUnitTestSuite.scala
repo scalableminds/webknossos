@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   AddBookmarkAnnotationAction,
   AnnotationBookmarkState,
   BookmarkViewMode,
+  UpdateBookmarkAnnotationAction,
   UpdateBookmarkStateAnnotationAction,
   UpdateBookmarkThumbnailAnnotationAction,
   UpdateMetadataOfBookmarkAnnotationAction
@@ -42,6 +43,16 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
       MetadataEntryProto("c", boolValue = Some(true))
     )
   )
+
+  "UpdateBookmarkAnnotationAction" should {
+    "clear fields that are null and keep fields that are absent" in {
+      val named = bookmark.withName("name").withDescription("description")
+      val clearName = Json.parse("""{"id": 1, "name": null}""").as[UpdateBookmarkAnnotationAction]
+      assert(clearName.applyOn(named) == named.clearName)
+      val setDescription = Json.parse("""{"id": 1, "description": "new"}""").as[UpdateBookmarkAnnotationAction]
+      assert(setDescription.applyOn(named) == named.withDescription("new"))
+    }
+  }
 
   "UpdateMetadataOfBookmarkAnnotationAction" should {
     "update existing entries in place, append new ones and remove the requested keys" in {

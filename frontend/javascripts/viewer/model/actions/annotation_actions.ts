@@ -248,7 +248,6 @@ export const setBookmarkNameAction = (bookmarkId: number, name: string | null) =
     name,
   }) as const;
 
-// Replaces the whole list, so that the order of the entries is kept while editing.
 // A null description clears it.
 export const setBookmarkDescriptionAction = (bookmarkId: number, description: string | null) =>
   ({
@@ -257,6 +256,7 @@ export const setBookmarkDescriptionAction = (bookmarkId: number, description: st
     description,
   }) as const;
 
+// Replaces the whole list, so that the order of the entries is kept while editing.
 export const setBookmarkMetadataAction = (bookmarkId: number, metadata: MetadataEntryProto[]) =>
   ({
     type: "SET_BOOKMARK_METADATA",

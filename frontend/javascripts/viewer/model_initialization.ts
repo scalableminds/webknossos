@@ -197,7 +197,6 @@ export async function initialize(
       const completeAnnotation = {
         ...unversionedAnnotation,
         description: annotationProto.description,
-        annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,
         bookmarks,
         largestBookmarkId: annotationProto.largestBookmarkId,

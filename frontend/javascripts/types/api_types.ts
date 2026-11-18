@@ -738,7 +738,6 @@ export type APITracingStoreAnnotation = {
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
   readonly userStates: APIAnnotationUserState[];
   readonly bookmarkIds: number[];
-  // Never decreases, see Annotation.proto. Absent for older annotations.
   readonly largestBookmarkId?: number;
 };
 

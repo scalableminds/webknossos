@@ -122,7 +122,7 @@ export type Annotation = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly bookmarks: Array<APIAnnotationBookmark>;
   // The largest bookmark id the annotation ever had when it was loaded, also counting deleted
-  // bookmarks. New bookmark ids are larger, so that ids of deleted bookmarks are not reused.
+  // bookmarks.
   readonly largestBookmarkIdOnLoad: number;
   readonly tags: Array<string>;
   readonly stats: TracingStats | null | undefined;

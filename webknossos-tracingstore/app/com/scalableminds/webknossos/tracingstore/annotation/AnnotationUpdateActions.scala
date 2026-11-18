@@ -116,12 +116,12 @@ case class AddBookmarkAnnotationAction(
   override def withAuthorId(authorId: Option[ObjectId]): UpdateAction = this.copy(actionAuthorId = authorId)
 }
 
+// The Some(None) defaults are needed so that the tristate json parsing reads null as Some(None) (= clear) instead of
+// None (= untouched), see TristateOptionJsonHelper.
 case class UpdateBookmarkAnnotationAction(
     id: Int,
-    name: Option[Option[String]], // tristate: outer None = untouched, Some(None) = clear, Some(Some(x)) = set to x.
-    description: Option[
-      Option[String]
-    ], // tristate: outer None = untouched, Some(None) = clear, Some(Some(x)) = set to x.
+    name: Option[Option[String]] = Some(None), // tristate: None = untouched, Some(None) = clear, Some(Some(x)) = set
+    description: Option[Option[String]] = Some(None), // tristate like name
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None

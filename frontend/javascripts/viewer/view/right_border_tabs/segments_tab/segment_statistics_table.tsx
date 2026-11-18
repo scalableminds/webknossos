@@ -1,5 +1,15 @@
-import { FolderOutlined } from "@ant-design/icons";
-import { Button, Flex, Progress, Spin, Table, type TableColumnType, Typography, theme } from "antd";
+import { FolderOutlined, SwapOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Flex,
+  Progress,
+  Spin,
+  Table,
+  type TableColumnType,
+  Tooltip,
+  Typography,
+  theme,
+} from "antd";
 import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { type ReactNode, useMemo, useState } from "react";
@@ -18,6 +28,7 @@ import {
 import {
   type ColumnSpec,
   formatStatisticNumber,
+  MAX_COMPARED_COUNT,
   type ResolvedUnit,
   SEGMENT_COLUMN_KEY,
   type SortOrder,
@@ -27,6 +38,7 @@ import {
 const SEGMENT_COLUMN_WIDTH = 220;
 const NUMBER_COLUMN_WIDTH = 130;
 const VECTOR_COLUMN_WIDTH = 180;
+const COMPARE_COLUMN_WIDTH = 40;
 // Even the smallest value should get a visible bar.
 const MIN_BAR_PERCENT = 2;
 
@@ -84,7 +96,16 @@ function ColumnTitle({
   );
 }
 
-function SegmentCell({ row, layerName }: { row: SegmentStatisticsRow; layerName: string }) {
+function SegmentCell({
+  row,
+  layerName,
+  isSelected,
+}: {
+  row: SegmentStatisticsRow;
+  layerName: string;
+  // Whether this is the segment that is selected in the segments tab.
+  isSelected: boolean;
+}) {
   const segmentColorRGBA = useWkSelector(
     (state) => getSegmentColorAsRGBA(state, row.segmentId, layerName),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
@@ -92,7 +113,11 @@ function SegmentCell({ row, layerName }: { row: SegmentStatisticsRow; layerName:
   return (
     <Flex align="center" gap="small" style={{ minWidth: 0 }}>
       <ColorDot colorRGBA={segmentColorRGBA} />
-      <Typography.Text ellipsis={{ tooltip: row.segmentName }} style={{ minWidth: 0 }}>
+      <Typography.Text
+        strong={isSelected}
+        ellipsis={{ tooltip: row.segmentName }}
+        style={{ minWidth: 0 }}
+      >
         {row.segmentName}
       </Typography.Text>
       {row.segment.name != null ? (
@@ -266,6 +291,9 @@ type Props = {
   units: Record<string, ResolvedUnit>;
   sort: StatisticsSort;
   onSortChange: (sort: StatisticsSort) => void;
+  // The rows that are picked for the comparison.
+  comparedKeys: string[];
+  onComparedKeysChange: (keys: string[]) => void;
   layerName: string;
 };
 
@@ -281,6 +309,8 @@ export function SegmentStatisticsTable({
   units,
   sort,
   onSortChange,
+  comparedKeys,
+  onComparedKeysChange,
   layerName,
 }: Props) {
   const { selectedSegmentIds, selectSegmentAndJumpToPosition } = useSegmentSelection();
@@ -315,7 +345,11 @@ export function SegmentStatisticsTable({
         tableRow.kind === "group" ? (
           <GroupCell group={tableRow} />
         ) : (
-          <SegmentCell row={tableRow.row} layerName={layerName} />
+          <SegmentCell
+            row={tableRow.row}
+            layerName={layerName}
+            isSelected={selectedKeys.has(tableRow.key)}
+          />
         ),
     };
     const statisticColumns = columnSpecs.map((spec) =>
@@ -326,8 +360,9 @@ export function SegmentStatisticsTable({
       ...column,
       sortOrder: sort != null && sort.key === column.key ? sort.order : null,
     }));
-  }, [columnSpecs, units, rows, groupRows, layerName, sort]);
-  const totalColumnWidth = columns.reduce((sum, column) => sum + Number(column.width), 0);
+  }, [columnSpecs, units, rows, groupRows, layerName, sort, selectedKeys]);
+  const totalColumnWidth =
+    COMPARE_COLUMN_WIDTH + columns.reduce((sum, column) => sum + Number(column.width), 0);
 
   return (
     <div ref={containerRef} style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
@@ -356,9 +391,23 @@ export function SegmentStatisticsTable({
               return keys;
             }),
         }}
-        rowClassName={(tableRow) =>
-          selectedKeys.has(tableRow.key) ? "ant-table-row-selected" : ""
-        }
+        rowSelection={{
+          selectedRowKeys: comparedKeys,
+          // Groups and their segments are picked independently of each other.
+          checkStrictly: true,
+          hideSelectAll: true,
+          columnWidth: COMPARE_COLUMN_WIDTH,
+          columnTitle: (
+            <Tooltip title="Tick segments or groups to compare them">
+              <SwapOutlined />
+            </Tooltip>
+          ),
+          getCheckboxProps: (tableRow) => ({
+            disabled:
+              comparedKeys.length >= MAX_COMPARED_COUNT && !comparedKeys.includes(tableRow.key),
+          }),
+          onChange: (keys) => onComparedKeysChange(keys.map(String)),
+        }}
         onRow={(tableRow) => ({
           style: { cursor: "pointer" },
           onClick:

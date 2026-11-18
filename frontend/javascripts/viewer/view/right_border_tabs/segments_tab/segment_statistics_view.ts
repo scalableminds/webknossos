@@ -24,6 +24,10 @@ export type SortOrder = "ascend" | "descend";
 export type StatisticsSort = { key: string; order: SortOrder } | null;
 
 export type GroupBy = "group" | "none";
+export type StatisticsMode = "table" | "compare";
+
+// More entities than this cannot be told apart in the comparison.
+export const MAX_COMPARED_COUNT = 6;
 
 export const SEGMENT_COLUMN_KEY = "segment";
 const DEFAULT_SORT: StatisticsSort = { key: "volume", order: "descend" };
@@ -99,6 +103,8 @@ export function formatStatisticNumber(
     return numberInUnit.toLocaleString("en-US", { maximumSignificantDigits: 2 });
   }
   return numberInUnit.toLocaleString("en-US", {
+    // The components of a vector are separated by commas, so they must not contain any themselves.
+    useGrouping: value.kind !== "vector",
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   });
@@ -128,6 +134,21 @@ export function filterRows(
 
 export type Histogram = { bins: number[]; min: number; max: number };
 
+export const HISTOGRAM_BIN_COUNT = 26;
+
+// The share of the numbers that are not larger than the given one, in percent.
+export function getPercentile(number: number, numbers: number[]): number {
+  if (numbers.length === 0) {
+    return 0;
+  }
+  return Math.round((numbers.filter((other) => other <= number).length / numbers.length) * 100);
+}
+
+export function getMedian(numbers: number[]): number | undefined {
+  const sortedNumbers = [...numbers].sort((a, b) => a - b);
+  return sortedNumbers[Math.floor(sortedNumbers.length / 2)];
+}
+
 export function computeHistogram(numbers: number[], binCount: number): Histogram | null {
   if (numbers.length === 0) {
     return null;
@@ -149,6 +170,9 @@ export type StatisticsViewState = {
   ranges: Record<string, ValueRange>;
   sort: StatisticsSort;
   groupBy: GroupBy;
+  mode: StatisticsMode;
+  // The keys of the table rows (segments and groups) that are compared with each other.
+  comparedKeys: string[];
 };
 
 export const DEFAULT_VIEW_STATE: StatisticsViewState = {
@@ -157,6 +181,8 @@ export const DEFAULT_VIEW_STATE: StatisticsViewState = {
   ranges: {},
   sort: DEFAULT_SORT,
   groupBy: "group",
+  mode: "table",
+  comparedKeys: [],
 };
 
 export type StatisticsView = StatisticsViewState & {
@@ -166,6 +192,8 @@ export type StatisticsView = StatisticsViewState & {
   resetRanges: () => void;
   setSort: (sort: StatisticsSort) => void;
   setGroupBy: (groupBy: GroupBy) => void;
+  setMode: (mode: StatisticsMode) => void;
+  setComparedKeys: (keys: string[]) => void;
 };
 
 function omitKey<T>(record: Record<string, T>, key: string): Record<string, T> {
@@ -220,8 +248,36 @@ export function useStatisticsView(
     setState((previous) => ({ ...previous, groupBy }));
   }, []);
 
+  const setMode = useCallback((mode: StatisticsMode) => {
+    setState((previous) => ({ ...previous, mode }));
+  }, []);
+
+  const setComparedKeys = useCallback((keys: string[]) => {
+    setState((previous) => ({ ...previous, comparedKeys: keys.slice(0, MAX_COMPARED_COUNT) }));
+  }, []);
+
   return useMemo(
-    () => ({ ...state, toggleColumn, setChosenUnit, setRange, resetRanges, setSort, setGroupBy }),
-    [state, toggleColumn, setChosenUnit, setRange, resetRanges, setSort, setGroupBy],
+    () => ({
+      ...state,
+      toggleColumn,
+      setChosenUnit,
+      setRange,
+      resetRanges,
+      setSort,
+      setGroupBy,
+      setMode,
+      setComparedKeys,
+    }),
+    [
+      state,
+      toggleColumn,
+      setChosenUnit,
+      setRange,
+      resetRanges,
+      setSort,
+      setGroupBy,
+      setMode,
+      setComparedKeys,
+    ],
   );
 }

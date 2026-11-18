@@ -9,11 +9,13 @@ import { useWkSelector } from "libs/react_hooks";
 import { useMemo } from "react";
 import { LongUnitToShortUnitMap } from "viewer/constants";
 import type { SegmentStatisticsRow, StatisticCategory } from "./segment_statistics_helpers";
+import { StatisticHistogram } from "./segment_statistics_histogram";
 import {
   type ColumnSpec,
   computeHistogram,
   formatStatisticNumber,
   getSelectableUnits,
+  HISTOGRAM_BIN_COUNT,
   type Histogram,
   type ResolvedUnit,
   type StatisticsView,
@@ -21,53 +23,7 @@ import {
 } from "./segment_statistics_view";
 
 const CATEGORIES: StatisticCategory[] = ["Size", "Shape", "Location"];
-const HISTOGRAM_BIN_COUNT = 26;
-const HISTOGRAM_HEIGHT = 36;
 const AUTOMATIC_UNIT = "auto";
-
-function StatisticHistogram({
-  histogram,
-  range,
-  isHighlighted,
-}: {
-  histogram: Histogram;
-  range: ValueRange | undefined;
-  isHighlighted: boolean;
-}) {
-  const { token } = theme.useToken();
-  const { bins, min, max } = histogram;
-  const maxCount = Math.max(1, ...bins);
-  const binWidth = (max - min) / bins.length;
-  return (
-    <Flex align="flex-end" gap={1} style={{ height: HISTOGRAM_HEIGHT }} aria-hidden>
-      {bins.map((count, index) => {
-        const binStart = min + index * binWidth;
-        const binEnd = binStart + binWidth;
-        const isInRange =
-          range == null ||
-          ((range[0] == null || binEnd >= range[0]) && (range[1] == null || binStart <= range[1]));
-        return (
-          <div
-            // biome-ignore lint/suspicious/noArrayIndexKey: the bins have a fixed order
-            key={index}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              borderRadius: 1,
-              // Empty bins keep a sliver, so that the extent of the histogram stays visible.
-              height: `${Math.max(6, (count / maxCount) * 100)}%`,
-              background: isInRange
-                ? isHighlighted
-                  ? token.colorPrimary
-                  : token.colorPrimaryBorder
-                : token.colorFillSecondary,
-            }}
-          />
-        );
-      })}
-    </Flex>
-  );
-}
 
 function RangeFilter({
   spec,

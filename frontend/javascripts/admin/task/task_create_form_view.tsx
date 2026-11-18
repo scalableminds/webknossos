@@ -8,11 +8,7 @@ import {
   getTaskTypes,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
-import {
-  getOnlyItem,
-  useIsFetchedSinceMount,
-  usePreselectFormValue,
-} from "admin/use_preselect_form_value";
+import { getOnlyItem, usePreselectFormValue } from "admin/use_preselect_form_value";
 import {
   Alert,
   App,
@@ -406,27 +402,27 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     queryFn: getScripts,
     refetchOnWindowFocus: false,
   });
-  const hasFreshTaskTypes = useIsFetchedSinceMount(taskTypesUpdatedAt);
-  const hasFreshProjects = useIsFetchedSinceMount(projectsUpdatedAt);
   usePreselectFormValue(
     form,
     "taskTypeId",
-    taskId == null && hasFreshTaskTypes
+    taskId == null
       ? getPreselection(
           taskTypes.map((taskType) => taskType.id),
           LAST_USED_TASK_TYPE_KEY,
         )
       : undefined,
+    taskTypesUpdatedAt,
   );
   usePreselectFormValue(
     form,
     "projectName",
-    taskId == null && hasFreshProjects
+    taskId == null
       ? getPreselection(
           projects.map((project) => project.name),
           LAST_USED_PROJECT_KEY,
         )
       : undefined,
+    projectsUpdatedAt,
   );
   const [specificationType, setSpecificationType] = useState<Specification>(
     SpecificationEnum.Manual,

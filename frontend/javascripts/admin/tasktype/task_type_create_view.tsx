@@ -3,11 +3,7 @@ import { createTaskType, getEditableTeams, getTaskType, updateTaskType } from "a
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
-import {
-  getOnlyItem,
-  useIsFetchedSinceMount,
-  usePreselectFormValue,
-} from "admin/use_preselect_form_value";
+import { getOnlyItem, usePreselectFormValue } from "admin/use_preselect_form_value";
 import { Button, Col, Form, Input, InputNumber, Radio, Row, Select, Typography, theme } from "antd";
 import type { RuleObject } from "antd/es/form";
 import {
@@ -37,7 +33,7 @@ type FormValues = {
   isMagRestricted: boolean;
   summary: string;
   teamId: string;
-  description?: string;
+  description: string;
   tracingType: TracingType;
   settings: {
     somaClickingAllowed: boolean;
@@ -108,11 +104,11 @@ function TaskTypeCreateView() {
     queryFn: getEditableTeams,
     refetchOnWindowFocus: false,
   });
-  const hasFreshTeams = useIsFetchedSinceMount(teamsUpdatedAt);
   usePreselectFormValue(
     form,
     "teamId",
-    taskTypeId == null && hasFreshTeams ? getOnlyItem(teams)?.id : undefined,
+    taskTypeId == null ? getOnlyItem(teams)?.id : undefined,
+    teamsUpdatedAt,
   );
 
   const { data: taskType } = useQueryWithErrorHandling({
@@ -190,8 +186,6 @@ function TaskTypeCreateView() {
 
     const newTaskType: Omit<APITaskType, "id" | "teamName"> = {
       ...rest,
-      // The description is optional, but the API expects the field to be present.
-      description: rest.description ?? "",
       teamId,
       settings,
       recommendedConfiguration:
@@ -324,14 +318,20 @@ function TaskTypeCreateView() {
             label="Description"
             description={
               <>
-                Optional. Instructions shown to annotators when they start a task and in the
-                viewer&apos;s info tab. Supports{" "}
+                Instructions shown to annotators when they start a task and in the viewer&apos;s
+                info tab. Supports{" "}
                 <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
                   Markdown
                 </a>
                 .
               </>
             }
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+            ]}
           >
             <TextArea rows={10} />
           </FormItemWithDescription>

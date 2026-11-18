@@ -1,5 +1,4 @@
 import { getProjects, getTaskTypes } from "admin/rest_api";
-import { useIsFetchedSinceMount } from "admin/use_preselect_form_value";
 import { Alert, Steps, type StepsProps, theme } from "antd";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 
@@ -30,21 +29,18 @@ export default function TaskSetupGuide() {
   const { token } = theme.useToken();
   // Same keys as in the task form, so both share the cache. Refetching on focus also updates
   // the form's dropdowns once the user returns from creating a task type or project.
-  const { data: taskTypes, dataUpdatedAt: taskTypesUpdatedAt } = useQueryWithErrorHandling({
+  const { data: taskTypes } = useQueryWithErrorHandling({
     queryKey: ["taskTypes"],
     queryFn: getTaskTypes,
     refetchOnWindowFocus: true,
   });
-  const { data: projects, dataUpdatedAt: projectsUpdatedAt } = useQueryWithErrorHandling({
+  const { data: projects } = useQueryWithErrorHandling({
     queryKey: ["projects"],
     queryFn: getProjects,
     refetchOnWindowFocus: true,
   });
 
-  // The cache is persisted, so wait for fresh data instead of flashing the guide for stale lists.
-  const hasFetchedTaskTypes = useIsFetchedSinceMount(taskTypesUpdatedAt);
-  const hasFetchedProjects = useIsFetchedSinceMount(projectsUpdatedAt);
-  if (!hasFetchedTaskTypes || !hasFetchedProjects || taskTypes == null || projects == null) {
+  if (taskTypes == null || projects == null) {
     return null;
   }
   const hasTaskType = taskTypes.length > 0;

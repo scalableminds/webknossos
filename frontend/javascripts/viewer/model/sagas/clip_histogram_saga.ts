@@ -1,7 +1,10 @@
 import Toast from "libs/toast";
 import { takeEvery } from "typed-redux-saga";
 import { OrthoViews, type Vector3 } from "viewer/constants";
-import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
+import {
+  getDefaultValueRangeOfLayer,
+  getLayerByName,
+} from "viewer/model/accessors/dataset_accessor";
 import type { ClipHistogramAction } from "viewer/model/actions/settings_actions";
 import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -139,8 +142,25 @@ async function clipHistogram(action: ClipHistogramAction) {
     onThresholdChange(action.layerName, [lowerClip, upperClip]);
   } else {
     onThresholdChange(action.layerName, [lowerClip, upperClip]);
-    Store.dispatch(updateLayerSettingAction(action.layerName, "min", lowerClip - wiggleRoom));
-    Store.dispatch(updateLayerSettingAction(action.layerName, "max", upperClip + wiggleRoom));
+    // The wiggle room must not extend the histogram range beyond the range of the dtype.
+    const [lowerLimit, upperLimit] = getDefaultValueRangeOfLayer(
+      Store.getState().dataset,
+      action.layerName,
+    );
+    Store.dispatch(
+      updateLayerSettingAction(
+        action.layerName,
+        "min",
+        Math.max(lowerLimit, lowerClip - wiggleRoom),
+      ),
+    );
+    Store.dispatch(
+      updateLayerSettingAction(
+        action.layerName,
+        "max",
+        Math.min(upperLimit, upperClip + wiggleRoom),
+      ),
+    );
   }
 
   if (action.callback != null) {

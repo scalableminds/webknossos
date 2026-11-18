@@ -14,7 +14,9 @@ type Props = {
   onSelect?: (arg0: string) => void;
   onChange?: () => void;
   allowCreation?: boolean;
+  allowClear?: boolean;
   alreadyUsedDomains?: ExperienceDomainList;
+  "aria-label"?: string;
 };
 
 const SelectExperienceDomain: React.FC<Props> = ({
@@ -26,7 +28,9 @@ const SelectExperienceDomain: React.FC<Props> = ({
   onSelect,
   onChange,
   allowCreation = false,
+  allowClear = false,
   alreadyUsedDomains = [],
+  "aria-label": ariaLabel,
 }) => {
   const { data: domains = [] } = useQuery({
     queryKey: ["experienceDomains"],
@@ -66,8 +70,10 @@ const SelectExperienceDomain: React.FC<Props> = ({
         }}
         disabled={disabled}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         onSelect={onSelect}
         onChange={onChange}
+        allowClear={allowClear}
         options={selectableDomains.map((domain) => ({ value: domain, label: domain }))}
       />
     </Tooltip>

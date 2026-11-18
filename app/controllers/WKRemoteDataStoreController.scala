@@ -559,8 +559,9 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   def listPathsToDelete(name: String, key: String): Action[AnyContent] = Action.fox { _ =>
-    dataStoreService.validateAccess(name, key) { _ =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
       for {
+        _ <- assertMayProcessPathDeletionQueue(dataStore)
         paths <- pathDeletionDAO.findAll
       } yield Ok(Json.toJson(paths))
     }
@@ -568,12 +569,17 @@ class WKRemoteDataStoreController @Inject() (
 
   def markPathsAsDeleted(name: String, key: String): Action[Seq[String]] = Action.fox(validateJson[Seq[String]]) {
     implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
         for {
+          _ <- assertMayProcessPathDeletionQueue(dataStore)
           _ <- Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)
         } yield Ok
       }
   }
+
+  // The queue holds paths of all organizations, so datastores restricted to one organization may not access it
+  private def assertMayProcessPathDeletionQueue(dataStore: DataStore): Fox[Unit] =
+    Fox.fromBool(dataStore.onlyAllowedOrganization.isEmpty) ?~> Msg.notAllowed ~> FORBIDDEN
 
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.fox { _ =>
     dataStoreService.validateAccess(name, key) { _ =>

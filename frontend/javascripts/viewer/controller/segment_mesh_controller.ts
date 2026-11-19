@@ -204,6 +204,7 @@ export default class SegmentMeshController {
 
   async addMeshFromVerticesAsync(
     vertices: Float32Array,
+    indices: Uint16Array | Uint32Array | null,
     segmentId: bigint,
     layerName: string,
     opacity: number | undefined,
@@ -213,8 +214,13 @@ export default class SegmentMeshController {
     if (vertices.length === 0) return;
     let bufferGeometry = new BufferGeometry();
     bufferGeometry.setAttribute("position", new BufferAttribute(vertices, 3));
-
-    bufferGeometry = mergeVertices(bufferGeometry);
+    if (indices != null) {
+      bufferGeometry.setIndex(new BufferAttribute(indices, 1));
+    } else {
+      // A triangle soup from an older datastore. Share the vertices between triangles, so that
+      // the normals are smooth.
+      bufferGeometry = mergeVertices(bufferGeometry);
+    }
     bufferGeometry.computeVertexNormals();
 
     bufferGeometry.boundsTree = await computeBvhAsync(bufferGeometry);

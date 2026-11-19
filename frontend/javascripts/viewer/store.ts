@@ -581,6 +581,12 @@ export type BorderOpenStatus = {
   right: boolean;
 };
 export type Theme = "light" | "dark";
+// Restricts the segment statistics tab to a subset of the visible segmentation layer. A group is
+// referenced by id so that the statistics always reflect the group's current contents. The scope
+// only applies to the layer it was chosen in, since ids are not unique across layers.
+export type SegmentStatisticsScope =
+  | { readonly kind: "group"; readonly layerName: string; readonly groupId: number }
+  | { readonly kind: "segments"; readonly layerName: string; readonly segmentIds: bigint[] };
 export type ContextMenuInfo = {
   readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
   readonly clickedNodeId: number | null | undefined;
@@ -613,6 +619,8 @@ type UiInformation = {
   readonly isInAnnotationView: boolean;
   readonly hasOrganizations: boolean;
   readonly borderOpenStatus: BorderOpenStatus;
+  // Null means that the statistics of all segments of the visible segmentation layer are shown.
+  readonly segmentStatisticsScope: SegmentStatisticsScope | null;
   // The OS color scheme. Use getActiveTheme() for the theme that is actually in effect.
   readonly systemTheme: Theme;
   readonly isWkInitialized: boolean;

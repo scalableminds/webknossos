@@ -6,6 +6,8 @@ import {
   computeHistogram,
   filterRows,
   formatStatisticNumber,
+  getMedian,
+  getPercentile,
   getSelectableUnits,
   resolveUnit,
 } from "viewer/view/right_border_tabs/segments_tab/segment_statistics_view";
@@ -69,6 +71,25 @@ describe("segment statistics view", () => {
     // Values that are too small for the decimal places are not shown as zero.
     expect(formatStatisticNumber(1.3e6, volumeSpec.value, unit)).toBe("0.0013");
     expect(formatStatisticNumber(0, volumeSpec.value, unit)).toBe("0.00");
+  });
+
+  it("does not group the digits of vector components", () => {
+    const sizeValue = {
+      kind: "vector",
+      unit: "vx",
+      fractionDigits: 0,
+      sortBy: "product",
+      get: () => undefined,
+    } as const;
+    expect(formatStatisticNumber(12345, sizeValue, { label: "vx", factor: 1 })).toBe("12345");
+  });
+
+  it("computes percentiles and the median", () => {
+    expect(getPercentile(3, [1, 2, 3, 4])).toBe(75);
+    expect(getPercentile(0, [1, 2])).toBe(0);
+    expect(getPercentile(1, [])).toBe(0);
+    expect(getMedian([5, 1, 3])).toBe(3);
+    expect(getMedian([])).toBeUndefined();
   });
 
   it("computes a histogram", () => {

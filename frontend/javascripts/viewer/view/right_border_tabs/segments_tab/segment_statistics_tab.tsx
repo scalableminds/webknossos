@@ -4,6 +4,7 @@ import {
   Button,
   Empty,
   Flex,
+  Segmented,
   Select,
   Space,
   Splitter,
@@ -32,15 +33,21 @@ import { setSegmentStatisticsScopeAction } from "viewer/model/actions/ui_actions
 import type { Segment, SegmentGroup, SegmentStatisticsScope } from "viewer/store";
 import { findGroup, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 import { useSegmentStatisticsRows } from "./hooks/use_segment_statistics_rows";
+import { SegmentStatisticsCompare } from "./segment_statistics_compare";
 import { exportStatisticsToCSV } from "./segment_statistics_helpers";
 import { SegmentStatisticsRail } from "./segment_statistics_rail";
 import { SegmentStatisticsTable } from "./segment_statistics_table";
-import { buildGroupedTableRows, toSegmentTableRows } from "./segment_statistics_tree";
+import {
+  buildGroupedTableRows,
+  getAllGroupRows,
+  toSegmentTableRows,
+} from "./segment_statistics_tree";
 import {
   filterRows,
   type GroupBy,
   getColumnSpecs,
   resolveUnit,
+  type StatisticsMode,
   useStatisticsView,
 } from "./segment_statistics_view";
 import { getSegmentsOfGroupRecursively } from "./segments_view_helper";
@@ -160,12 +167,15 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
     () => filterRows(rows, columnSpecs, view.ranges),
     [rows, columnSpecs, view.ranges],
   );
+  // Built regardless of the grouping of the table, as groups can also be compared.
+  const groupedTableRows = useMemo(
+    () => buildGroupedTableRows(filteredRows, segmentGroups, statisticSpecs),
+    [filteredRows, segmentGroups, statisticSpecs],
+  );
+  const groupRows = useMemo(() => getAllGroupRows(groupedTableRows), [groupedTableRows]);
   const tableRows = useMemo(
-    () =>
-      view.groupBy === "group"
-        ? buildGroupedTableRows(filteredRows, segmentGroups, statisticSpecs)
-        : toSegmentTableRows(filteredRows),
-    [view.groupBy, filteredRows, segmentGroups, statisticSpecs],
+    () => (view.groupBy === "group" ? groupedTableRows : toSegmentTableRows(filteredRows)),
+    [view.groupBy, groupedTableRows, filteredRows],
   );
   const filteredTitles = columnSpecs
     .filter((spec) => view.ranges[spec.key] != null)
@@ -211,6 +221,18 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
             />
           </Space>
         ) : null}
+        <Segmented<StatisticsMode>
+          value={view.mode}
+          onChange={view.setMode}
+          options={[
+            { value: "table", label: `Table · ${filteredRows.length}` },
+            {
+              value: "compare",
+              label:
+                view.comparedKeys.length > 0 ? `Compare · ${view.comparedKeys.length}` : "Compare",
+            },
+          ]}
+        />
         <Tooltip title="Recompute the statistics, e.g. after editing segments">
           <Button
             icon={<ReloadOutlined />}
@@ -271,15 +293,30 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
         </Splitter.Panel>
         <Splitter.Panel>
           <Flex vertical style={{ height: "100%", minHeight: 0, paddingInlineStart: 8 }}>
-            <SegmentStatisticsTable
-              rows={rows}
-              tableRows={tableRows}
-              columnSpecs={visibleColumnSpecs}
-              units={units}
-              sort={view.sort}
-              onSortChange={view.setSort}
-              layerName={layer.name}
-            />
+            {view.mode === "table" ? (
+              <SegmentStatisticsTable
+                rows={rows}
+                tableRows={tableRows}
+                columnSpecs={visibleColumnSpecs}
+                units={units}
+                sort={view.sort}
+                onSortChange={view.setSort}
+                comparedKeys={view.comparedKeys}
+                onComparedKeysChange={view.setComparedKeys}
+                layerName={layer.name}
+              />
+            ) : (
+              <SegmentStatisticsCompare
+                comparedKeys={view.comparedKeys}
+                onComparedKeysChange={view.setComparedKeys}
+                rows={filteredRows}
+                groupRows={groupRows}
+                allRows={rows}
+                columnSpecs={visibleColumnSpecs}
+                units={units}
+                layerName={layer.name}
+              />
+            )}
           </Flex>
         </Splitter.Panel>
       </Splitter>

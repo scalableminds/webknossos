@@ -1,8 +1,10 @@
+import { toBigInt } from "libs/bigint_helpers";
 import Toast from "libs/toast";
 import type { Point2, Vector3 } from "viewer/constants";
 import {
+  getLayerPositionAndRenderedZoomStep,
   getSegmentIdsAtPosition,
-  getSegmentIdsAtPositionAsync,
+  warnIfMappingIsHiddenByZoomLimit,
 } from "viewer/controller/combinations/volume_handlers";
 import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
@@ -18,7 +20,7 @@ import {
   loadAgglomerateTreeFromIdAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { clickSegmentAction } from "viewer/model/actions/volumetracing_actions";
-import { Model } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 
 export async function handleAgglomerateTreeAtClick(clickPosition: Point2) {
@@ -53,6 +55,7 @@ export function loadAgglomerateTreeAtPosition(position: Vector3): void {
 
   if (agglomerateTreeLoadingInfo) {
     const [layerName, mappingName] = agglomerateTreeLoadingInfo;
+    if (warnIfMappingIsHiddenByZoomLimit(layerName)) return;
     Store.dispatch(loadAgglomerateTreeAtPositionAction(layerName, mappingName, position));
   }
 }
@@ -85,8 +88,18 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
   if (mappingName && isConnectomeEnabled.value) {
     // The connectome mapping might have been activated right before this function is called
     // (see withMappingActivationConfirmation), so the displayed segment id can't be used.
-    const { mappedId: segmentId } = await getSegmentIdsAtPositionAsync(segmentation.name, position);
-    if (segmentId == null) {
+    if (warnIfMappingIsHiddenByZoomLimit(segmentation.name)) return;
+    let segmentId: bigint;
+    try {
+      const { positionInLayer, zoomStep } = await getLayerPositionAndRenderedZoomStep(
+        segmentation.name,
+        position,
+      );
+      segmentId = toBigInt(
+        await api.data.getDataValue(segmentation.name, positionInLayer, zoomStep),
+      );
+    } catch (error) {
+      console.error(error);
       Toast.error("Could not determine the segment id at the clicked position.");
       return;
     }

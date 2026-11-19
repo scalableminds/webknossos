@@ -36,6 +36,11 @@ import {
   operationFinished,
 } from "./proofreading_test_utils";
 import { waitUntilNoActiveOperations } from "viewer/model/sagas/saga_helpers";
+import messages from "messages";
+import { OrthoViews } from "viewer/constants";
+import { ProofreadToolController } from "viewer/controller/combinations/tool_controls";
+import { isMappingHiddenByZoomLimit } from "viewer/model/accessors/volumetracing_accessor";
+import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -248,6 +253,40 @@ describe("Proofreading (Single User)", () => {
     await task.toPromise();
   });
 
+  it("getDataValue should fetch the agglomerate id of a segment that the local mapping doesn't know (yet)", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+    const fetchAgglomerates = vi.mocked(getAgglomeratesForSegmentsFromDatastore);
+    const originalImplementation = fetchAgglomerates.getMockImplementation();
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const position = getPositionForSegmentId(1337);
+      try {
+        fetchAgglomerates.mockClear();
+        fetchAgglomerates.mockResolvedValue(new Map([[1337, 99]]));
+        // Segment 1337 is not known to the local mapping, so its agglomerate id is fetched.
+        expect(yield call(() => api.data.getDataValue(tracingId, position, 0))).toBe(99);
+        expect(fetchAgglomerates).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          new Set([1337n]),
+        );
+        expect(yield call(() => api.data.getUnmappedDataValue(tracingId, position, 0))).toBe(1337);
+
+        fetchAgglomerates.mockRejectedValue(new Error("Network error"));
+        yield call(() =>
+          expect(api.data.getDataValue(tracingId, position, 0)).rejects.toThrow("Network error"),
+        );
+      } finally {
+        fetchAgglomerates.mockImplementation(originalImplementation!);
+      }
+    });
+    await task.toPromise();
+  });
+
   it("should show a warning instead of crashing if the agglomerate id of a proofreading click can't be fetched", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const { tracingId } = Store.getState().annotation.volumes[0];
@@ -270,6 +309,36 @@ describe("Proofreading (Single User)", () => {
         );
       } finally {
         fetchAgglomerates.mockImplementation(originalImplementation!);
+      }
+    });
+    await task.toPromise();
+  });
+
+  it("should not proofread at a clicked position while the mapping isn't rendered due to the zoom level", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setZoomStepAction(1000));
+      expect(isMappingHiddenByZoomLimit(Store.getState(), tracingId)).toBe(true);
+      vi.mocked(Toast.warning).mockClear();
+      const dispatchSpy = vi.spyOn(Store, "dispatch");
+      try {
+        // Shift-click merges the agglomerate at the position into the active one.
+        ProofreadToolController.onLeftClick(
+          null as any,
+          { x: 10, y: 10 },
+          OrthoViews.PLANE_XY,
+          { shiftKey: true, ctrlKey: false, metaKey: false } as MouseEvent,
+          false,
+        );
+        expect(Toast.warning).toHaveBeenCalledWith(
+          messages["tracing.mapping_hidden_by_zoom_limit"],
+        );
+        expect(dispatchSpy).not.toHaveBeenCalled();
+      } finally {
+        dispatchSpy.mockRestore();
       }
     });
     await task.toPromise();

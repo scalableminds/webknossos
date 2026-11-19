@@ -2,8 +2,10 @@ import { WarningOutlined } from "@ant-design/icons";
 import { App, Empty, Typography } from "antd";
 import type { ItemType, MenuItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
+import { toBigInt } from "libs/bigint_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import messages from "messages";
 import React from "react";
 import { shallowEqual, useDispatch } from "react-redux";
 import { CtrlOrCmdKey } from "viewer/constants";
@@ -13,9 +15,10 @@ import {
 } from "viewer/controller/combinations/segmentation_handlers";
 import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinations/skeleton_handlers";
 import {
+  getLayerPositionAndRenderedZoomStep,
   getSegmentIdsAtPosition,
-  getSegmentIdsAtPositionAsync,
   handleFloodFillFromGlobalPosition,
+  warnIfMappingIsHiddenByZoomLimit,
 } from "viewer/controller/combinations/volume_handlers";
 import {
   isConcurrentCollaborationMode,
@@ -34,6 +37,7 @@ import {
   getActiveCellId,
   getActiveSegmentationTracing,
   hasAgglomerateMapping,
+  isMappingHiddenByZoomLimit,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { maybeFetchMeshFilesAction } from "viewer/model/actions/annotation_actions";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
@@ -55,7 +59,7 @@ import {
   toggleAllSegmentsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { Store } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import type { ContextMenuInfo } from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
@@ -139,6 +143,26 @@ export function useNoNodeContextMenuOptions(
 
   const disabledVolumeInfo = useWkSelector(getDisabledInfoForTools);
   const isAgglomerateMappingEnabled = useWkSelector(hasAgglomerateMapping);
+  const isMappingHidden = useWkSelector(
+    (state) =>
+      visibleSegmentationLayer != null &&
+      isMappingHiddenByZoomLimit(state, visibleSegmentationLayer.name),
+  );
+  // Disables an item that operates on the agglomerate at the clicked position if the mapping
+  // isn't rendered due to the zoom limit, since the user sees unmapped segments then. Handlers
+  // that might activate a mapping before reading the agglomerate id check this again.
+  const disableIfMappingIsHidden = (item: MenuItemType): MenuItemType =>
+    isMappingHidden
+      ? {
+          ...item,
+          disabled: true,
+          label: (
+            <FastTooltip title={messages["tracing.mapping_hidden_by_zoom_limit"]}>
+              {item.label}
+            </FastTooltip>
+          ),
+        }
+      : item;
   const isConnectomeMappingEnabled = useWkSelector(hasConnectomeFile);
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
   const maybeMinCutPartitions = useWkSelector((state) =>
@@ -177,12 +201,18 @@ export function useNoNodeContextMenuOptions(
       return;
     // Don't use the displayed segment id: the mesh file might require another mapping, which
     // is activated before this function is called (see withMappingActivationConfirmation).
-    const { mappedId: segmentId } = await getSegmentIdsAtPositionAsync(
-      visibleSegmentationLayer.name,
-      globalPosition,
-    );
-
-    if (segmentId == null) {
+    if (warnIfMappingIsHiddenByZoomLimit(visibleSegmentationLayer.name)) return;
+    let segmentId: bigint;
+    try {
+      const { positionInLayer, zoomStep } = await getLayerPositionAndRenderedZoomStep(
+        visibleSegmentationLayer.name,
+        globalPosition,
+      );
+      segmentId = toBigInt(
+        await api.data.getDataValue(visibleSegmentationLayer.name, positionInLayer, zoomStep),
+      );
+    } catch (error) {
+      console.error(error);
       Toast.info("Could not determine the segment id at the clicked position");
       return;
     }
@@ -281,6 +311,7 @@ export function useNoNodeContextMenuOptions(
       return;
     }
 
+    if (warnIfMappingIsHiddenByZoomLimit(visibleSegmentationLayer.name)) return;
     if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
@@ -343,7 +374,7 @@ export function useNoNodeContextMenuOptions(
             ),
             disabled: areSkeletonGeometriesTransformed || isConcurrentCollabMode,
           },
-          {
+          disableIfMappingIsHidden({
             key: "load-agglomerate-tree",
             // Do not disable menu entry, but show modal advertising automated segmentation services if no agglomerate file is activated
             onClick: () =>
@@ -373,16 +404,16 @@ export function useNoNodeContextMenuOptions(
                 </span>
               </FastTooltip>
             ),
-          },
+          }),
 
           ...(isProofreadingActive &&
           isMultiSplitActive &&
           maybeMinCutPartitions &&
           maybeUnmappedSegmentId
-            ? proofreadingMultiSplitToolActions
+            ? proofreadingMultiSplitToolActions.map(disableIfMappingIsHidden)
             : []),
           isAgglomerateMappingEnabled.value
-            ? {
+            ? disableIfMappingIsHidden({
                 key: "merge-agglomerate-tree",
                 disabled: !isProofreadingActive,
                 onClick: () => dispatch(proofreadMergeAction(globalPosition)),
@@ -400,10 +431,10 @@ export function useNoNodeContextMenuOptions(
                     </span>
                   </FastTooltip>
                 ),
-              }
+              })
             : null,
           isAgglomerateMappingEnabled.value
-            ? {
+            ? disableIfMappingIsHidden({
                 key: "min-cut-agglomerate-at-position",
                 disabled: !isProofreadingActive,
                 onClick: () => dispatch(minCutAgglomerateWithPositionAction(globalPosition)),
@@ -421,10 +452,10 @@ export function useNoNodeContextMenuOptions(
                     </span>
                   </FastTooltip>
                 ),
-              }
+              })
             : null,
           isAgglomerateMappingEnabled.value
-            ? {
+            ? disableIfMappingIsHidden({
                 key: "cut-agglomerate-from-neighbors",
                 disabled: !isProofreadingActive,
                 onClick: () => dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
@@ -439,7 +470,7 @@ export function useNoNodeContextMenuOptions(
                     Split from all neighboring segments
                   </FastTooltip>
                 ),
-              }
+              })
             : null,
         ]
       : [];
@@ -480,7 +511,7 @@ export function useNoNodeContextMenuOptions(
       ),
     };
     // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Tree" action
-    skeletonActions.push(loadSynapsesItem);
+    skeletonActions.push(disableIfMappingIsHidden(loadSynapsesItem));
   }
 
   const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
@@ -504,7 +535,7 @@ export function useNoNodeContextMenuOptions(
     onClick: showAllSegments,
     label: "Show all Segments",
   };
-  const loadPrecomputedMeshItem: MenuItemType = {
+  const loadPrecomputedMeshItem: MenuItemType = disableIfMappingIsHidden({
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
     onClick: withMappingActivationConfirmation(
@@ -517,12 +548,12 @@ export function useNoNodeContextMenuOptions(
     label: (
       <LoadMeshMenuItemLabel currentMeshFile={currentMeshFile} volumeTracing={volumeTracing} />
     ),
-  };
-  const computeMeshAdHocItem = {
+  });
+  const computeMeshAdHocItem = disableIfMappingIsHidden({
     key: "compute-mesh-adhc",
     onClick: computeMeshAdHoc,
     label: "Compute Mesh (ad-hoc)",
-  };
+  });
   const nonSkeletonActions: ItemType[] =
     globalPosition != null && visibleSegmentationLayer != null
       ? [

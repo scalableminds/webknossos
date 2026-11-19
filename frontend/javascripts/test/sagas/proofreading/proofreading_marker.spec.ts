@@ -372,8 +372,8 @@ describe("Proofreading marker", () => {
       yield call(clickSegmentWithProofreadingTool, tracingId, 4n);
       yield call(() => testApi.tracing.save());
 
-      const getDataValueSpy = vi
-        .spyOn(api.data, "getDataValue")
+      const getUnmappedDataValueSpy = vi
+        .spyOn(api.data, "getUnmappedDataValue")
         .mockRejectedValue(new Error("Bucket 0,0,0,0, could not be loaded after 3 retries."));
       try {
         // The merge changes the agglomerate at the marker, so the active segment would be adapted.
@@ -394,9 +394,9 @@ describe("Proofreading marker", () => {
         );
         yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
         yield call(waitForSagas);
-        expect(getDataValueSpy).toHaveBeenCalled();
+        expect(getUnmappedDataValueSpy).toHaveBeenCalled();
       } finally {
-        getDataValueSpy.mockRestore();
+        getUnmappedDataValueSpy.mockRestore();
       }
 
       expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));

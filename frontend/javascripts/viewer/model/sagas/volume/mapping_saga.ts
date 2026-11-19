@@ -26,7 +26,7 @@ import {
 } from "typed-redux-saga";
 import type { APIDataLayer, APIMapping } from "types/api_types";
 import { MappingStatusEnum, type MappingType } from "viewer/constants";
-import { getSegmentIdsAtPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getLayerPositionAndRenderedZoomStep } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
   getMappingInfo,
@@ -75,6 +75,7 @@ import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import {
   fetchAgglomeratesForSegmentIds,
   isMappingAppliedLocally,
+  mapId,
 } from "../../helpers/mapped_id_lookup";
 import { ensureWkInitialized } from "../ready_sagas";
 import { waitUntilNoActiveOperations } from "../saga_helpers";
@@ -241,6 +242,16 @@ const isAgglomerate = (mapping: ActiveMappingInfo) => {
   return mapping.mappingType !== "JSON" && mapping.mappingType != null;
 };
 
+// The data reloads that were started because the mapping of a layer changed (see reloadData).
+const latestDataReloadByLayer: Record<string, Promise<void>> = {};
+
+// Resolves once the data of the layer was reloaded after the latest mapping change that required
+// a reload (e.g., the deactivation of a mapping that the server applies). Until then, the loaded
+// buckets might still contain the data of the previous mapping.
+export function waitForDataReloadAfterMappingChange(layerName: string): Promise<void> {
+  return latestDataReloadByLayer[layerName] ?? Promise.resolve();
+}
+
 function* reloadData(
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: { layerName: string },
@@ -258,7 +269,9 @@ function* reloadData(
     content: "Reloading segmentation data...",
     duration: 1,
   });
-  yield* call([api.data, api.data.reloadBuckets], layerName);
+  const reloadPromise = api.data.reloadBuckets(layerName);
+  latestDataReloadByLayer[layerName] = reloadPromise.catch(() => {});
+  yield* call(() => reloadPromise);
 
   const needsLocalHdf5Mapping = yield* select((state) =>
     getNeedsLocalHdf5Mapping(state, layerName),
@@ -694,12 +707,24 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
   // mapping, so this would cause a request for each update while the marker is out of view.
   // The local mapping only contains entries for the ids in the currently needed buckets.
   // Once the marker is in view again, the lookup will succeed.
-  const { mappedId: agglomerateId } = yield* call(
-    getSegmentIdsAtPositionAsync,
-    layerName,
-    proofreadingMarkerPosition,
-    { fetchUnknownIds: false },
-  );
+  let agglomerateId: bigint | null;
+  try {
+    const { positionInLayer, zoomStep } = yield* call(
+      getLayerPositionAndRenderedZoomStep,
+      layerName,
+      proofreadingMarkerPosition,
+    );
+    const unmappedId = yield* call(
+      [api.data, api.data.getUnmappedDataValue],
+      layerName,
+      positionInLayer,
+      zoomStep,
+    );
+    agglomerateId = yield* select((state) => mapId(state, layerName, toBigInt(unmappedId)));
+  } catch (error) {
+    console.error(error);
+    return;
+  }
 
   // The marker may have been moved (e.g., by a click) while the lookup was pending.
   // In that case, the result is outdated.

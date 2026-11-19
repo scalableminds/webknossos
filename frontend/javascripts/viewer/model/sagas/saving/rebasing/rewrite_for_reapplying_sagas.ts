@@ -54,7 +54,12 @@ async function appendIdToReloadFromPositionAsync(
     return;
   }
   const unmappedId = toBigInt(
-    await api.data.getDataValue(actionTracingId, anchorPosition, null, additionalCoordinates),
+    await api.data.getUnmappedDataValue(
+      actionTracingId,
+      anchorPosition,
+      null,
+      additionalCoordinates,
+    ),
   );
   const anchorPositionKey = segmentPositionToKey(anchorPosition, additionalCoordinates);
   if (!anchorPositionToUnmappedIdByMappingId.has(actionTracingId)) {

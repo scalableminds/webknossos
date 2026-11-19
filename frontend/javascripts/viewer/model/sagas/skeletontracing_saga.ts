@@ -3,6 +3,7 @@ import {
   getEditableAgglomerateTreeAsSkeletonTracing,
 } from "admin/rest_api";
 import { Modal } from "antd";
+import { toBigInt } from "libs/bigint_helpers";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
@@ -28,7 +29,7 @@ import {
 } from "typed-redux-saga";
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { NumberToOrthoView, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { getSegmentIdsAtPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getLayerPositionAndRenderedZoomStep } from "viewer/controller/combinations/volume_handlers";
 import {
   getAgglomerateDiffKey,
   getAgglomerateDiffReferenceForSkeleton,
@@ -465,17 +466,16 @@ function* loadAgglomerateTreeWithAtPosition(
       agglomerateId = action.agglomerateId;
     } else {
       // Ad-hoc lookup of agglomerate id after syncing in live-collab. Should be preferred over using the LoadAgglomerateTreeFromIdAction action.
-      const { mappedId: maybeAgglomerateId } = yield* call(
-        getSegmentIdsAtPositionAsync,
+      const { positionInLayer, zoomStep } = yield* call(
+        getLayerPositionAndRenderedZoomStep,
         layerName,
         action.agglomeratePosition,
       );
-      if (maybeAgglomerateId == null) {
-        throw new Error(
-          `Could not determine the agglomerate id at position ${action.agglomeratePosition}.`,
-        );
-      }
-      agglomerateId = maybeAgglomerateId;
+      // The caller ensures that the mapping isn't hidden by the zoom limit (see
+      // loadAgglomerateTreeAtPosition), so the rendered id is the agglomerate id.
+      agglomerateId = toBigInt(
+        yield* call([api.data, api.data.getDataValue], layerName, positionInLayer, zoomStep),
+      );
     }
 
     const trees = yield* select((state) =>

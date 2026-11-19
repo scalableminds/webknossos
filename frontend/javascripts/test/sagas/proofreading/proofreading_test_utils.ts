@@ -106,9 +106,9 @@ export function* initializeMappingAndTool(
 
   // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
   // is only maintained for loaded buckets).
-  const valueAt444 = yield call(() => api.data.getDataValue(tracingId, [4, 4, 4], 0));
-  // getDataValue returns whichever native type (number or bigint) matches the layer's element
-  // class, so compare via Number() to support both a uint16 and a uint64 test layer here.
+  const valueAt444 = yield call(() => api.data.getUnmappedDataValue(tracingId, [4, 4, 4], 0));
+  // getUnmappedDataValue returns whichever native type (number or bigint) matches the layer's
+  // element class, so compare via Number() to support both a uint16 and a uint64 test layer here.
   expect(Number(valueAt444)).toBe(4);
   // Once again, we wait for FINISH_MAPPING_INITIALIZATION because the mapping is updated
   // for the keys that are found in the newly loaded bucket.

@@ -13,6 +13,7 @@ import {
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { setMappingAction, setMappingEnabledAction } from "viewer/model/actions/settings_actions";
+import { waitForDataReloadAfterMappingChange } from "viewer/model/sagas/volume/mapping_saga";
 import type {
   ActiveMappingInfo,
   Segment,
@@ -144,6 +145,8 @@ export function withMappingActivationConfirmation(
               ).mappingStatus === MappingStatusEnum.DISABLED,
             100,
           );
+          // Unlike the activation, the deactivation finishes before the data was reloaded.
+          await waitForDataReloadAfterMappingChange(layerName);
         }
 
         if (originalOnClick) {

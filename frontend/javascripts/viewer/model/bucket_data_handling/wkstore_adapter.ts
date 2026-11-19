@@ -7,14 +7,14 @@ import window from "libs/window";
 import chunk from "lodash-es/chunk";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3 } from "viewer/constants";
-import constants, { MappingStatusEnum } from "viewer/constants";
+import constants from "viewer/constants";
 import {
   getByteCountFromLayer,
   getMagInfo,
-  getMappingInfo,
   isSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getServerMappingName,
   getVolumeTracingById,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -99,12 +99,15 @@ export type BucketRequestResult =
   | { type: "empty" }
   | { type: "failure" };
 
-// With applyServerMapping: false, the active agglomerate mapping is not applied by the server, so
-// that the unmapped data is returned even if the buckets of the layer are usually requested mapped.
+// serverMappingName is the agglomerate mapping that the server should apply to segmentation data
+// (null for unmapped data). It defaults to the one with which the buckets of the layer are
+// currently requested (see getServerMappingName).
 export async function requestWithFallback(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
-  { applyServerMapping = true }: { applyServerMapping?: boolean } = {},
+  {
+    serverMappingName = getServerMappingName(Store.getState(), layerInfo.name),
+  }: { serverMappingName?: string | null } = {},
 ): Promise<Array<BucketRequestResult>> {
   const state = Store.getState();
   const datasetId = state.dataset.id;
@@ -137,7 +140,7 @@ export async function requestWithFallback(
     maybeVolumeTracing,
     maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
     false,
-    applyServerMapping,
+    serverMappingName,
   );
   // Only empty buckets are eligible for the fallback lookup below. A failure must not be
   // replaced by fallback-layer data, since that data would lack the annotated changes.
@@ -169,7 +172,7 @@ export async function requestWithFallback(
     maybeVolumeTracing,
     maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
     true,
-    applyServerMapping,
+    serverMappingName,
   );
   return bucketResults.map((result, idx) => {
     if (result.type === "empty") {
@@ -188,30 +191,14 @@ async function requestFromStore(
   maybeVolumeTracing: VolumeTracing | null | undefined,
   maybeAnnotationId: string | undefined,
   isVolumeFallback: boolean,
-  applyServerMapping: boolean,
+  serverMappingName: string | null,
 ): Promise<Array<BucketRequestResult>> {
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
 
   // Mappings can be applied in the frontend or on the server.
-  const agglomerateMappingNameToApplyOnServer = (() => {
-    if (!isSegmentation || !applyServerMapping) {
-      return null;
-    }
-    if (needsLocalHdf5Mapping(state, layerInfo.name)) {
-      return null;
-    }
-    const activeMapping = getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      layerInfo.name,
-    );
-    return activeMapping != null && // Start to request mapped data during mapping activation phase already
-      activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
-      activeMapping.mappingType !== "JSON"
-      ? activeMapping.mappingName
-      : null;
-  })();
+  const agglomerateMappingNameToApplyOnServer = isSegmentation ? serverMappingName : null;
 
   const magInfo = getMagInfo(layerInfo.mags);
   const version =

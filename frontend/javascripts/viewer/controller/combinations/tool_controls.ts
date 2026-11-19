@@ -55,6 +55,7 @@ import {
   handleFloodFill,
   handleMoveForDrawOrErase,
   handlePickCell,
+  warnIfMappingIsHiddenByZoomLimit,
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { isSkeletonLayerVisible } from "viewer/model/accessors/skeletontracing_accessor";
@@ -1419,13 +1420,18 @@ export class ProofreadToolController extends ToolController {
     }
 
     const state = Store.getState();
+    // All of the following operate on the agglomerate at the clicked position.
+    const volumeTracing = getActiveSegmentationTracing(state);
+    if (volumeTracing != null && warnIfMappingIsHiddenByZoomLimit(volumeTracing.tracingId)) {
+      return;
+    }
     const globalPosition = calculateGlobalPos(state, pos).rounded;
     const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
     const ctrlOrMetaKey = event.ctrlKey || event.metaKey;
     if (isMultiSplitActive && ctrlOrMetaKey) {
       const { unmappedId: unmappedSegmentId, mappedId: mappedSegmentId } =
         getSegmentIdsAtPosition(globalPosition);
-      if (unmappedSegmentId === 0n || mappedSegmentId === 0n) {
+      if (unmappedSegmentId == null || unmappedSegmentId === 0n || mappedSegmentId === 0n) {
         // No valid ids were found, ignore action.
         return;
       }

@@ -137,7 +137,7 @@ export default function VoxelValueTooltip() {
                 positionInLayer.map((el) => Math.floor(el)) as Vector3,
                 magIndex,
                 additionalCoordinates,
-                true,
+                undefined,
                 channelIndex,
               ),
             ),

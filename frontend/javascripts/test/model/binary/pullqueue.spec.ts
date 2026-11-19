@@ -46,8 +46,11 @@ vi.mock("viewer/store", function () {
             ],
           },
         },
-        tracing: {
+        annotation: {
           volumes: [{ tracingId: "volumeTracingId" }],
+        },
+        temporaryConfiguration: {
+          activeMappingByLayer: {},
         },
         datasetConfiguration: {
           renderMissingDataBlack: true,

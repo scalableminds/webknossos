@@ -1,6 +1,5 @@
 import ErrorHandling from "libs/error_handling";
 import { V3, V4 } from "libs/mjs";
-import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
 import { mod, union } from "libs/utils";
 import keyBy from "lodash-es/keyBy";
@@ -641,10 +640,12 @@ class DataCube {
     return usableZoomStep;
   }
 
+  // Returns the value at the given voxel as contained in the loaded bucket (0 if the bucket isn't
+  // loaded). For segmentation layers, this is the unmapped id unless the server applies a mapping
+  // (see getServerMappingName). Use the front-end API to get the rendered id.
   getDataValue(
     _voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
-    mapping: Mapping | null | undefined,
     zoomStep: number = 0,
     channelIndex: number = 0,
   ): NumberLike {
@@ -660,17 +661,7 @@ class DataCube {
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep, channelIndex);
 
     if (bucket.hasData()) {
-      const data = bucket.getData();
-      const dataValue = data[voxelIndex];
-
-      if (mapping) {
-        const mappedValue = new NumberLikeMapWrapper(mapping).get(dataValue);
-        if (mappedValue != null) {
-          return mappedValue;
-        }
-      }
-
-      return dataValue;
+      return bucket.getData()[voxelIndex];
     }
 
     return 0;

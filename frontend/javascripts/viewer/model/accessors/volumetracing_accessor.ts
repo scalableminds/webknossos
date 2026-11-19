@@ -1033,6 +1033,38 @@ export const getBucketRetrievalSourceFn =
     }),
   );
 
+// Returns the name of the agglomerate mapping that the server applies when buckets of the layer
+// are requested, or null if the buckets are requested unmapped.
+export function getServerMappingName(state: WebknossosState, layerName: string): string | null {
+  const bucketRetrievalSource = getBucketRetrievalSourceFn(layerName)(state);
+  return bucketRetrievalSource[0] === "REQUESTED-WITH-MAPPING" ? bucketRetrievalSource[1] : null;
+}
+
+// The datastore applies agglomerate mappings only to mags up to MAX_MAG_FOR_AGGLOMERATE_MAPPING
+// (see BinaryDataService). Returns the mapping that the server actually applies if data of the
+// given mag is requested with the given mapping.
+export function getServerMappingNameForMag(
+  serverMappingName: string | null,
+  mag: Vector3,
+): string | null {
+  return Math.max(...mag) <= MAX_MAG_FOR_AGGLOMERATE_MAPPING ? serverMappingName : null;
+}
+
+// Returns true if a mapping is active for the layer, but isn't rendered, because the zoom limit
+// for mappings is exceeded (the server doesn't apply it to coarse mags and the GPU mapping is
+// disabled). Functionality that needs the mapped segment id at a position is disabled then,
+// since the user sees unmapped segments.
+export function isMappingHiddenByZoomLimit(state: WebknossosState, layerName: string): boolean {
+  const { mappingStatus } = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
+  return (
+    mappingStatus !== MappingStatusEnum.DISABLED &&
+    isZoomThresholdExceededForAgglomerateMapping(state, layerName)
+  );
+}
+
 export function getReadableNameOfVolumeLayer(
   layer: APIDataLayer,
   tracing: APIAnnotation | StoreAnnotation,

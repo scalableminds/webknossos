@@ -63,7 +63,6 @@ import {
   getLayerByName,
   getMagInfo,
   getMappingInfo,
-  getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -88,18 +87,18 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
-  getBucketRetrievalSourceFn,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
   getRequestedOrVisibleSegmentationLayerEnforced,
   getSegmentColorAsRGBA,
   getSegmentsForLayer,
+  getServerMappingName,
+  getServerMappingNameForMag,
   getVolumeTracingById,
   getVolumeTracingByNameOrActive,
   getVolumeTracings,
   hasVolumeTracings,
-  needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchGetNewIdAsync,
@@ -173,7 +172,7 @@ import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_a
 import type DataLayer from "viewer/model/data_layer";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
-import { mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
+import { mapIdAsRendered } from "viewer/model/helpers/mapped_id_lookup";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
 import {
@@ -229,6 +228,14 @@ type TransformSpec =
   | { type: "translate"; args: Vector3 };
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
+const shownDeprecationWarnings = new Set<string>();
+function warnAboutDeprecationOnce(key: string, message: string) {
+  if (!shownDeprecationWarnings.has(key)) {
+    shownDeprecationWarnings.add(key);
+    console.warn(message);
+  }
+}
+
 function assertExists<T>(value: any, message: string): asserts value is NonNullable<T> {
   if (value == null) {
     throw new Error(message);
@@ -1770,7 +1777,7 @@ class DataApi {
    * @example
    * const position = [123, 123, 123];
    * const segmentationLayerName = "segmentation";
-   * const segmentId = await api.data.getDataValue(segmentationLayerName, position);
+   * const segmentId = await api.data.getUnmappedDataValue(segmentationLayerName, position);
    * const treeId = api.tracing.getActiveTreeId();
    * const mapping = {[segmentId]: treeId}
    *
@@ -1936,11 +1943,18 @@ class DataApi {
   }
 
   /**
-   * Returns raw binary data for a given layer, position and zoom level. If the zoom
+   * Returns the data value for a given layer, position and zoom level. If the zoom
    * level is not provided, the first magnification will be used. If this
    * mag does not exist, the next existing mag will be used.
    * If the zoom level is provided and points to a not existent mag,
    * 0 will be returned.
+   *
+   * For segmentation layers, the returned segment id is the one that is rendered (once the
+   * needed data is loaded), i.e., the mapped id if a mapping is active. Note that mappings
+   * aren't rendered if the zoom limit for agglomerate mappings is exceeded (the server doesn't
+   * apply them to coarse mags and a locally applied mapping is disabled). The unmapped id is
+   * returned then. Use getUnmappedDataValue to always get the unmapped id.
+   * The parameter respectMapping is deprecated and ignored.
    *
    * @example
    * // Return the greyscale value for a bucket
@@ -1954,58 +1968,48 @@ class DataApi {
    * @example
    * // Get the segmentation id for the first volume tracing layer
    * const segmentId = await api.data.getDataValue(api.data.getVolumeTracingLayerIds()[0], position);
-   *
-   * Note that if an agglomerate mapping is applied by the server (e.g., outside of proofreading),
-   * the returned segment id is the mapped id. Use getUnmappedDataValue to always get the unmapped id.
    */
   async getDataValue(
     layerName: string,
     position: Vector3, // in layer space
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
-    respectMapping: boolean = false,
+    respectMapping?: boolean,
     channelIndex: number = 0,
   ): Promise<NumberLike> {
-    const state = Store.getState();
-    const {
-      cube,
-      zoomStep,
-      bucketAddress,
-      additionalCoordinates: resolvedAdditionalCoordinates,
-    } = this.getBucketAddressOfPosition(layerName, position, _zoomStep, additionalCoordinates);
-    await this.getLoadedBucket(layerName, bucketAddress);
-
-    let mapping = null;
-    if (respectMapping) {
-      const activeMappingInfo = getMappingInfoOrNull(
-        state.temporaryConfiguration.activeMappingByLayer,
-        layerName,
+    if (respectMapping !== undefined) {
+      warnAboutDeprecationOnce(
+        "getDataValue.respectMapping",
+        "The parameter respectMapping of api.data.getDataValue is deprecated and ignored. getDataValue returns the rendered (mapped) segment id. Use api.data.getUnmappedDataValue to get the unmapped segment id.",
       );
-      mapping =
-        activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
-          ? activeMappingInfo.mapping
-          : null;
     }
-
-    // Bucket has been loaded by now or was loaded already
-    const dataValue = cube.getDataValue(
+    if (!this.model.getLayerByName(layerName).isSegmentation) {
+      return this.readDataValue(
+        layerName,
+        position,
+        _zoomStep,
+        additionalCoordinates,
+        channelIndex,
+        false,
+      );
+    }
+    return this.readMappedSegmentId(
+      layerName,
       position,
-      resolvedAdditionalCoordinates,
-      mapping,
-      zoomStep,
+      _zoomStep,
+      additionalCoordinates,
       channelIndex,
+      false,
     );
-    return dataValue;
   }
 
   /**
    * Returns the unmapped segment id for a given segmentation layer, position and zoom level.
    * The parameters behave like the ones of getDataValue.
    *
-   * Unlike getDataValue, the returned id is the unmapped id even if an agglomerate mapping is
-   * applied by the server (e.g., outside of proofreading). In that case, the bucket is requested
-   * again without the mapping (and not cached), because the loaded buckets contain the mapped ids.
-   * Otherwise, the loaded buckets contain the unmapped ids and are used as in getDataValue.
+   * Unlike getDataValue, the returned id is the unmapped id even if a mapping is active.
+   * If the server applies an agglomerate mapping to the loaded buckets (e.g., outside of
+   * proofreading), the bucket is requested again without the mapping (and not cached).
    *
    * @example
    * // Get the unmapped segment id even if an agglomerate mapping is active
@@ -2018,28 +2022,90 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
     channelIndex: number = 0,
   ): Promise<NumberLike> {
-    if (getBucketRetrievalSourceFn(layerName)(Store.getState())[0] !== "REQUESTED-WITH-MAPPING") {
-      return this.getDataValue(
-        layerName,
-        position,
-        _zoomStep,
-        additionalCoordinates,
-        false,
-        channelIndex,
-      );
-    }
-    const { cube, zoomStep, bucketAddress } = this.getBucketAddressOfPosition(
+    return this.readDataValue(
       layerName,
       position,
       _zoomStep,
       additionalCoordinates,
+      channelIndex,
+      true,
     );
+  }
+
+  /**
+   * @deprecated Use getDataValue, which returns the mapped segment id while the mapping is
+   * rendered.
+   *
+   * Returns the mapped segment id for a given segmentation layer, position and zoom level as a
+   * bigint (or the unmapped id if no mapping is active). The parameters behave like the ones of
+   * getDataValue. Unlike getDataValue, a locally applied mapping is also applied if the zoom
+   * limit for agglomerate mappings is exceeded.
+   */
+  async getMappedDataValue(
+    layerName: string,
+    position: Vector3, // in layer space
+    zoomStep: number | null | undefined = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+  ): Promise<bigint> {
+    warnAboutDeprecationOnce(
+      "getMappedDataValue",
+      "api.data.getMappedDataValue is deprecated. Use api.data.getDataValue, which returns the mapped segment id unless the mapping isn't rendered because of the zoom level.",
+    );
+    return toBigInt(
+      await this.readMappedSegmentId(layerName, position, zoomStep, additionalCoordinates, 0, true),
+    );
+  }
+
+  private async readMappedSegmentId(
+    layerName: string,
+    position: Vector3,
+    zoomStep: number | null | undefined,
+    additionalCoordinates: AdditionalCoordinate[] | null,
+    channelIndex: number,
+    ignoreZoomLimit: boolean,
+  ): Promise<NumberLike> {
+    const id = await this.readDataValue(
+      layerName,
+      position,
+      zoomStep,
+      additionalCoordinates,
+      channelIndex,
+      false,
+    );
+    const mappedId = await mapIdAsRendered(layerName, toBigInt(id), { ignoreZoomLimit });
+    return typeof id === "number" ? Number(mappedId) : mappedId;
+  }
+
+  // Reads the value at the position from the loaded bucket. With unmapped, the bucket is
+  // requested without the mapping (and not cached) if the server applies an agglomerate mapping
+  // to the loaded buckets of that mag.
+  private async readDataValue(
+    layerName: string,
+    position: Vector3,
+    _zoomStep: number | null | undefined,
+    _additionalCoordinates: AdditionalCoordinate[] | null,
+    channelIndex: number,
+    unmapped: boolean,
+  ): Promise<NumberLike> {
+    const { cube, zoomStep, bucketAddress, additionalCoordinates } =
+      this.getBucketAddressOfPosition(layerName, position, _zoomStep, _additionalCoordinates);
     if (!cube.magInfo.hasIndex(zoomStep)) {
       return 0;
     }
+    const isMappedByServer =
+      getServerMappingNameForMag(
+        getServerMappingName(Store.getState(), layerName),
+        cube.magInfo.getMagByIndexOrThrow(zoomStep),
+      ) != null;
+    if (!unmapped || !isMappedByServer) {
+      await cube.getLoadedBucket(bucketAddress);
+      // Read via the cube, because the additional coordinates might have changed while the
+      // bucket was loading.
+      return cube.getDataValue(position, additionalCoordinates, zoomStep, channelIndex);
+    }
     const layerInfo = getLayerByName(Store.getState().dataset, layerName);
     const [result] = await requestWithFallback(layerInfo, [bucketAddress], {
-      applyServerMapping: false,
+      serverMappingName: null,
     });
     if (result.type === "failure") {
       throw new Error(`Could not load the data of layer ${layerName} at position ${position}.`);
@@ -2076,46 +2142,6 @@ class DataApi {
       additionalCoordinates: resolvedAdditionalCoordinates,
       bucketAddress,
     };
-  }
-
-  /**
-   * Returns the mapped (agglomerate) id for the segment at the given position, respecting the
-   * active HDF5 mapping. For layers without a local HDF5 mapping, delegates to getDataValue
-   * with respectMapping enabled. For layers with a local HDF5 mapping (proofread mode or
-   * editable mapping), looks up the id in the local mapping and fetches from the server if
-   * the id is not cached yet.
-   */
-  async getMappedDataValue(
-    layerName: string,
-    position: Vector3,
-    zoomStep: number | null | undefined = null,
-    additionalCoordinates: AdditionalCoordinate[] | null = null,
-  ): Promise<bigint> {
-    const state = Store.getState();
-
-    if (!needsLocalHdf5Mapping(state, layerName)) {
-      return toBigInt(
-        await this.getDataValue(layerName, position, zoomStep, additionalCoordinates, true),
-      );
-    }
-
-    const unmappedId = toBigInt(
-      await this.getDataValue(layerName, position, zoomStep, additionalCoordinates),
-    );
-
-    const { mappingName } = getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      layerName,
-    );
-    if (mappingName == null) {
-      throw new Error(`No active mapping for layer ${layerName}`);
-    }
-
-    const mappedId = await mapIdAsync(layerName, unmappedId);
-    if (mappedId == null) {
-      throw new Error(`Could not map id ${unmappedId} at position ${position}`);
-    }
-    return mappedId;
   }
 
   /**

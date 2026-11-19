@@ -9,6 +9,7 @@ import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_a
 import {
   getBucketRetrievalSourceFn,
   getEditableMappingForVolumeTracingId,
+  isZoomThresholdExceededForAgglomerateMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type {
   EditableMapping,
@@ -80,17 +81,9 @@ export async function mapIdAsync(layerName: string, unmappedId: bigint): Promise
     return mappedId;
   }
 
-  let fetchedEntries: Mapping;
+  let fetchedId: bigint | null;
   try {
-    fetchedEntries = await fetchAgglomeratesForSegmentIds(
-      state.dataset,
-      state.annotation,
-      getEditableMappingForVolumeTracingId(state, layerName),
-      layerName,
-      getLayerByName(state.dataset, layerName),
-      mappingName,
-      new Set([unmappedId]),
-    );
+    fetchedId = await fetchMappedId(state, layerName, mappingName, unmappedId);
   } catch (exception) {
     // The callers handle null (e.g., with a toast), so a failed request doesn't crash the sagas.
     console.error(`Could not fetch the mapped id for ${unmappedId}:`, exception);
@@ -107,6 +100,63 @@ export async function mapIdAsync(layerName: string, unmappedId: bigint): Promise
   ) {
     return null;
   }
+  return fetchedId;
+}
+
+// Returns the id as which the given id (as contained in the bucket data) is rendered:
+// - If no mapping is applied locally, the bucket data already contains the rendered id.
+// - If the zoom limit for agglomerate mappings is exceeded, the local mapping isn't applied
+//   during rendering. With ignoreZoomLimit, the id is mapped anyway.
+// - If the local HDF5 mapping doesn't know the id (yet), the mapped id is fetched from the
+//   server (0 if the server has no entry for it). Throws if that fails.
+// - While the data of a JSON mapping isn't loaded yet, the id isn't mapped.
+export async function mapIdAsRendered(
+  layerName: string,
+  id: bigint,
+  { ignoreZoomLimit = false }: { ignoreZoomLimit?: boolean } = {},
+): Promise<bigint> {
+  const state = Store.getState();
+  const bucketRetrievalSource = getBucketRetrievalSourceFn(layerName)(state);
+  if (
+    id === 0n ||
+    bucketRetrievalSource[0] === "REQUESTED-WITH-MAPPING" ||
+    bucketRetrievalSource[1] === "NO-LOCAL-MAPPING-APPLIED" ||
+    (!ignoreZoomLimit && isZoomThresholdExceededForAgglomerateMapping(state, layerName))
+  ) {
+    return id;
+  }
+  const locallyMappedId = mapId(state, layerName, id);
+  if (locallyMappedId != null) {
+    return locallyMappedId;
+  }
+  const { mappingType } = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
+  if (mappingType === "JSON") {
+    return id;
+  }
+  const fetchedId = await fetchMappedId(state, layerName, bucketRetrievalSource[2], id);
+  return fetchedId ?? 0n;
+}
+
+// Fetches the id that the given unmapped id has under the given HDF5 mapping. Returns null if the
+// server has no entry for the id.
+async function fetchMappedId(
+  state: WebknossosState,
+  layerName: string,
+  mappingName: string,
+  unmappedId: bigint,
+): Promise<bigint | null> {
+  const fetchedEntries = await fetchAgglomeratesForSegmentIds(
+    state.dataset,
+    state.annotation,
+    getEditableMappingForVolumeTracingId(state, layerName),
+    layerName,
+    getLayerByName(state.dataset, layerName),
+    mappingName,
+    new Set([unmappedId]),
+  );
   return new NumberLikeMapWrapper(fetchedEntries).getAsBigInt(unmappedId) ?? null;
 }
 

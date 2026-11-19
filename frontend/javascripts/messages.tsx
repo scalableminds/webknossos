@@ -206,6 +206,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.segmentation_zoom_warning_agglomerate":
     "Segmentation data which is mapped using an agglomerate file cannot be rendered correctly in this magnification. Please zoom in further.",
+  "tracing.mapping_hidden_by_zoom_limit":
+    "The active mapping is not rendered at this zoom level. Please zoom in further to use this functionality.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",

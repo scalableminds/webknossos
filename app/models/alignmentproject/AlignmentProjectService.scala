@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.SectionRange
 import com.typesafe.scalalogging.LazyLogging
-import controllers.PathDeletionService
+import models.dataset.PathDeletionService
 import models.dataset.{DataStoreDAO, WKRemoteDataStoreClient}
 import models.job.{JobDAO, JobService}
 import models.user.{MultiUserDAO, User, UserDAO}

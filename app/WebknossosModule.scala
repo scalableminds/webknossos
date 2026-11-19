@@ -24,7 +24,7 @@ import models.task.TaskService
 import models.user.*
 import models.user.time.TimeSpanService
 import models.voxelytics.LokiClient
-import security.CertificateValidationService
+import security.{CertificateValidationService, ScopedApiTokenService}
 import telemetry.SlackNotificationService
 import utils.sql.SqlClient
 
@@ -58,6 +58,7 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[AlignmentProjectService]).asEagerSingleton()
     bind(classOf[AnalyticsService]).asEagerSingleton()
     bind(classOf[AnnotationReservedIdsService]).asEagerSingleton()
+    bind(classOf[ScopedApiTokenService]).asEagerSingleton()
     bind(classOf[DatasetDAOLike]).to(classOf[DatasetDAO])
   }
 }

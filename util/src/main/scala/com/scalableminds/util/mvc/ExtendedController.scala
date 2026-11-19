@@ -205,8 +205,15 @@ trait ValidationHelpers {
 }
 
 trait RequestTokenHelper {
+  // The same headers as the WEBKNOSSOS authentication accepts, in the same order: Authorization: Bearer is only
+  // consulted if X-Auth-Token is absent.
   implicit protected def tokenContextForRequest(implicit request: Request[Any]): TokenContext =
-    TokenContext(request.target.getQueryParameter("token").orElse(request.headers.get("X-Auth-Token")))
+    TokenContext(
+      request.target
+        .getQueryParameter("token")
+        .orElse(TokenHeaders.authToken(request))
+        .orElse(TokenHeaders.bearerToken(request))
+    )
 }
 
 trait ExtendedController

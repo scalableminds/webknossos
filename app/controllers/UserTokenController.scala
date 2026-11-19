@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.box.{Box, Full}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -22,7 +22,18 @@ import models.user.{User, UserService}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
-import security.{RandomIDGenerator, URLSharing, WkEnv, WkSilhouetteEnvironment}
+import play.silhouette.api.actions.UserAwareRequest
+import play.silhouette.impl.authenticators.BearerTokenAuthenticator
+import security.{
+  RandomIDGenerator,
+  Scope,
+  ScopeMode,
+  ScopeSet,
+  ScopedApiTokenService,
+  URLSharing,
+  WkEnv,
+  WkSilhouetteEnvironment
+}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -50,6 +61,7 @@ class UserTokenController @Inject() (
     jobDAO: JobDAO,
     alignmentProjectDAO: AlignmentProjectDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    scopedApiTokenService: ScopedApiTokenService,
     conf: WkConf,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -61,7 +73,19 @@ class UserTokenController @Inject() (
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        bearerTokenService.createAndInitDataStoreTokenForUser(user)
+        scopedApiTokenOf(request) match {
+          // If the request is by a scopedApiToken, this will also yield a scopedApiToken so permissions stay scoped.
+          // The datastore accepts those too.
+          case Some(scopedApiTokenValue) =>
+            for {
+              scopedApiToken <- scopedApiTokenService.findValid(scopedApiTokenValue) ?~> "Invalid token"
+              newToken <- scopedApiTokenService.createFrom(
+                scopedApiToken,
+                conf.Silhouette.TokenAuthenticator.scopedApiTokenExpiry
+              )
+            } yield newToken.value
+          case None => bearerTokenService.createAndInitDataStoreTokenForUser(user)
+        }
       case None => Fox.successful("")
     }
     for {
@@ -87,6 +111,7 @@ class UserTokenController @Inject() (
        - the global webknossosToken (allow everything)
        - a user token (allow what that user may do)
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
+       - A scoped access token (allow what that user may do *and* is allowed by the token’s scope)
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(implicit
       ec: ExecutionContext
@@ -95,23 +120,81 @@ class UserTokenController @Inject() (
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
+        scopeCheck <- checkScopes(token, accessRequest)
+        scopeDenial = denialFor(scopeCheck, accessRequest)
         userBox <- bearerTokenService.userForTokenOpt(token).shiftBox
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(using DBAccessContext(userBox.toOption))
-        answer <- accessRequest.resourceType match {
-          case AccessResourceType.dataset =>
-            handleDataSetAccess(accessRequest.resourceId, accessRequest.mode, userBox)(using sharingTokenAccessCtx)
-          case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
-          case AccessResourceType.annotation =>
-            handleAnnotationAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
-          case AccessResourceType.jobExport =>
-            handleJobExportAccess(accessRequest.resourceId, accessRequest.mode, userBox)
-          case AccessResourceType.alignmentProject =>
-            handleAlignmentProjectAccess(accessRequest.resourceId, accessRequest.mode, userBox)
-          case _ =>
-            Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
-        }
+        answer <-
+          if (scopeDenial.isDefined) Fox.successful(UserAccessAnswer(granted = false, scopeDenial))
+          else
+            accessRequest.resourceType match {
+              case AccessResourceType.dataset =>
+                handleDataSetAccess(accessRequest.resourceId, accessRequest.mode, userBox)(using sharingTokenAccessCtx)
+              case AccessResourceType.tracing =>
+                handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
+              case AccessResourceType.annotation =>
+                handleAnnotationAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
+              case AccessResourceType.jobExport =>
+                handleJobExportAccess(accessRequest.resourceId, accessRequest.mode, userBox)
+              case AccessResourceType.alignmentProject =>
+                handleAlignmentProjectAccess(accessRequest.resourceId, accessRequest.mode, userBox)
+              case _ =>
+                Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
+            }
       } yield Ok(Json.toJson(answer.copy(userId = userBox.toOption.map(_._id))))
+    }
+
+  // The authenticator has already been validated at this point, so recognizing the token type is enough.
+  private def scopedApiTokenOf(request: UserAwareRequest[WkEnv, ?]): Option[String] =
+    request.authenticator.map(_.actualAuthenticator).collect {
+      case a: BearerTokenAuthenticator if scopedApiTokenService.looksLikeScopedApiTokenValue(a.id) => a.id
+    }
+
+  private enum ScopeCheck {
+    case Allowed
+    // A value that looks like a scoped API token but is not a valid one (expired, revoked, or its grant revoked).
+    case InvalidToken
+    case MissingScope(scopes: ScopeSet)
+  }
+
+  /*
+   * Datastore/Tracingstore access using scoped tokens must also be checked against their scopes.
+   * On pure WK side this is handled by filters.ScopeFilter.
+   */
+  private def checkScopes(token: Option[String], accessRequest: UserAccessRequest)(implicit
+      ec: ExecutionContext
+  ): Fox[ScopeCheck] =
+    token match {
+      case None             => Fox.successful(ScopeCheck.Allowed) // Not a scoped token, no scope restrictions.
+      case Some(tokenValue) =>
+        scopedApiTokenService.findValid(tokenValue).shiftBox.flatMap {
+          // The scopes come from the token's grant rather than the token, so that changing them takes effect at once.
+          // See ScopedApiTokenService for how its cache keeps it that way.
+          case Full(scopedApiToken) =>
+            val allowed = Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
+              scopedApiToken.scopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
+            }
+            Fox.successful(if (allowed) ScopeCheck.Allowed else ScopeCheck.MissingScope(scopedApiToken.scopes))
+          case Empty =>
+            Fox.successful(
+              if (scopedApiTokenService.looksLikeScopedApiTokenValue(tokenValue)) ScopeCheck.InvalidToken
+              else ScopeCheck.Allowed
+            )
+          case failure: Failure => failure.toFox
+        }
+    }
+
+  // Like filters.ScopeFilter: scoped tokens that are invalid or lack the required scope are denied.
+  private def denialFor(scopeCheck: ScopeCheck, accessRequest: UserAccessRequest): Option[String] =
+    scopeCheck match {
+      case ScopeCheck.Allowed              => None
+      case ScopeCheck.InvalidToken         => Some("Not allowed for this token: it is invalid or expired.")
+      case ScopeCheck.MissingScope(scopes) =>
+        logger.info(
+          s"Denying ${accessRequest.mode} access to ${accessRequest.resourceType} " +
+            s"${accessRequest.resourceId.getOrElse("")} for scoped token (scopes $scopes): missing scope"
+        )
+        Some("Not allowed for this token, missing scope.")
     }
 
   private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(using

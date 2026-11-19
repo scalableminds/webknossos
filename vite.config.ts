@@ -112,8 +112,8 @@ const viteConfig = {
         target: "http://localhost:8080",
         changeOrigin: true,
       },
-      // Proxy to Tracingstore / Datastore
-      "^/(api|data(?!set)|tracings)": {
+      // Proxy to Backend / Tracingstore / Datastore (.well-known serves the OAuth metadata for MCP clients)
+      "^/(api|data(?!set)|tracings|\\.well-known)": {
         target: "http://localhost:9001",
         changeOrigin: true,
       },

@@ -129,6 +129,10 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
 
     val operatorData: String = get[String]("webKnossos.operatorData")
 
+    object Mcp {
+      val allowInsecureClientMetadataUrls: Boolean = get[Boolean]("webKnossos.mcp.allowInsecureClientMetadataUrls")
+    }
+
     object Datasets {
       object UploadToPaths {
         val prefixes: Option[Seq[String]] =
@@ -150,6 +154,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,
+        Mcp,
         Datasets
       )
   }
@@ -188,6 +193,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
     val passkeysEnabled: Boolean = get[Boolean]("features.passkeysEnabled")
+    val mcpEnabled: Boolean = get[Boolean]("features.mcpEnabled")
     val registerToDefaultOrgaEnabled: Boolean = get[Boolean]("features.registerToDefaultOrgaEnabled")
     val supportAiAgentUrl: Option[String] = getOptional[String]("features.supportAiAgentUrl")
   }
@@ -247,6 +253,8 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
       val jobExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.jobExpiry")
+      val scopedApiTokenExpiry: FiniteDuration =
+        get[FiniteDuration]("silhouette.tokenAuthenticator.scopedApiTokenExpiry")
       val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
       val authenticatorIdleTimeout: FiniteDuration =
         get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")

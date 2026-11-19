@@ -1,3 +1,6 @@
 -> /api/                         webknossos.versioned.Routes
 
 GET   /.well-known/security.txt  controllers.Application.getSecurityTxt
+GET   /.well-known/oauth-authorization-server controllers.OAuthController.authorizationServerMetadata()
+GET   /.well-known/oauth-protected-resource controllers.OAuthController.protectedResourceMetadata()
+GET   /.well-known/oauth-protected-resource/api/mcp controllers.OAuthController.protectedResourceMetadata()

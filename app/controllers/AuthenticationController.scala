@@ -25,6 +25,7 @@ import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.Silhouette
 import play.silhouette.impl.providers.CredentialsProvider
+import oauth.OAuthService
 import security.*
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -75,6 +76,8 @@ class AuthenticationController @Inject() (
     userDAO: UserDAO,
     slackNotificationService: SlackNotificationService,
     tokenDAO: TokenDAO,
+    oauthService: OAuthService,
+    scopedApiTokenService: ScopedApiTokenService,
     multiUserDAO: MultiUserDAO,
     accountEmailService: AccountEmailService,
     organizationEmailService: OrganizationEmailService,
@@ -412,11 +415,17 @@ class AuthenticationController @Inject() (
   }
 
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id)).flatMap {
-      case Some(token) =>
-        Fox.fromFuture(combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted))))
-      case _ => Fox.successful(Ok)
-    }
+    for {
+      _ <- scopedApiTokenService.revokeAllForUser(request.identity._id)
+      tokenOpt <- Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id))
+      result <- tokenOpt match {
+        case Some(token) =>
+          Fox.fromFuture(
+            combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted)))
+          )
+        case _ => Fox.successful(Ok)
+      }
+    } yield result
   }
 
   def logout: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
@@ -851,6 +860,7 @@ class AuthenticationController @Inject() (
       _ <- userDAO.logOutEverywhereByMultiUserId(request.identity._multiUser)
       userIds <- userDAO.findIdsByMultiUserId(request.identity._multiUser)
       _ = userIds.map(userService.removeUserFromCache)
+      _ <- oauthService.revokeAllForUsers(userIds)
       _ <- tokenDAO.deleteDataStoreTokensForMultiUser(request.identity._multiUser)
     } yield Ok
   }

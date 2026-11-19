@@ -1,5 +1,6 @@
 package security
 
+import com.scalableminds.util.mvc.TokenHeaders
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import play.silhouette.api.*
@@ -78,9 +79,20 @@ case class CombinedAuthenticatorService(
     for {
       optionCookie <- cookieAuthenticatorService.retrieve(using request)
       optionCookieUnlessSignedOutEverywhere <- cookieUnlessSignedOutEverywhere(optionCookie)
-      optionToken <- tokenAuthenticatorService.retrieve(using request)
-    } yield optionCookieUnlessSignedOutEverywhere.map(CombinedAuthenticator(_)).orElse {
-      optionToken.map(CombinedAuthenticator(_))
+      // Silhouette only reads the X-Auth-Token header. Authorization: Bearer is handled separately below, and only if
+      // X-Auth-Token is absent. Falling back to it when X-Auth-Token holds an unknown token would let a request be
+      // authenticated by a token that filters.ScopeFilter did not check, see TokenHeaders.
+      optionTokenOrBearer <-
+        if (TokenHeaders.authToken(request).isDefined) tokenAuthenticatorService.retrieve(using request)
+        else retrieveByAuthorizationHeader(request)
+    } yield optionCookieUnlessSignedOutEverywhere
+      .map(CombinedAuthenticator(_))
+      .orElse(optionTokenOrBearer.map(CombinedAuthenticator(_)))
+
+  private def retrieveByAuthorizationHeader(request: RequestHeader): Future[Option[BearerTokenAuthenticator]] =
+    TokenHeaders.bearerToken(request) match {
+      case None        => Future.successful(None)
+      case Some(value) => tokenDao.findOneUsableForAuthentication(value).toFutureOption
     }
 
   private def cookieUnlessSignedOutEverywhere(

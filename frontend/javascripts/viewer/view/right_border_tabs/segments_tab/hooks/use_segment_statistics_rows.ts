@@ -27,6 +27,8 @@ type Options = {
   segmentGroups: SegmentGroup[];
   // Set to false to defer fetching, e.g. until the user asks for the statistics.
   enabled?: boolean;
+  // Change this to force a refetch, e.g. after the segments were edited.
+  refreshToken?: number | null;
 };
 
 /*
@@ -34,7 +36,13 @@ type Options = {
  * the specs that describe how each statistic is rendered and exported. Views (table, CSV export)
  * should build on this instead of on the raw statistics.
  */
-export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabled }: Options) {
+export function useSegmentStatisticsRows({
+  layer,
+  segments,
+  segmentGroups,
+  enabled,
+  refreshToken,
+}: Options) {
   const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = dataset.dataSource.scale;
 
@@ -62,7 +70,7 @@ export function useSegmentStatisticsRows({ layer, segments, segmentGroups, enabl
     sphericities,
     centersOfMass,
     covarianceMatrices,
-  } = useSegmentStatistics({ layer, segmentIds, enabled });
+  } = useSegmentStatistics({ layer, segmentIds, enabled, refreshToken });
 
   const getGroupIdForSegment = useCallback(
     // Segments without a groupId belong to the (virtual) root group.

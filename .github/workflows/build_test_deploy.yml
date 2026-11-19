@@ -93,7 +93,7 @@ jobs:
 
       # No sbt dependency cache here: this job only resolves the build's plugins. It would save its incomplete
       # dependency cache first, under the same key the compiling jobs need to save the full one.
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "21"
@@ -116,7 +116,7 @@ jobs:
           node-version: 22
       - run: corepack enable
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "21"
@@ -232,7 +232,7 @@ jobs:
           node-version: 22
       - run: corepack enable
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "21"

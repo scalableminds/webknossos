@@ -27,7 +27,7 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 17;
+export const currentLayoutVersion = 18;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInFlightMode = false;
@@ -227,6 +227,7 @@ const _getDefaultLayouts = () => {
       borderTabs.CommentTabView,
       borderTabs.SegmentsView,
       borderTabs.BoundingBoxTab,
+      borderTabs.BookmarksTab,
       borderTabs.ConnectomeView,
     ],
     rightBorderWidth,
@@ -237,6 +238,7 @@ const _getDefaultLayouts = () => {
     [
       borderTabs.DatasetInfoTabView,
       borderTabs.BoundingBoxTab,
+      borderTabs.BookmarksTab,
       borderTabs.SegmentsView,
       borderTabs.ConnectomeView,
     ],

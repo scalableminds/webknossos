@@ -4,6 +4,7 @@ import {
   updateMetadataOfAnnotation,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
+import { diffBookmarks } from "./bookmark_diffing";
 
 export function* diffAnnotationMetadata(
   prevAnnotation: StoreAnnotation,
@@ -22,4 +23,6 @@ export function* diffAnnotationMetadata(
       yield updateAnnotationLayerName(layer.tracingId, layer.name);
     }
   }
+
+  yield* diffBookmarks(prevAnnotation.bookmarks, annotation.bookmarks);
 }

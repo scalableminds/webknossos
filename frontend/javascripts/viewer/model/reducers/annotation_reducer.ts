@@ -4,18 +4,20 @@ import { V3 } from "libs/mjs";
 import isEqual from "lodash-es/isEqual";
 import reduce from "lodash-es/reduce";
 import uniqWith from "lodash-es/uniqWith";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
 import defaultState from "viewer/default_state";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getExtentForNewBoundingBox } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
+import { sanitizeMetadata } from "viewer/model/helpers/metadata_helpers";
 import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/store";
 import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import { applyBookmarkVersionAction } from "./reducer_helpers";
 
 const updateAnnotation = (
   state: WebknossosState,
@@ -187,6 +189,106 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const { description } = action;
       return updateAnnotation(state, {
         description,
+      });
+    }
+
+    case "ADD_BOOKMARK": {
+      // Like the backend, a bookmark with the same id is replaced (and moved to the end), so that
+      // an addBookmark that is applied twice (e.g., when incorporating updates) adds no duplicate.
+      return updateAnnotation(state, {
+        bookmarks: [
+          ...state.annotation.bookmarks.filter((bookmark) => bookmark.id !== action.bookmark.id),
+          action.bookmark,
+        ],
+      });
+    }
+
+    case "UPDATE_BOOKMARK_METADATA": {
+      const { bookmarkId, upsertEntriesByKey, removeEntriesByKey } = action;
+      // Same semantics as in the backend: existing entries are updated in place, new ones are appended.
+      const updateMetadata = (metadata: MetadataEntryProto[]) => {
+        const remainingMetadata = metadata
+          .filter((entry) => !removeEntriesByKey.includes(entry.key))
+          .map((entry) => upsertEntriesByKey.find((upsert) => upsert.key === entry.key) ?? entry);
+        const newEntries = upsertEntriesByKey.filter(
+          (upsert) => !remainingMetadata.some((entry) => entry.key === upsert.key),
+        );
+        return sanitizeMetadata([...remainingMetadata, ...newEntries]);
+      };
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId
+            ? { ...bookmark, metadata: updateMetadata(bookmark.metadata) }
+            : bookmark,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARK_NAME": {
+      const { bookmarkId, name } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId ? { ...bookmark, name } : bookmark,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARK_DESCRIPTION": {
+      const { bookmarkId, description } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId ? { ...bookmark, description } : bookmark,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARK_METADATA": {
+      const { bookmarkId, metadata } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId
+            ? { ...bookmark, metadata: sanitizeMetadata(metadata) }
+            : bookmark,
+        ),
+      });
+    }
+
+    case "DELETE_BOOKMARK": {
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.filter(
+          (bookmark) => bookmark.id !== action.bookmarkId,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARK_STATE": {
+      const { bookmarkId, state: bookmarkState, thumbnail } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId
+            ? { ...bookmark, state: bookmarkState, ...thumbnail }
+            : bookmark,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARK_THUMBNAIL": {
+      const { bookmarkId, thumbnail } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId ? { ...bookmark, ...thumbnail } : bookmark,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARKS": {
+      return updateAnnotation(state, { bookmarks: action.bookmarks });
+    }
+
+    case "SET_BOOKMARK_THUMBNAIL_VERSION":
+    case "SET_BOOKMARK_CREATED_AT_VERSION": {
+      return updateAnnotation(state, {
+        bookmarks: applyBookmarkVersionAction(state.annotation.bookmarks, action),
       });
     }
 
@@ -564,13 +666,20 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "SET_ID_RESERVATIONS": {
-      // BoundingBox reservations are annotation-wide (bounding boxes are mirrored across all
+      // BoundingBox and Bookmark reservations are annotation-wide (bounding boxes are mirrored across all
       // tracings, see updateUserBoundingBoxes above), unlike SegmentGroup/Segment reservations
       // which are handled per segmentation layer in volumetracing_reducer.ts.
-      if (action.domain !== "BoundingBox") return state;
-      return updateKey(state, "localAnnotationState", {
-        idReservationsForBoundingBoxes: action.reservations,
-      });
+      if (action.domain === "BoundingBox") {
+        return updateKey(state, "localAnnotationState", {
+          idReservationsForBoundingBoxes: action.reservations,
+        });
+      }
+      if (action.domain === "Bookmark") {
+        return updateKey(state, "localAnnotationState", {
+          idReservationsForBookmarks: action.reservations,
+        });
+      }
+      return state;
     }
 
     default:

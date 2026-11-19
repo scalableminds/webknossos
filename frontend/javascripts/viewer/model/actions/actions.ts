@@ -116,7 +116,11 @@ export const getNewIdAction = (
 // Domains for which the id reservation mechanism is actually implemented (as opposed to
 // AnnotationIdDomain, which lists all domains the back-end knows about, including ones that
 // aren't wired up on the frontend, yet).
-export type ReservableIdDomain = "SegmentGroup" | "BoundingBox";
+export type ReservableIdDomain = "SegmentGroup" | "BoundingBox" | "Bookmark";
+
+// Bookmarks belong to the annotation rather than a tracing. Their id reservations use
+// this value in place of a tracing id.
+export const ANNOTATION_SCOPED_TRACING_ID = "";
 
 export const dispatchGetNewIdAsync = async (
   dispatch: Dispatch<any>,

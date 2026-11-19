@@ -4,10 +4,7 @@ import { SoftError } from "libs/utils";
 import messages from "messages";
 import { actionChannel, call, fork, put, take, takeEvery } from "typed-redux-saga";
 import { OrthoViews, TreeTypeEnum } from "viewer/constants";
-import {
-  getLayerPositionAndRenderedZoomStep,
-  warnIfMappingIsHiddenByZoomLimit,
-} from "viewer/controller/combinations/volume_handlers";
+import { getLayerPositionAndRenderedZoomStep } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
@@ -323,8 +320,6 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const layerName = volumeTracingLayer.tracingId;
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled || volumeTracing.mappingName == null) return;
-
-  if (yield* call(warnIfMappingIsHiddenByZoomLimit, layerName)) return;
 
   yield put(updateProofreadingMarkerPositionAction(position, layerName));
 

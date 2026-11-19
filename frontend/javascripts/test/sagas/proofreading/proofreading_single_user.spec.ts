@@ -36,6 +36,11 @@ import {
   operationFinished,
 } from "./proofreading_test_utils";
 import { waitUntilNoActiveOperations } from "viewer/model/sagas/saga_helpers";
+import messages from "messages";
+import { OrthoViews } from "viewer/constants";
+import { ProofreadToolController } from "viewer/controller/combinations/tool_controls";
+import { isMappingHiddenByZoomLimit } from "viewer/model/accessors/volumetracing_accessor";
+import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -304,6 +309,36 @@ describe("Proofreading (Single User)", () => {
         );
       } finally {
         fetchAgglomerates.mockImplementation(originalImplementation!);
+      }
+    });
+    await task.toPromise();
+  });
+
+  it("should not proofread at a clicked position while the mapping isn't rendered due to the zoom level", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setZoomStepAction(1000));
+      expect(isMappingHiddenByZoomLimit(Store.getState(), tracingId)).toBe(true);
+      vi.mocked(Toast.warning).mockClear();
+      const dispatchSpy = vi.spyOn(Store, "dispatch");
+      try {
+        // Shift-click merges the agglomerate at the position into the active one.
+        ProofreadToolController.onLeftClick(
+          null as any,
+          { x: 10, y: 10 },
+          OrthoViews.PLANE_XY,
+          { shiftKey: true, ctrlKey: false, metaKey: false } as MouseEvent,
+          false,
+        );
+        expect(Toast.warning).toHaveBeenCalledWith(
+          messages["tracing.mapping_hidden_by_zoom_limit"],
+        );
+        expect(dispatchSpy).not.toHaveBeenCalled();
+      } finally {
+        dispatchSpy.mockRestore();
       }
     });
     await task.toPromise();

@@ -2004,6 +2004,7 @@ class DataApi {
       _zoomStep,
       additionalCoordinates,
       channelIndex,
+      false,
     );
   }
 
@@ -2036,12 +2037,37 @@ class DataApi {
     );
   }
 
+  /**
+   * @deprecated Use getDataValue, which returns the mapped segment id while the mapping is
+   * rendered.
+   *
+   * Returns the mapped segment id for a given segmentation layer, position and zoom level as a
+   * bigint (or the unmapped id if no mapping is active). The parameters behave like the ones of
+   * getDataValue. Unlike getDataValue, a locally applied mapping is also applied if the zoom
+   * limit for agglomerate mappings is exceeded.
+   */
+  async getMappedDataValue(
+    layerName: string,
+    position: Vector3, // in layer space
+    zoomStep: number | null | undefined = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+  ): Promise<bigint> {
+    warnAboutDeprecationOnce(
+      "getMappedDataValue",
+      "api.data.getMappedDataValue is deprecated. Use api.data.getDataValue, which returns the mapped segment id unless the mapping isn't rendered because of the zoom level.",
+    );
+    return toBigInt(
+      await this.readMappedSegmentId(layerName, position, zoomStep, additionalCoordinates, 0, true),
+    );
+  }
+
   private async readMappedSegmentId(
     layerName: string,
     position: Vector3,
     zoomStep: number | null | undefined,
     additionalCoordinates: AdditionalCoordinate[] | null,
     channelIndex: number,
+    ignoreZoomLimit: boolean,
   ): Promise<NumberLike> {
     const getBucketRetrievalSource = getBucketRetrievalSourceFn(layerName);
     for (let attempt = 1; ; attempt++) {
@@ -2054,7 +2080,7 @@ class DataApi {
         channelIndex,
         getServerMappingName(Store.getState(), layerName),
       );
-      const mappedId = await mapIdAsRendered(layerName, toBigInt(id));
+      const mappedId = await mapIdAsRendered(layerName, toBigInt(id), { ignoreZoomLimit });
       // The tuple instance is reused as long as it's equal. If the mapping changed while reading
       // the data, the id is read again, because it might have been read with the old mapping.
       if (

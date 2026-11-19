@@ -148,9 +148,9 @@ export function useNoNodeContextMenuOptions(
       visibleSegmentationLayer != null &&
       isMappingHiddenByZoomLimit(state, visibleSegmentationLayer.name),
   );
-  // Disables an item that needs the mapped segment id at the clicked position if the mapping
-  // isn't rendered due to the zoom limit (the handlers check this, too, since the mapping might
-  // only be activated when an item is clicked).
+  // Disables an item that operates on the agglomerate at the clicked position if the mapping
+  // isn't rendered due to the zoom limit, since the user sees unmapped segments then. Handlers
+  // that might activate a mapping before reading the agglomerate id check this again.
   const disableIfMappingIsHidden = (item: MenuItemType): MenuItemType =>
     isMappingHidden
       ? {
@@ -410,10 +410,10 @@ export function useNoNodeContextMenuOptions(
           isMultiSplitActive &&
           maybeMinCutPartitions &&
           maybeUnmappedSegmentId
-            ? proofreadingMultiSplitToolActions
+            ? proofreadingMultiSplitToolActions.map(disableIfMappingIsHidden)
             : []),
           isAgglomerateMappingEnabled.value
-            ? {
+            ? disableIfMappingIsHidden({
                 key: "merge-agglomerate-tree",
                 disabled: !isProofreadingActive,
                 onClick: () => dispatch(proofreadMergeAction(globalPosition)),
@@ -431,10 +431,10 @@ export function useNoNodeContextMenuOptions(
                     </span>
                   </FastTooltip>
                 ),
-              }
+              })
             : null,
           isAgglomerateMappingEnabled.value
-            ? {
+            ? disableIfMappingIsHidden({
                 key: "min-cut-agglomerate-at-position",
                 disabled: !isProofreadingActive,
                 onClick: () => dispatch(minCutAgglomerateWithPositionAction(globalPosition)),
@@ -452,10 +452,10 @@ export function useNoNodeContextMenuOptions(
                     </span>
                   </FastTooltip>
                 ),
-              }
+              })
             : null,
           isAgglomerateMappingEnabled.value
-            ? {
+            ? disableIfMappingIsHidden({
                 key: "cut-agglomerate-from-neighbors",
                 disabled: !isProofreadingActive,
                 onClick: () => dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
@@ -470,7 +470,7 @@ export function useNoNodeContextMenuOptions(
                     Split from all neighboring segments
                   </FastTooltip>
                 ),
-              }
+              })
             : null,
         ]
       : [];

@@ -455,6 +455,22 @@ describe("API Skeleton", () => {
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("respectMapping"));
       warnSpy.mockRestore();
     });
+
+    it<WebknossosTestContext>("getMappedDataValue should be deprecated and return the mapped id even if the zoom limit is exceeded", async (context) => {
+      const { api } = context;
+      mockBucketRequests(context);
+      api.data.setMapping("segmentation", { [unmappedId]: 7 });
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      expect(await api.data.getMappedDataValue("segmentation", position, 0)).toBe(7n);
+      Store.dispatch(setZoomStepAction(1000));
+      expect(isMappingHiddenByZoomLimit(Store.getState(), "segmentation")).toBe(true);
+      expect(await api.data.getMappedDataValue("segmentation", position, 0)).toBe(7n);
+      expect(await api.data.getDataValue("segmentation", position, 0)).toBe(unmappedId);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("getMappedDataValue is deprecated"),
+      );
+      warnSpy.mockRestore();
+    });
   });
 
   it<WebknossosTestContext>("User Api: setConfiguration should set and get a user configuration value", ({

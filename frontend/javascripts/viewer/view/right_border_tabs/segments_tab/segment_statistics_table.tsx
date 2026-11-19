@@ -1,67 +1,39 @@
 import { FolderOutlined } from "@ant-design/icons";
 import { Button, Flex, Progress, Spin, Table, type TableColumnType, Typography, theme } from "antd";
-import { formatNumber, getBestUnitForValue } from "libs/format_utils";
 import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { type ReactNode, useMemo, useState } from "react";
-import {
-  LongUnitToShortUnitMap,
-  type UnitShort,
-  type Vector3,
-  type Vector4,
-} from "viewer/constants";
+import type { Vector3, Vector4 } from "viewer/constants";
 import { getSegmentColorAsRGBA } from "viewer/model/accessors/volumetracing_accessor";
 import { ColorDot } from "../shared/list_row";
 import { useJumpToPosition } from "./hooks/use_jump_to_position";
 import { useSegmentSelection } from "./hooks/use_segment_selection";
 import { useTableBodyHeight } from "./hooks/use_table_body_height";
-import type {
-  SegmentStatisticsRow,
-  StatisticSpec,
-  StatisticValue,
-} from "./segment_statistics_helpers";
+import type { SegmentStatisticsRow } from "./segment_statistics_helpers";
 import {
   type GroupTableRow,
   getAllGroupRows,
   type StatisticsTableRow,
 } from "./segment_statistics_tree";
+import {
+  type ColumnSpec,
+  formatStatisticNumber,
+  type ResolvedUnit,
+  SEGMENT_COLUMN_KEY,
+  type SortOrder,
+  type StatisticsSort,
+} from "./segment_statistics_view";
 
 const SEGMENT_COLUMN_WIDTH = 220;
 const NUMBER_COLUMN_WIDTH = 130;
 const VECTOR_COLUMN_WIDTH = 180;
-const DEFAULT_FRACTION_DIGITS = 2;
 // Even the smallest value should get a visible bar.
 const MIN_BAR_PERCENT = 2;
 
-type ResolvedUnit = { label: string; factor: number };
-type ValueSpec = StatisticSpec & { title: string; value: StatisticValue };
-
 const AGGREGATION_LABELS = { sum: "total", mean: "avg", max: "max" } as const;
 
-// All values of a column share one unit, so that they can be compared at a glance. A physical unit
-// is chosen so that it fits the median value of the column.
-function resolveUnit(
-  value: StatisticValue,
-  rows: SegmentStatisticsRow[],
-  datasetUnit: UnitShort,
-): ResolvedUnit {
-  if (typeof value.unit === "string") {
-    return { label: value.unit, factor: 1 };
-  }
-  const numbers = rows
-    .flatMap((row) => {
-      const rowValue = value.get(row);
-      if (rowValue == null) return [];
-      return typeof rowValue === "number" ? [rowValue] : [rowValue[0]];
-    })
-    .sort((a, b) => a - b);
-  const median = numbers[Math.floor(numbers.length / 2)] ?? 0;
-  const { factor, unit } = getBestUnitForValue(median, datasetUnit, value.unit.dimension);
-  return { label: unit, factor };
-}
-
 // Missing values are sorted as the smallest ones. Groups are sorted by their aggregated values.
-function getSortKey(spec: ValueSpec, tableRow: StatisticsTableRow): number[] {
+function getSortKey(spec: ColumnSpec, tableRow: StatisticsTableRow): number[] {
   if (tableRow.kind === "group") {
     return [tableRow.aggregates[spec.key] ?? Number.NEGATIVE_INFINITY];
   }
@@ -74,11 +46,9 @@ function getSortKey(spec: ValueSpec, tableRow: StatisticsTableRow): number[] {
     : rowValue;
 }
 
-type SortOrder = "ascend" | "descend" | null | undefined;
-
 // Wraps a comparison so that groups stay above the segments of the same level in both directions.
 function createSorter(compare: (a: StatisticsTableRow, b: StatisticsTableRow) => number) {
-  return (a: StatisticsTableRow, b: StatisticsTableRow, sortOrder?: SortOrder) => {
+  return (a: StatisticsTableRow, b: StatisticsTableRow, sortOrder?: SortOrder | null) => {
     if (a.kind !== b.kind) {
       const groupFirst = a.kind === "group" ? -1 : 1;
       return sortOrder === "descend" ? -groupFirst : groupFirst;
@@ -208,15 +178,13 @@ function PositionCell({ position, layerName }: { position: Vector3; layerName: s
 }
 
 function getStatisticColumn(
-  spec: ValueSpec,
+  spec: ColumnSpec,
+  unit: ResolvedUnit,
   rows: SegmentStatisticsRow[],
   groupRows: GroupTableRow[],
-  datasetUnit: UnitShort,
   layerName: string,
 ): TableColumnType<StatisticsTableRow> {
   const { value } = spec;
-  const unit = resolveUnit(value, rows, datasetUnit);
-  const fractionDigits = value.fractionDigits ?? DEFAULT_FRACTION_DIGITS;
   const renderPending = (render: () => ReactNode) => {
     if (spec.isLoading) return <Spin size="small" />;
     if (spec.isError) return "n/a";
@@ -237,7 +205,6 @@ function getStatisticColumn(
       width: NUMBER_COLUMN_WIDTH,
       align: "right",
       sorter,
-      defaultSortOrder: spec.key === "volume" ? "descend" : undefined,
       render: (_, tableRow) =>
         renderPending(() => {
           if (tableRow.kind === "group") {
@@ -246,7 +213,7 @@ function getStatisticColumn(
             const barPercent = maxOfGroups > 0 ? (aggregate / maxOfGroups) * 100 : 100;
             return (
               <NumberCell
-                text={formatNumber(aggregate / unit.factor, fractionDigits)}
+                text={formatStatisticNumber(aggregate, value, unit)}
                 barPercent={Math.max(MIN_BAR_PERCENT, barPercent)}
                 aggregationLabel={aggregationLabel}
               />
@@ -257,7 +224,7 @@ function getStatisticColumn(
           const barPercent = max > min ? ((number - min) / (max - min)) * 100 : 100;
           return (
             <NumberCell
-              text={formatNumber(number / unit.factor, fractionDigits)}
+              text={formatStatisticNumber(number, value, unit)}
               barPercent={Math.max(MIN_BAR_PERCENT, barPercent)}
             />
           );
@@ -282,9 +249,7 @@ function getStatisticColumn(
         }
         return (
           <Typography.Text type="secondary" style={{ fontVariantNumeric: "tabular-nums" }}>
-            {vector
-              .map((component) => formatNumber(component / unit.factor, fractionDigits))
-              .join(", ")}
+            {vector.map((component) => formatStatisticNumber(component, value, unit)).join(", ")}
           </Typography.Text>
         );
       }),
@@ -296,7 +261,11 @@ type Props = {
   rows: SegmentStatisticsRow[];
   // The rows as they are arranged in the table: either flat or nested in groups.
   tableRows: StatisticsTableRow[];
-  statisticSpecs: StatisticSpec[];
+  // The statistics that are shown as columns, with the unit of each one by its key.
+  columnSpecs: ColumnSpec[];
+  units: Record<string, ResolvedUnit>;
+  sort: StatisticsSort;
+  onSortChange: (sort: StatisticsSort) => void;
   layerName: string;
 };
 
@@ -305,10 +274,15 @@ type Props = {
  * Clicking a segment selects it (which is shared with the segments tab) and jumps to it. Clicking
  * a group collapses or expands it.
  */
-export function SegmentStatisticsTable({ rows, tableRows, statisticSpecs, layerName }: Props) {
-  const datasetUnit = useWkSelector(
-    (state) => LongUnitToShortUnitMap[state.dataset.dataSource.scale.unit],
-  );
+export function SegmentStatisticsTable({
+  rows,
+  tableRows,
+  columnSpecs,
+  units,
+  sort,
+  onSortChange,
+  layerName,
+}: Props) {
   const { selectedSegmentIds, selectSegmentAndJumpToPosition } = useSegmentSelection();
   const selectedKeys = useMemo(
     () => new Set(selectedSegmentIds.map((segmentId) => segmentId.toString())),
@@ -326,7 +300,7 @@ export function SegmentStatisticsTable({ rows, tableRows, statisticSpecs, layerN
 
   const columns = useMemo((): TableColumnType<StatisticsTableRow>[] => {
     const segmentColumn: TableColumnType<StatisticsTableRow> = {
-      key: "segment",
+      key: SEGMENT_COLUMN_KEY,
       title: <ColumnTitle title="Segment" unit="name · ID" align="start" />,
       width: SEGMENT_COLUMN_WIDTH,
       fixed: "left",
@@ -344,14 +318,15 @@ export function SegmentStatisticsTable({ rows, tableRows, statisticSpecs, layerN
           <SegmentCell row={tableRow.row} layerName={layerName} />
         ),
     };
-    const statisticColumns = statisticSpecs.flatMap((spec) => {
-      const { title, value } = spec;
-      return title != null && value != null
-        ? [getStatisticColumn({ ...spec, title, value }, rows, groupRows, datasetUnit, layerName)]
-        : [];
-    });
-    return [segmentColumn, ...statisticColumns];
-  }, [statisticSpecs, rows, groupRows, datasetUnit, layerName]);
+    const statisticColumns = columnSpecs.map((spec) =>
+      getStatisticColumn(spec, units[spec.key], rows, groupRows, layerName),
+    );
+    // The sorting is controlled, so that it can also be changed from outside of the table.
+    return [segmentColumn, ...statisticColumns].map((column) => ({
+      ...column,
+      sortOrder: sort != null && sort.key === column.key ? sort.order : null,
+    }));
+  }, [columnSpecs, units, rows, groupRows, layerName, sort]);
   const totalColumnWidth = columns.reduce((sum, column) => sum + Number(column.width), 0);
 
   return (
@@ -363,6 +338,12 @@ export function SegmentStatisticsTable({ rows, tableRows, statisticSpecs, layerN
         virtual
         pagination={false}
         showSorterTooltip={false}
+        onChange={(_pagination, _filters, sorter) => {
+          const { columnKey, order } = Array.isArray(sorter) ? sorter[0] : sorter;
+          onSortChange(
+            columnKey != null && order != null ? { key: String(columnKey), order } : null,
+          );
+        }}
         scroll={{ x: totalColumnWidth, y: bodyHeight }}
         expandable={{
           expandedRowKeys,

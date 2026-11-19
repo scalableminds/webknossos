@@ -64,16 +64,17 @@ trait FullMeshHelper extends LazyLogging {
     val output = ByteBuffer.allocate(outputNumBytesLong.toInt).order(ByteOrder.LITTLE_ENDIAN)
     val unused = Array.fill[Byte](2)(0)
     for (faceIndex <- 0 until numFaces) {
-      val v1 = Vec3Float(vertexBuffer(faceIndex), vertexBuffer(faceIndex + 1), vertexBuffer(faceIndex + 2))
-      val v2 = Vec3Float(vertexBuffer(faceIndex + 3), vertexBuffer(faceIndex + 4), vertexBuffer(faceIndex + 5))
-      val v3 = Vec3Float(vertexBuffer(faceIndex + 6), vertexBuffer(faceIndex + 7), vertexBuffer(faceIndex + 8))
+      val base = 9 * faceIndex
+      val v1 = Vec3Float(vertexBuffer(base), vertexBuffer(base + 1), vertexBuffer(base + 2))
+      val v2 = Vec3Float(vertexBuffer(base + 3), vertexBuffer(base + 4), vertexBuffer(base + 5))
+      val v3 = Vec3Float(vertexBuffer(base + 6), vertexBuffer(base + 7), vertexBuffer(base + 8))
       val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize
       output.putFloat(norm.x)
       output.putFloat(norm.y)
       output.putFloat(norm.z)
       for (vertexIndex <- 0 until 3)
         for (dimIndex <- 0 until 3)
-          output.putFloat(vertexBuffer(9 * faceIndex + 3 * vertexIndex + dimIndex))
+          output.putFloat(vertexBuffer(base + 3 * vertexIndex + dimIndex))
       output.put(unused)
     }
     output.array()

@@ -25,7 +25,9 @@ It holds the landmarks of all moving layers.
 - Click **Open** to continue one of your layer registrations.
 - Layer registrations of other users (e.g., shared with your team) can't be edited directly. Use **Copy to my account** to continue working on your own copy.
 
-Layer registration annotations also appear in your list of annotations. Opening one there leads to the layer registration view as well.
+Layer registration annotations also appear in your list of annotations.
+If you own one, opening it there leads to the layer registration view as well, unless it is archived or locked.
+Other users who open a shared layer registration annotation see it in the normal annotation view. But sharing from the layer registration view is currently disabled. So it should be impossible (except using scripting) to share a landmark annotation with someone else. Users editing the annotation in the normal annotation view could break assumptions of the annotation like adding a volume annotation layer or breaking the tree group hierarchy.
 
 ## Placing Landmarks
 
@@ -74,7 +76,7 @@ Where the layers match, they add up to gray. Structures that don't match show gr
 This is especially helpful for grayscale layers.
 
 A transform needs at least four landmark pairs that don't all lie in one plane.
-If all landmarks lie in a single z slice, three pairs are enough. WEBKNOSSOS then assumes that the two layers are only shifted against each other along z.
+If all landmarks lie in a single z slice, three pairs are enough, as long as they do not lie on one line. WEBKNOSSOS then assumes that the two layers are only shifted against each other along z.  
 
 More shortcuts, which work in the view under the mouse pointer (the keyboard button at the bottom of the side panel lists them, too):
 

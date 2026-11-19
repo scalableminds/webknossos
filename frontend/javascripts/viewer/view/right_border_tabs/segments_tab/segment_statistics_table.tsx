@@ -1,14 +1,19 @@
 import { Button, Flex, Progress, Spin, Table, type TableColumnType, Typography, theme } from "antd";
-import { getBestUnitForValue } from "libs/format_utils";
+import { formatNumber, getBestUnitForValue } from "libs/format_utils";
+import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
-import { type ReactNode, useLayoutEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
-import { LongUnitToShortUnitMap, type UnitShort, type Vector3 } from "viewer/constants";
-import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { type ReactNode, useMemo } from "react";
+import {
+  LongUnitToShortUnitMap,
+  type UnitShort,
+  type Vector3,
+  type Vector4,
+} from "viewer/constants";
 import { getSegmentColorAsRGBA } from "viewer/model/accessors/volumetracing_accessor";
-import { setPositionAction } from "viewer/model/actions/flycam_actions";
-import Store from "viewer/store";
+import { ColorDot } from "../shared/list_row";
+import { useJumpToPosition } from "./hooks/use_jump_to_position";
 import { useSegmentSelection } from "./hooks/use_segment_selection";
+import { useTableBodyHeight } from "./hooks/use_table_body_height";
 import type {
   SegmentStatisticsRow,
   StatisticSpec,
@@ -23,32 +28,6 @@ const DEFAULT_FRACTION_DIGITS = 2;
 const MIN_BAR_PERCENT = 2;
 
 type ResolvedUnit = { label: string; factor: number };
-
-/*
- * Reports how much vertical space is left for the body of the table inside of the container.
- * antd's virtual table needs an explicit pixel height and cannot simply fill its parent.
- */
-function useTableBodyHeight() {
-  // Held in state instead of a ref object, so that the measuring starts once the container appears.
-  const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  const [bodyHeight, setBodyHeight] = useState(0);
-
-  useLayoutEffect(() => {
-    if (container == null) {
-      return;
-    }
-    const measure = () => {
-      const headerHeight = container.querySelector(".ant-table-header")?.clientHeight ?? 0;
-      setBodyHeight(Math.max(0, container.clientHeight - headerHeight));
-    };
-    measure();
-    const resizeObserver = new ResizeObserver(measure);
-    resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
-  }, [container]);
-
-  return { containerRef: setContainer, bodyHeight };
-}
 
 // All values of a column share one unit, so that they can be compared at a glance. A physical unit
 // is chosen so that it fits the median value of the column.
@@ -70,13 +49,6 @@ function resolveUnit(
   const median = numbers[Math.floor(numbers.length / 2)] ?? 0;
   const { factor, unit } = getBestUnitForValue(median, datasetUnit, value.unit.dimension);
   return { label: unit, factor };
-}
-
-function formatNumber(number: number, fractionDigits: number): string {
-  return number.toLocaleString("en-US", {
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  });
 }
 
 // Missing values are sorted as the smallest ones.
@@ -117,22 +89,13 @@ function ColumnTitle({
 }
 
 function SegmentCell({ row, layerName }: { row: SegmentStatisticsRow; layerName: string }) {
-  // Converted to a string within the selector, so that the result is stable across store updates.
-  const color = useWkSelector((state) => {
-    const [r, g, b] = getSegmentColorAsRGBA(state, row.segmentId, layerName);
-    return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
-  });
+  const segmentColorRGBA = useWkSelector(
+    (state) => getSegmentColorAsRGBA(state, row.segmentId, layerName),
+    (a: Vector4, b: Vector4) => V4.isEqual(a, b),
+  );
   return (
     <Flex align="center" gap="small" style={{ minWidth: 0 }}>
-      <div
-        style={{
-          width: 3,
-          alignSelf: "stretch",
-          minHeight: 18,
-          borderRadius: 2,
-          background: color,
-        }}
-      />
+      <ColorDot colorRGBA={segmentColorRGBA} />
       <Typography.Text ellipsis={{ tooltip: row.segmentName }} style={{ minWidth: 0 }}>
         {row.segmentName}
       </Typography.Text>
@@ -163,7 +126,7 @@ function NumberCell({ text, barPercent }: { text: string; barPercent: number }) 
 }
 
 function PositionCell({ position, layerName }: { position: Vector3; layerName: string }) {
-  const dispatch = useDispatch();
+  const jumpToPosition = useJumpToPosition();
   return (
     <Button
       type="link"
@@ -173,11 +136,7 @@ function PositionCell({ position, layerName }: { position: Vector3; layerName: s
       onClick={(event) => {
         // Don't select the segment of the row, which would jump to the segment's anchor position.
         event.stopPropagation();
-        dispatch(
-          setPositionAction(
-            layerToGlobalTransformedPosition(position, layerName, "segmentation", Store.getState()),
-          ),
-        );
+        jumpToPosition(position, layerName);
       }}
     >
       {position.join(", ")}

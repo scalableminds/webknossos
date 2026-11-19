@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.webknossos.datastore.services.mapping.MappingService
+import com.scalableminds.webknossos.datastore.services.mapping.{JsonMapping, MappingService}
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool
@@ -99,12 +99,25 @@ class AdHocMeshService(
     )
     val scale = Vec3Float(cuboid.topLeft.mag) * Vec3Float(request.voxelSizeFactor)
 
+    val jsonMappingRequestOpt = (request.mapping, request.mappingType) match {
+      case (Some(mappingName), Some(MappingType.JSON)) =>
+        Some(DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName))
+      case _ => None
+    }
+
     for {
       _ <- Fox.fromBool(ElementClass.segmentationElementClasses.contains(elementClass)) ?~>
         s"Ad-hoc meshing is not supported for element class $elementClass"
+      // Started before loading the data, so that loading the mapping runs concurrently with it.
+      jsonMappingOptFox = Fox.runOptional(jsonMappingRequestOpt)(mappingService.loadMapping)
       data <- binaryDataService.handleDataRequest(dataRequest)
       agglomerateMappedData <- applyAgglomerate(request, data) ?~> "failed to apply agglomerate for ad-hoc meshing"
-      (mappedData, mappedSegmentId) <- applyJsonMappingIfNeeded(request, agglomerateMappedData)
+      jsonMappingOpt <- jsonMappingOptFox ?~> "failed to load json mapping"
+      mappedData <- applyJsonMappingIfNeeded(jsonMappingOpt, agglomerateMappedData, elementClass) ?~>
+        "failed to apply json mapping"
+      mappedSegmentId = jsonMappingOpt.fold(request.segmentId)(
+        mappingService.mapSegmentId(_, request.segmentId, elementClass)
+      )
       mesh <- tryo(
         adHocMesher.mesh(
           mappedData,
@@ -137,18 +150,10 @@ class AdHocMeshService(
         Fox.successful(data)
     }
 
-  // Maps both the data and the requested segment id.
-  private def applyJsonMappingIfNeeded(request: AdHocMeshRequest, data: Array[Byte]): Fox[(Array[Byte], Long)] =
-    (request.mapping, request.mappingType) match {
-      case (Some(mappingName), Some(MappingType.JSON)) =>
-        val elementClass = request.dataLayer.elementClass
-        for {
-          mapping <- mappingService.loadMapping(
-            DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName)
-          )
-          mappedData <- mappingService.applyMapping(mapping, data, elementClass).toFox
-        } yield (mappedData, mappingService.mapSegmentId(mapping, request.segmentId, elementClass))
-      case _ =>
-        Fox.successful((data, request.segmentId))
-    }
+  private def applyJsonMappingIfNeeded(
+      jsonMappingOpt: Option[JsonMapping],
+      data: Array[Byte],
+      elementClass: ElementClass.Value
+  ): Fox[Array[Byte]] =
+    jsonMappingOpt.map(mappingService.applyMapping(_, data, elementClass).toFox).getOrElse(Fox.successful(data))
 }

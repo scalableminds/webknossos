@@ -1,8 +1,9 @@
+import { FolderOutlined } from "@ant-design/icons";
 import { Button, Flex, Progress, Spin, Table, type TableColumnType, Typography, theme } from "antd";
 import { formatNumber, getBestUnitForValue } from "libs/format_utils";
 import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import {
   LongUnitToShortUnitMap,
   type UnitShort,
@@ -19,6 +20,11 @@ import type {
   StatisticSpec,
   StatisticValue,
 } from "./segment_statistics_helpers";
+import {
+  type GroupTableRow,
+  getAllGroupRows,
+  type StatisticsTableRow,
+} from "./segment_statistics_tree";
 
 const SEGMENT_COLUMN_WIDTH = 220;
 const NUMBER_COLUMN_WIDTH = 130;
@@ -28,6 +34,9 @@ const DEFAULT_FRACTION_DIGITS = 2;
 const MIN_BAR_PERCENT = 2;
 
 type ResolvedUnit = { label: string; factor: number };
+type ValueSpec = StatisticSpec & { title: string; value: StatisticValue };
+
+const AGGREGATION_LABELS = { sum: "total", mean: "avg", max: "max" } as const;
 
 // All values of a column share one unit, so that they can be compared at a glance. A physical unit
 // is chosen so that it fits the median value of the column.
@@ -51,14 +60,31 @@ function resolveUnit(
   return { label: unit, factor };
 }
 
-// Missing values are sorted as the smallest ones.
-function getSortKey(value: StatisticValue, row: SegmentStatisticsRow): number[] {
-  const rowValue = value.get(row);
+// Missing values are sorted as the smallest ones. Groups are sorted by their aggregated values.
+function getSortKey(spec: ValueSpec, tableRow: StatisticsTableRow): number[] {
+  if (tableRow.kind === "group") {
+    return [tableRow.aggregates[spec.key] ?? Number.NEGATIVE_INFINITY];
+  }
+  const { value } = spec;
+  const rowValue = value.get(tableRow.row);
   if (rowValue == null) return [Number.NEGATIVE_INFINITY];
   if (typeof rowValue === "number") return [rowValue];
   return value.kind === "vector" && value.sortBy === "product"
     ? [rowValue[0] * rowValue[1] * rowValue[2]]
     : rowValue;
+}
+
+type SortOrder = "ascend" | "descend" | null | undefined;
+
+// Wraps a comparison so that groups stay above the segments of the same level in both directions.
+function createSorter(compare: (a: StatisticsTableRow, b: StatisticsTableRow) => number) {
+  return (a: StatisticsTableRow, b: StatisticsTableRow, sortOrder?: SortOrder) => {
+    if (a.kind !== b.kind) {
+      const groupFirst = a.kind === "group" ? -1 : 1;
+      return sortOrder === "descend" ? -groupFirst : groupFirst;
+    }
+    return compare(a, b);
+  };
 }
 
 function compareSortKeys(a: number[], b: number[]): number {
@@ -108,17 +134,54 @@ function SegmentCell({ row, layerName }: { row: SegmentStatisticsRow; layerName:
   );
 }
 
-function NumberCell({ text, barPercent }: { text: string; barPercent: number }) {
+function GroupCell({ group }: { group: GroupTableRow }) {
+  return (
+    <Flex align="center" gap="small" style={{ minWidth: 0 }}>
+      <FolderOutlined />
+      <Typography.Text strong ellipsis={{ tooltip: group.name }} style={{ minWidth: 0 }}>
+        {group.name}
+      </Typography.Text>
+      <Typography.Text type="secondary" style={{ flex: "none" }}>
+        {group.segmentCount}
+      </Typography.Text>
+    </Flex>
+  );
+}
+
+function NumberCell({
+  text,
+  barPercent,
+  aggregationLabel,
+}: {
+  text: string;
+  barPercent: number;
+  // Set for the aggregated value of a group.
+  aggregationLabel?: string;
+}) {
   const { token } = theme.useToken();
+  const isGroup = aggregationLabel != null;
   return (
     <Flex vertical align="stretch">
-      <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{text}</span>
+      <span
+        style={{
+          textAlign: "right",
+          fontVariantNumeric: "tabular-nums",
+          fontWeight: isGroup ? token.fontWeightStrong : undefined,
+        }}
+      >
+        {text}
+        {isGroup ? (
+          <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+            {` ${aggregationLabel}`}
+          </Typography.Text>
+        ) : null}
+      </span>
       <Progress
         percent={barPercent}
         showInfo={false}
         size={{ height: 2 }}
         strokeLinecap="butt"
-        strokeColor={token.colorPrimaryBorder}
+        strokeColor={isGroup ? token.colorPrimary : token.colorPrimaryBorder}
         style={{ lineHeight: 0, margin: 0 }}
       />
     </Flex>
@@ -145,11 +208,12 @@ function PositionCell({ position, layerName }: { position: Vector3; layerName: s
 }
 
 function getStatisticColumn(
-  spec: StatisticSpec & { title: string; value: StatisticValue },
+  spec: ValueSpec,
   rows: SegmentStatisticsRow[],
+  groupRows: GroupTableRow[],
   datasetUnit: UnitShort,
   layerName: string,
-): TableColumnType<SegmentStatisticsRow> {
+): TableColumnType<StatisticsTableRow> {
   const { value } = spec;
   const unit = resolveUnit(value, rows, datasetUnit);
   const fractionDigits = value.fractionDigits ?? DEFAULT_FRACTION_DIGITS;
@@ -158,13 +222,15 @@ function getStatisticColumn(
     if (spec.isError) return "n/a";
     return render();
   };
-  const sorter = (a: SegmentStatisticsRow, b: SegmentStatisticsRow) =>
-    compareSortKeys(getSortKey(value, a), getSortKey(value, b));
+  const sorter = createSorter((a, b) => compareSortKeys(getSortKey(spec, a), getSortKey(spec, b)));
 
   if (value.kind === "number") {
     const numbers = rows.flatMap((row) => value.get(row) ?? []);
     const min = Math.min(...numbers);
     const max = Math.max(...numbers);
+    // The bars of groups relate the groups to each other, as e.g. totals exceed any single segment.
+    const maxOfGroups = Math.max(...groupRows.flatMap((group) => group.aggregates[spec.key] ?? []));
+    const aggregationLabel = AGGREGATION_LABELS[value.aggregation ?? "sum"];
     return {
       key: spec.key,
       title: <ColumnTitle title={spec.title} unit={unit.label} align="end" />,
@@ -172,9 +238,21 @@ function getStatisticColumn(
       align: "right",
       sorter,
       defaultSortOrder: spec.key === "volume" ? "descend" : undefined,
-      render: (_, row) =>
+      render: (_, tableRow) =>
         renderPending(() => {
-          const number = value.get(row);
+          if (tableRow.kind === "group") {
+            const aggregate = tableRow.aggregates[spec.key];
+            if (aggregate == null) return null;
+            const barPercent = maxOfGroups > 0 ? (aggregate / maxOfGroups) * 100 : 100;
+            return (
+              <NumberCell
+                text={formatNumber(aggregate / unit.factor, fractionDigits)}
+                barPercent={Math.max(MIN_BAR_PERCENT, barPercent)}
+                aggregationLabel={aggregationLabel}
+              />
+            );
+          }
+          const number = value.get(tableRow.row);
           if (number == null) return null;
           const barPercent = max > min ? ((number - min) / (max - min)) * 100 : 100;
           return (
@@ -192,9 +270,12 @@ function getStatisticColumn(
     title: <ColumnTitle title={spec.title} unit={`x, y, z in ${unit.label}`} align="start" />,
     width: VECTOR_COLUMN_WIDTH,
     sorter,
-    render: (_, row) =>
+    render: (_, tableRow) =>
       renderPending(() => {
-        const vector = value.get(row);
+        if (tableRow.kind === "group") {
+          return <Typography.Text type="secondary">–</Typography.Text>;
+        }
+        const vector = value.get(tableRow.row);
         if (vector == null) return null;
         if (value.isPosition) {
           return <PositionCell position={vector} layerName={layerName} />;
@@ -211,16 +292,20 @@ function getStatisticColumn(
 }
 
 type Props = {
+  // All segments that are shown, used to relate the values of a column to each other.
   rows: SegmentStatisticsRow[];
+  // The rows as they are arranged in the table: either flat or nested in groups.
+  tableRows: StatisticsTableRow[];
   statisticSpecs: StatisticSpec[];
   layerName: string;
 };
 
 /*
  * The table of the segment statistics tab. Each statistic is a sortable column in one common unit.
- * Clicking a row selects the segment (which is shared with the segments tab) and jumps to it.
+ * Clicking a segment selects it (which is shared with the segments tab) and jumps to it. Clicking
+ * a group collapses or expands it.
  */
-export function SegmentStatisticsTable({ rows, statisticSpecs, layerName }: Props) {
+export function SegmentStatisticsTable({ rows, tableRows, statisticSpecs, layerName }: Props) {
   const datasetUnit = useWkSelector(
     (state) => LongUnitToShortUnitMap[state.dataset.dataSource.scale.unit],
   );
@@ -231,39 +316,74 @@ export function SegmentStatisticsTable({ rows, statisticSpecs, layerName }: Prop
   );
   const { containerRef, bodyHeight } = useTableBodyHeight();
 
-  const columns = useMemo((): TableColumnType<SegmentStatisticsRow>[] => {
-    const segmentColumn: TableColumnType<SegmentStatisticsRow> = {
+  const groupRows = useMemo(() => getAllGroupRows(tableRows), [tableRows]);
+  // Groups are expanded unless the user collapsed them, so that new groups show their segments.
+  const [collapsedKeys, setCollapsedKeys] = useState<ReadonlySet<string>>(new Set());
+  const expandedRowKeys = useMemo(
+    () => groupRows.map((group) => group.key).filter((key) => !collapsedKeys.has(key)),
+    [groupRows, collapsedKeys],
+  );
+
+  const columns = useMemo((): TableColumnType<StatisticsTableRow>[] => {
+    const segmentColumn: TableColumnType<StatisticsTableRow> = {
       key: "segment",
       title: <ColumnTitle title="Segment" unit="name · ID" align="start" />,
       width: SEGMENT_COLUMN_WIDTH,
       fixed: "left",
-      sorter: (a, b) => (a.segmentId < b.segmentId ? -1 : a.segmentId > b.segmentId ? 1 : 0),
-      render: (_, row) => <SegmentCell row={row} layerName={layerName} />,
+      sorter: createSorter((a, b) => {
+        if (a.kind === "group" && b.kind === "group") return a.name.localeCompare(b.name);
+        if (a.kind === "segment" && b.kind === "segment") {
+          return a.row.segmentId < b.row.segmentId ? -1 : a.row.segmentId > b.row.segmentId ? 1 : 0;
+        }
+        return 0;
+      }),
+      render: (_, tableRow) =>
+        tableRow.kind === "group" ? (
+          <GroupCell group={tableRow} />
+        ) : (
+          <SegmentCell row={tableRow.row} layerName={layerName} />
+        ),
     };
     const statisticColumns = statisticSpecs.flatMap((spec) => {
       const { title, value } = spec;
       return title != null && value != null
-        ? [getStatisticColumn({ ...spec, title, value }, rows, datasetUnit, layerName)]
+        ? [getStatisticColumn({ ...spec, title, value }, rows, groupRows, datasetUnit, layerName)]
         : [];
     });
     return [segmentColumn, ...statisticColumns];
-  }, [statisticSpecs, rows, datasetUnit, layerName]);
+  }, [statisticSpecs, rows, groupRows, datasetUnit, layerName]);
   const totalColumnWidth = columns.reduce((sum, column) => sum + Number(column.width), 0);
 
   return (
     <div ref={containerRef} style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
       <Table
-        dataSource={rows}
+        dataSource={tableRows}
         columns={columns}
         size="small"
         virtual
         pagination={false}
         showSorterTooltip={false}
         scroll={{ x: totalColumnWidth, y: bodyHeight }}
-        rowClassName={(row) => (selectedKeys.has(row.key) ? "ant-table-row-selected" : "")}
-        onRow={(row) => ({
+        expandable={{
+          expandedRowKeys,
+          expandRowByClick: true,
+          onExpand: (isExpanded, tableRow) =>
+            setCollapsedKeys((previousKeys) => {
+              const keys = new Set(previousKeys);
+              if (isExpanded) keys.delete(tableRow.key);
+              else keys.add(tableRow.key);
+              return keys;
+            }),
+        }}
+        rowClassName={(tableRow) =>
+          selectedKeys.has(tableRow.key) ? "ant-table-row-selected" : ""
+        }
+        onRow={(tableRow) => ({
           style: { cursor: "pointer" },
-          onClick: () => selectSegmentAndJumpToPosition(row.segment),
+          onClick:
+            tableRow.kind === "segment"
+              ? () => selectSegmentAndJumpToPosition(tableRow.row.segment)
+              : undefined,
         })}
       />
     </div>

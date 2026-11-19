@@ -1,5 +1,5 @@
 import { DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Flex, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Empty, Flex, Select, Space, Tag, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import { useEffect, useMemo, useState } from "react";
@@ -22,9 +22,12 @@ import { findGroup, MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpe
 import { useSegmentStatisticsRows } from "./hooks/use_segment_statistics_rows";
 import { exportStatisticsToCSV } from "./segment_statistics_helpers";
 import { SegmentStatisticsTable } from "./segment_statistics_table";
+import { buildGroupedTableRows, toSegmentTableRows } from "./segment_statistics_tree";
 import { getSegmentsOfGroupRecursively } from "./segments_view_helper";
 
 const MAX_SEGMENT_COUNT_FOR_AUTOMATIC_COMPUTATION = 50;
+
+type GroupBy = "group" | "none";
 
 function getScopeLabel(scope: SegmentStatisticsScope, segmentGroups: SegmentGroup[]): string {
   if (scope.kind === "group") {
@@ -115,6 +118,15 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
       refreshToken,
     });
 
+  const [groupBy, setGroupBy] = useState<GroupBy>("group");
+  const tableRows = useMemo(
+    () =>
+      groupBy === "group"
+        ? buildGroupedTableRows(rows, segmentGroups, statisticSpecs)
+        : toSegmentTableRows(rows),
+    [groupBy, rows, segmentGroups, statisticSpecs],
+  );
+
   if (!areSegmentStatisticsAvailable && !isAnyStatisticLoading) {
     return (
       <Empty
@@ -137,6 +149,20 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
           </Tag>
         ) : null}
         <div style={{ flex: 1 }} />
+        {segmentGroups.length > 0 ? (
+          <Space size="small">
+            <Typography.Text type="secondary">Group by</Typography.Text>
+            <Select<GroupBy>
+              value={groupBy}
+              onChange={setGroupBy}
+              style={{ width: 160 }}
+              options={[
+                { value: "group", label: "Segment groups" },
+                { value: "none", label: "No grouping" },
+              ]}
+            />
+          </Space>
+        ) : null}
         <Tooltip title="Recompute the statistics, e.g. after editing segments">
           <Button
             icon={<ReloadOutlined />}
@@ -191,7 +217,12 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
           showIcon
         />
       ) : null}
-      <SegmentStatisticsTable rows={rows} statisticSpecs={statisticSpecs} layerName={layer.name} />
+      <SegmentStatisticsTable
+        rows={rows}
+        tableRows={tableRows}
+        statisticSpecs={statisticSpecs}
+        layerName={layer.name}
+      />
     </Flex>
   );
 }

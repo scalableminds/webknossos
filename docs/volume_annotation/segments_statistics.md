@@ -4,7 +4,9 @@ WEBKNOSSOS provides handy statistics about your labelled segments, such as the v
 There are several ways to access this information: 
 
 1. Right-click any segment to bring up the context menu. The segment statistics are listed at the end of the context menu.
-2. In the [`Segments`](./segments_list.md) tab in the right-hand panel, right-click on any group of segments (or the "Root" group) to bring up a context menu. Select `Show Segment Statistics` to access a summary table with statistics for a whole group of labelled segments. These can be exported as CSV files for further analysis outside of WEBKNOSSOS.
+2. In the [`Segments`](./segments_list.md) tab in the right-hand panel, right-click on any group of segments (or the "Root" group) to bring up a context menu. Select `Show Segment Statistics` to open the `Statistics` tab with a table of statistics for the whole group of labelled segments. The same entry is available for single segments and for a selection of segments. These can be exported as CSV files for further analysis outside of WEBKNOSSOS.
+
+While the `Statistics` tab is shown, WEBKNOSSOS makes room for the table: the right-hand panel is widened and the viewports are stacked in one column (the XY, YZ and XZ viewports become tabs above the 3D viewport). On smaller screens, the left-hand panel is closed as well. On very wide screens (2500 pixels and more), only the right-hand panel is widened and the viewports stay as they are. Your previous layout is restored as soon as you switch to another tab or close the `Statistics` tab. The `Statistics` tab is not kept when the page is reloaded or another dataset is opened; open it again from the context menu. For more than 50 segments, the statistics are only computed after clicking `Compute statistics`.
 
 In cases where you only wish to measure a simple distance or surface area, use the [`Measurement Tool`](../ui/toolbar.md#measurement-and-analysis) instead.
 

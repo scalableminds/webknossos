@@ -73,6 +73,16 @@ type Options = {
 
 const NOT_REQUESTED = { data: undefined, isLoading: false, isError: false };
 
+// Computing the statistics is expensive for the backend, so they are not refetched when the window
+// regains focus (the views offer an explicit refresh instead). The results are kept for a short
+// while after their last consumer is gone, so that coming back to a view shows them right away.
+// They are not persisted to localStorage, because they can be large and outdated on the next visit.
+const STATISTICS_QUERY_OPTIONS = {
+  gcTime: 2 * 60 * 1000,
+  refetchOnWindowFocus: false,
+  meta: { persist: false },
+} as const;
+
 /*
  * Fetches segment statistics for a list of segments. This hook should be used by and component using
  * the segment statistics as it has a shared query cache.
@@ -179,7 +189,7 @@ export function useSegmentStatistics({
         await saveAndGetAnnotationVersion(),
       ),
     enabled: isReady && isVolumeAvailable,
-    gcTime: 0,
+    ...STATISTICS_QUERY_OPTIONS,
   });
 
   const boundingBoxes = useQuery({
@@ -196,7 +206,7 @@ export function useSegmentStatistics({
     // Bounding boxes are computed from the segment index only; unlike volume and surface area they
     // have neither a statistics-file source nor a fallback, so without one the route 404s.
     enabled: isReady && isSegmentIndexAvailable,
-    gcTime: 0,
+    ...STATISTICS_QUERY_OPTIONS,
   });
 
   const surfaceAreas = useQuery({
@@ -212,7 +222,7 @@ export function useSegmentStatistics({
         await saveAndGetAnnotationVersion(),
       ),
     enabled: isReady && isSurfaceAreaAvailable,
-    gcTime: 0,
+    ...STATISTICS_QUERY_OPTIONS,
   });
 
   // The remaining metrics are only served from the statistics file, so there is nothing to flush
@@ -228,7 +238,7 @@ export function useSegmentStatistics({
         mappingName,
       ),
     enabled: isReady && availableFileMetrics.maxDistance,
-    gcTime: 0,
+    ...STATISTICS_QUERY_OPTIONS,
   });
 
   const sphericities = useQuery({
@@ -242,7 +252,7 @@ export function useSegmentStatistics({
         mappingName,
       ),
     enabled: isReady && availableFileMetrics.sphericity,
-    gcTime: 0,
+    ...STATISTICS_QUERY_OPTIONS,
   });
 
   const centersOfMass = useQuery({
@@ -256,7 +266,7 @@ export function useSegmentStatistics({
         mappingName,
       ),
     enabled: isReady && availableFileMetrics.centerOfMass,
-    gcTime: 0,
+    ...STATISTICS_QUERY_OPTIONS,
   });
 
   const covarianceMatrices = useQuery({
@@ -270,7 +280,7 @@ export function useSegmentStatistics({
         mappingName,
       ),
     enabled: isReady && availableFileMetrics.covariance,
-    gcTime: 0,
+    ...STATISTICS_QUERY_OPTIONS,
   });
 
   type RawQuery<T> = { data: T[] | undefined; isError: boolean };

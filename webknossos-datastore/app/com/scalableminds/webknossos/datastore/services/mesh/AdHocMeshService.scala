@@ -66,16 +66,16 @@ class AdHocMeshService(
   private val actor: ActorRef =
     actorSystem.actorOf(RoundRobinPool(adHocMeshActorPoolSize).props(Props(new AdHocMeshActor(this, timeout.duration))))
 
-  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
+  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[AdHocMesh] =
     Fox.fromFutureBox {
-      actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover { case e: Exception =>
+      actor.ask(request).mapTo[Box[AdHocMesh]].recover { case e: Exception =>
         Failure(e.getMessage)
       }
     }
 
   private lazy val adHocMesher = new NativeAdHocMesher()
 
-  def requestAdHocMesh(request: AdHocMeshRequest)(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
+  def requestAdHocMesh(request: AdHocMeshRequest)(using tc: TokenContext): Fox[AdHocMesh] = {
     val cuboid = request.cuboid
     val elementClass = request.dataLayer.elementClass
 
@@ -105,7 +105,7 @@ class AdHocMeshService(
       data <- binaryDataService.handleDataRequest(dataRequest)
       agglomerateMappedData <- applyAgglomerate(request, data) ?~> "failed to apply agglomerate for ad-hoc meshing"
       (mappedData, mappedSegmentId) <- applyJsonMappingIfNeeded(request, agglomerateMappedData)
-      (vertices, neighbors) <- tryo(
+      mesh <- tryo(
         adHocMesher.mesh(
           mappedData,
           ElementClass.bytesPerElement(elementClass),
@@ -115,7 +115,7 @@ class AdHocMeshService(
           scale
         )
       ).toFox
-    } yield (vertices, if (request.findNeighbors) neighbors else List())
+    } yield if (request.findNeighbors) mesh else mesh.copy(neighbors = List())
   }
 
   private def applyAgglomerate(request: AdHocMeshRequest, data: Array[Byte])(using

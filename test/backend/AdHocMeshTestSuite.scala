@@ -38,7 +38,7 @@ class AdHocMeshTestSuite extends AnyWordSpec {
       assert(floats(bytes, 0, 12) == mesh.vertices.toSeq)
       val indices = littleEndian(bytes, 48, 12).slice().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
       assert((0 until 6).map(indices.get(_).toInt) == mesh.indices.toSeq)
-      assert(mesh.responseHeaders.contains("VERTEX_COUNT" -> "4"))
+      assert(mesh.responseHeaders.contains("Vertex-Count" -> "4"))
       assert(mesh.responseHeaders.contains("NEIGHBORS" -> "[2, 5]"))
     }
 

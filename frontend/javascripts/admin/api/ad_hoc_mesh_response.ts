@@ -9,7 +9,7 @@ export type AdHocMeshGeometry = {
 // Parses the body of an ad-hoc mesh response. An indexed response contains the vertices,
 // followed by the indices, which are 16-bit if there are at most 65535 vertices, else 32-bit
 // (WebGL 2 treats the 16-bit index 65535 as primitive restart).
-// The VERTEX_COUNT header locates the indices. Without it, the body is a triangle soup.
+// The Vertex-Count header locates the indices. Without it, the body is a triangle soup.
 export function parseAdHocMeshResponse(
   buffer: ArrayBuffer,
   vertexCountHeader: string | undefined,

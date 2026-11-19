@@ -30,8 +30,8 @@ case class AdHocMesh(vertices: Array[Float], indices: Array[Int], neighbors: Lis
   /** The response body of an ad-hoc mesh request, little-endian.
     *
     * Indexed: the vertices as floats, followed by the indices as unsigned 16-bit integers if there are at most 65535
-    * vertices, else as 32-bit integers. Not 65536, because WebGL 2 treats the 16-bit index 65535 as primitive
-    * restart. Otherwise: the triangle soup as floats.
+    * vertices, else as 32-bit integers. Not 65536, because WebGL 2 treats the 16-bit index 65535 as primitive restart.
+    * Otherwise: the triangle soup as floats.
     */
   def toBytes(indexed: Boolean): Array[Byte] =
     if (indexed) {
@@ -52,8 +52,8 @@ case class AdHocMesh(vertices: Array[Float], indices: Array[Int], neighbors: Lis
   /** The neighbors (see [[neighbors]]) and the vertex count, which locates the indices in an indexed response. */
   def responseHeaders: List[(String, String)] = List(
     "NEIGHBORS" -> neighbors.mkString("[", ", ", "]"),
-    "VERTEX_COUNT" -> vertexCount.toString,
-    "Access-Control-Expose-Headers" -> "NEIGHBORS, VERTEX_COUNT"
+    "Vertex-Count" -> vertexCount.toString,
+    "Access-Control-Expose-Headers" -> "NEIGHBORS, Vertex-Count"
   )
 }
 

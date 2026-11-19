@@ -2350,7 +2350,7 @@ export function computeAdHocMesh(
           },
         );
         const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
-        return { ...parseAdHocMeshResponse(buffer, headers.vertex_count), neighbors };
+        return { ...parseAdHocMeshResponse(buffer, headers["vertex-count"]), neighbors };
       }),
     options,
     retryOptions,

@@ -7,6 +7,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import type { StartAiJobDrawerState } from "viewer/view/ai_jobs/constants";
+import type { StatisticsViewState } from "viewer/view/right_border_tabs/segments_tab/segment_statistics_view_state";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
@@ -14,6 +15,7 @@ type SetIsRestoringVersionAction = ReturnType<typeof setIsRestoringVersionAction
 type SetStoredLayoutsAction = ReturnType<typeof setStoredLayoutsAction>;
 type SetBorderOpenStatusAction = ReturnType<typeof setBorderOpenStatusAction>;
 type SetSegmentStatisticsScopeAction = ReturnType<typeof setSegmentStatisticsScopeAction>;
+type SetSegmentStatisticsViewAction = ReturnType<typeof setSegmentStatisticsViewAction>;
 type SetImportingMeshStateAction = ReturnType<typeof setImportingMeshStateAction>;
 type SetIsInAnnotationViewAction = ReturnType<typeof setIsInAnnotationViewAction>;
 type SetHasOrganizationsAction = ReturnType<typeof setHasOrganizationsAction>;
@@ -61,6 +63,7 @@ export type UiAction =
   | SetImportingMeshStateAction
   | SetBorderOpenStatusAction
   | SetSegmentStatisticsScopeAction
+  | SetSegmentStatisticsViewAction
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
   | SetHasOrganizationsAction
@@ -121,6 +124,11 @@ export const setSegmentStatisticsScopeAction = (scope: SegmentStatisticsScope | 
   ({
     type: "SET_SEGMENT_STATISTICS_SCOPE",
     scope,
+  }) as const;
+export const setSegmentStatisticsViewAction = (view: StatisticsViewState) =>
+  ({
+    type: "SET_SEGMENT_STATISTICS_VIEW",
+    view,
   }) as const;
 const setImportingMeshStateAction = (isImporting: boolean) =>
   ({

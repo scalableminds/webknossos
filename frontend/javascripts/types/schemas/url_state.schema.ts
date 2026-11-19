@@ -237,6 +237,52 @@ export default {
         tdCamera: {
           $ref: "#/definitions/types::TdCamera",
         },
+        segmentStatistics: {
+          $ref: "#/definitions/types::SegmentStatisticsUrlState",
+        },
+      },
+      additionalProperties: false,
+    },
+    "types::SegmentStatisticsUrlState": {
+      type: "object",
+      properties: {
+        // Either a group or a list of segments.
+        scope: {
+          type: "object",
+          properties: {
+            groupId: { type: "number" },
+            segmentIds: { type: "array", items: { type: "string" } },
+          },
+          additionalProperties: false,
+        },
+        groupBy: { enum: ["group", "none"] },
+        mode: { enum: ["table", "compare"] },
+        sort: {
+          anyOf: [
+            { type: "null" },
+            {
+              type: "object",
+              properties: {
+                key: { type: "string" },
+                order: { enum: ["ascend", "descend"] },
+              },
+              required: ["key", "order"],
+              additionalProperties: false,
+            },
+          ],
+        },
+        hiddenColumns: { type: "array", items: { type: "string" } },
+        units: { type: "object", additionalProperties: { type: "string" } },
+        ranges: {
+          type: "object",
+          additionalProperties: {
+            type: "array",
+            items: [{ type: ["number", "null"] }, { type: ["number", "null"] }],
+            minItems: 2,
+            maxItems: 2,
+          },
+        },
+        compared: { type: "array", items: { type: "string" } },
       },
       additionalProperties: false,
     },

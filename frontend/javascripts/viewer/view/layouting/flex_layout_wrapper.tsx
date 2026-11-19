@@ -15,12 +15,18 @@ import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
 import { BorderTabs, FlightViews, OrthoViews } from "viewer/constants";
+import UrlManager from "viewer/controller/url_manager";
 import {
   isUserInterfaceBlocked,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import { datasetHasConnectomes } from "viewer/model/accessors/connectome_accessor";
-import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import {
+  setBorderOpenStatusAction,
+  setSegmentStatisticsScopeAction,
+  setSegmentStatisticsViewAction,
+} from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BorderOpenStatus, WebknossosState } from "viewer/store";
@@ -42,6 +48,7 @@ import CommentTabView from "viewer/view/right_border_tabs/comment_tab/comment_ta
 import ConnectomeView from "viewer/view/right_border_tabs/connectome_tab/connectome_view";
 import DatasetInfoTabView from "viewer/view/right_border_tabs/info_tab/dataset_info_tab_view";
 import SegmentStatisticsTab from "viewer/view/right_border_tabs/segments_tab/segment_statistics_tab";
+import { fromUrlState } from "viewer/view/right_border_tabs/segments_tab/segment_statistics_view";
 import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_tab_view";
 import SkeletonTabView from "viewer/view/right_border_tabs/skeleton_tab/skeleton_tab_view";
 import Statusbar from "viewer/view/statusbar/statusbar";
@@ -164,6 +171,10 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     }
   }
 
+  componentDidMount() {
+    this.restoreSegmentStatisticsFromUrl();
+  }
+
   componentWillUnmount() {
     this.unbindAllListeners();
     this.keyboard?.destroy();
@@ -277,6 +288,32 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     const isRightOpen = getBorderOpenStatus(this.state.model).right;
     if (!isRightOpen) this.toggleBorder("right");
     rightBorderModel.doAction(Actions.selectTab(tabType.id));
+
+    // The right border's own layout component usually reports these changes (see
+    // renderSubLayout). It might not be mounted yet though (e.g. right after loading), so the
+    // changes are also published from here.
+    const rightBorderNode = this.state.model.getNodeById(rightBorderId);
+    if (rightBorderNode != null) {
+      this.state.model.doAction(
+        Actions.updateNodeAttributes(rightBorderId, {
+          config: { model: rightBorderModel.toJson() },
+        }),
+      );
+    }
+    this.syncStatisticsMode();
+  }
+
+  // A link that was copied from the segment statistics tab reopens that tab in the same state.
+  private restoreSegmentStatisticsFromUrl() {
+    const urlState = UrlManager.initialState.segmentStatistics;
+    if (urlState == null) return;
+    const { viewState, scope } = fromUrlState(
+      urlState,
+      getVisibleSegmentationLayer(Store.getState())?.name ?? null,
+    );
+    Store.dispatch(setSegmentStatisticsScopeAction(scope));
+    Store.dispatch(setSegmentStatisticsViewAction(viewState));
+    this.openRightBorderTabById(BorderTabs.SegmentStatisticsTab, BorderTabs.SegmentsView);
   }
 
   private getRightBorder(model: Model): BorderNode | undefined {

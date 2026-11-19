@@ -29,6 +29,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
+import type { SegmentStatisticsUrlState } from "viewer/view/right_border_tabs/segments_tab/segment_statistics_view";
 
 const MAX_UPDATE_INTERVAL = 1000;
 const MINIMUM_VALID_CSV_LENGTH = 5;
@@ -132,6 +133,9 @@ export type UrlManagerState = {
   clippingDistance?: number;
   clipSkeletonToCurrentSection?: boolean;
   tdCamera?: TdCameraUrlState;
+  // Opens the segment statistics tab in the given state. Only part of links that are copied from
+  // that tab.
+  segmentStatistics?: SegmentStatisticsUrlState;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 

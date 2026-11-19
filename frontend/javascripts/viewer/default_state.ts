@@ -14,6 +14,7 @@ import Constants, {
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
 import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import { DEFAULT_VIEW_STATE } from "viewer/view/right_border_tabs/segments_tab/segment_statistics_view_state";
 
 const defaultViewportRect = {
   top: 0,
@@ -300,6 +301,7 @@ const defaultState: WebknossosState = {
       left: false,
     },
     segmentStatisticsScope: null,
+    segmentStatisticsView: DEFAULT_VIEW_STATE,
     systemTheme: getSystemColorTheme(),
     isWkInitialized: false,
     isUiReady: false,

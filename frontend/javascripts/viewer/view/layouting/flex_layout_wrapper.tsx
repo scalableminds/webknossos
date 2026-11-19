@@ -89,8 +89,9 @@ const rightBorderId = "right-border-tab-container";
 
 // While the segment statistics tab is shown, the layout is temporarily rearranged to make room for
 // it ("statistics mode"): the right border is widened and the viewports are stacked in one column.
-// Below this window width, the left border is closed in addition.
-const STATISTICS_MODE_SMALL_WINDOW_WIDTH = 1500;
+// Below this window width, the left border is closed in addition. The value covers laptop screens
+// up to 16" (e.g. 1728px on a 16" MacBook Pro, 1920px on full HD laptops).
+const STATISTICS_MODE_SMALL_WINDOW_WIDTH = 2000;
 const STATISTICS_MODE_BORDER_WIDTH_FRACTION = 0.62;
 const STATISTICS_MODE_MIN_BORDER_WIDTH = 500;
 const STATISTICS_MODE_MAX_BORDER_WIDTH = 1100;

@@ -242,6 +242,16 @@ const isAgglomerate = (mapping: ActiveMappingInfo) => {
   return mapping.mappingType !== "JSON" && mapping.mappingType != null;
 };
 
+// The data reloads that were started because the mapping of a layer changed (see reloadData).
+const latestDataReloadByLayer: Record<string, Promise<void>> = {};
+
+// Resolves once the data of the layer was reloaded after the latest mapping change that required
+// a reload (e.g., the deactivation of a mapping that the server applies). Until then, the loaded
+// buckets might still contain the data of the previous mapping.
+export function waitForDataReloadAfterMappingChange(layerName: string): Promise<void> {
+  return latestDataReloadByLayer[layerName] ?? Promise.resolve();
+}
+
 function* reloadData(
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: { layerName: string },
@@ -259,7 +269,9 @@ function* reloadData(
     content: "Reloading segmentation data...",
     duration: 1,
   });
-  yield* call([api.data, api.data.reloadBuckets], layerName);
+  const reloadPromise = api.data.reloadBuckets(layerName);
+  latestDataReloadByLayer[layerName] = reloadPromise.catch(() => {});
+  yield* call(() => reloadPromise);
 
   const needsLocalHdf5Mapping = yield* select((state) =>
     getNeedsLocalHdf5Mapping(state, layerName),

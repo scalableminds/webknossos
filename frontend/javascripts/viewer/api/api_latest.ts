@@ -87,7 +87,6 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
-  getBucketRetrievalSourceFn,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -229,10 +228,6 @@ type TransformSpec =
   | { type: "translate"; args: Vector3 };
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
-// The mapping might change (repeatedly) while a segment id is read, e.g., when the proofreading
-// tool is activated during the mapping activation.
-const MAX_ATTEMPTS_TO_READ_MAPPED_SEGMENT_ID = 3;
-
 const shownDeprecationWarnings = new Set<string>();
 function warnAboutDeprecationOnce(key: string, message: string) {
   if (!shownDeprecationWarnings.has(key)) {
@@ -1995,7 +1990,7 @@ class DataApi {
         _zoomStep,
         additionalCoordinates,
         channelIndex,
-        null,
+        false,
       );
     }
     return this.readMappedSegmentId(
@@ -2033,7 +2028,7 @@ class DataApi {
       _zoomStep,
       additionalCoordinates,
       channelIndex,
-      null,
+      true,
     );
   }
 
@@ -2069,71 +2064,49 @@ class DataApi {
     channelIndex: number,
     ignoreZoomLimit: boolean,
   ): Promise<NumberLike> {
-    const getBucketRetrievalSource = getBucketRetrievalSourceFn(layerName);
-    for (let attempt = 1; ; attempt++) {
-      const bucketRetrievalSource = getBucketRetrievalSource(Store.getState());
-      const id = await this.readDataValue(
-        layerName,
-        position,
-        zoomStep,
-        additionalCoordinates,
-        channelIndex,
-        getServerMappingName(Store.getState(), layerName),
-      );
-      const mappedId = await mapIdAsRendered(layerName, toBigInt(id), { ignoreZoomLimit });
-      // The tuple instance is reused as long as it's equal. If the mapping changed while reading
-      // the data, the id is read again, because it might have been read with the old mapping.
-      if (
-        mappedId != null &&
-        getBucketRetrievalSource(Store.getState()) === bucketRetrievalSource
-      ) {
-        return typeof id === "number" ? Number(mappedId) : mappedId;
-      }
-      if (attempt >= MAX_ATTEMPTS_TO_READ_MAPPED_SEGMENT_ID) {
-        throw new Error(
-          `Could not read the segment id of layer ${layerName} at position ${position}, because the mapping changed repeatedly.`,
-        );
-      }
-    }
+    const id = await this.readDataValue(
+      layerName,
+      position,
+      zoomStep,
+      additionalCoordinates,
+      channelIndex,
+      false,
+    );
+    const mappedId = await mapIdAsRendered(layerName, toBigInt(id), { ignoreZoomLimit });
+    return typeof id === "number" ? Number(mappedId) : mappedId;
   }
 
-  // Reads the value at the position from the loaded bucket if the server applied the given
-  // mapping to it (null for unmapped data; the server doesn't apply mappings to coarse mags).
-  // Otherwise (e.g., the mapping changed, but the bucket wasn't reloaded yet), the bucket is
-  // requested with the given mapping (and not cached).
+  // Reads the value at the position from the loaded bucket. With unmapped, the bucket is
+  // requested without the mapping (and not cached) if the server applies an agglomerate mapping
+  // to the loaded buckets of that mag.
   private async readDataValue(
     layerName: string,
     position: Vector3,
     _zoomStep: number | null | undefined,
     _additionalCoordinates: AdditionalCoordinate[] | null,
     channelIndex: number,
-    serverMappingName: string | null,
+    unmapped: boolean,
   ): Promise<NumberLike> {
     const { cube, zoomStep, bucketAddress, additionalCoordinates } =
       this.getBucketAddressOfPosition(layerName, position, _zoomStep, _additionalCoordinates);
     if (!cube.magInfo.hasIndex(zoomStep)) {
       return 0;
     }
-    const mag = cube.magInfo.getMagByIndexOrThrow(zoomStep);
-    const appliedServerMappingName = getServerMappingNameForMag(serverMappingName, mag);
-    const cachedBucket = cube.getBucket(bucketAddress);
-    const isCachedBucketLoaded =
-      cachedBucket.type === "data" && (cachedBucket.isLoaded() || cachedBucket.isMissing());
-    // Avoid loading a bucket that will contain the data of another mapping.
-    if (
-      isCachedBucketLoaded ||
-      getServerMappingNameForMag(getServerMappingName(Store.getState(), layerName), mag) ===
-        appliedServerMappingName
-    ) {
-      const bucket = await cube.getLoadedBucket(bucketAddress);
-      if (bucket.type === "null" || bucket.serverMappingName === appliedServerMappingName) {
-        // Read via the cube, because the additional coordinates might have changed while the
-        // bucket was loading.
-        return cube.getDataValue(position, additionalCoordinates, zoomStep, channelIndex);
-      }
+    const isMappedByServer =
+      getServerMappingNameForMag(
+        getServerMappingName(Store.getState(), layerName),
+        cube.magInfo.getMagByIndexOrThrow(zoomStep),
+      ) != null;
+    if (!unmapped || !isMappedByServer) {
+      await cube.getLoadedBucket(bucketAddress);
+      // Read via the cube, because the additional coordinates might have changed while the
+      // bucket was loading.
+      return cube.getDataValue(position, additionalCoordinates, zoomStep, channelIndex);
     }
     const layerInfo = getLayerByName(Store.getState().dataset, layerName);
-    const [result] = await requestWithFallback(layerInfo, [bucketAddress], { serverMappingName });
+    const [result] = await requestWithFallback(layerInfo, [bucketAddress], {
+      serverMappingName: null,
+    });
     if (result.type === "failure") {
       throw new Error(`Could not load the data of layer ${layerName} at position ${position}.`);
     }

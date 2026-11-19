@@ -16,7 +16,11 @@ import {
   calculateGlobalPos,
   type PositionWithRounding,
 } from "viewer/model/accessors/view_mode_accessor";
-import { isMappingHiddenByZoomLimit } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getServerMappingName,
+  getServerMappingNameForMag,
+  isMappingHiddenByZoomLimit,
+} from "viewer/model/accessors/volumetracing_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   addToContourListAction,
@@ -103,11 +107,11 @@ export function handlePickCell(pos: Point2) {
 // Returns the segment ids that are currently rendered at the given position in the visible
 // segmentation layer. Nothing is loaded: if the bucket isn't loaded, both ids are 0. If the
 // local mapping doesn't know the unmapped id (yet), the mapped id is 0, because the segment
-// isn't rendered then either. If the server applied the mapping to the bucket, the unmapped id
+// isn't rendered then either. If the server applies the mapping to the bucket, the unmapped id
 // is null, because it isn't known. Note that the mapped id is also mapped if the zoom limit for
-// agglomerate mappings is exceeded (although the mapping isn't rendered then). Use this for interactions with what the user sees (hover,
-// clicks, context menu). For positions that may not be loaded, use the front-end API (see
-// getLayerPositionAndRenderedZoomStep).
+// agglomerate mappings is exceeded (although the mapping isn't rendered then). Use this for
+// interactions with what the user sees (hover, clicks, context menu). For positions that may not
+// be loaded, use the front-end API (see getLayerPositionAndRenderedZoomStep).
 // This must not be memoized on the position: the result depends on live state (loaded
 // buckets, mapping, visible layer, additional coordinates, rendered zoom step), e.g., the
 // mapped id can change due to a foreign proofreading action.
@@ -130,14 +134,11 @@ export function getSegmentIdsAtPosition(globalPos: Vector3): {
   const cube = Model.getCubeByLayerName(layer.name);
   const { additionalCoordinates } = state.flycam;
   const id = toBigInt(cube.getDataValue(posInLayerSpace, additionalCoordinates, renderedZoomStep));
-  const bucket = cube.getBucket(
-    cube.positionToZoomedAddress(
-      posInLayerSpace.map(Math.floor) as Vector3,
-      additionalCoordinates,
-      renderedZoomStep,
-    ),
-  );
-  if (bucket.type === "data" && bucket.serverMappingName != null) {
+  const renderedMag = cube.magInfo.getMagByIndex(renderedZoomStep);
+  if (
+    renderedMag != null &&
+    getServerMappingNameForMag(getServerMappingName(state, layer.name), renderedMag) != null
+  ) {
     return { unmappedId: null, mappedId: id };
   }
   return { unmappedId: id, mappedId: mapId(state, layer.name, id) ?? 0n };

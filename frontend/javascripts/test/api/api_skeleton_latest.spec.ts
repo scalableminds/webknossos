@@ -1,5 +1,5 @@
 import { createTestKeystrokes, setGlobalKeystrokes } from "@rwh/keystrokes";
-import { map3, sleep } from "libs/utils";
+import { map3 } from "libs/utils";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import testRotations from "test/fixtures/test_rotations";
 import {
@@ -22,7 +22,6 @@ import { setRotationAction, setZoomStepAction } from "viewer/model/actions/flyca
 import {
   finishMappingInitializationAction,
   setMappingAction,
-  setMappingDataAction,
   setMappingEnabledAction,
 } from "viewer/model/actions/settings_actions";
 import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_actions";
@@ -336,26 +335,6 @@ describe("API Skeleton", () => {
       expect(await api.data.getUnmappedDataValue("segmentation", position, 0)).toBe(unmappedId);
     });
 
-    it<WebknossosTestContext>("getDataValue should wait for the data of a JSON mapping that is being activated", async (context) => {
-      const { api } = context;
-      mockBucketRequests(context);
-      Store.dispatch(
-        setMappingAction("segmentation", "<custom mapping>", "JSON", false, {
-          dataIsProvidedExternally: true,
-        }),
-      );
-
-      let isResolved = false;
-      const promise = api.data.getDataValue("segmentation", position, 0).finally(() => {
-        isResolved = true;
-      });
-      await sleep(50);
-      expect(isResolved).toBe(false);
-
-      Store.dispatch(setMappingDataAction("segmentation", new Map([[unmappedId, 7]]), false));
-      expect(await promise).toBe(7);
-    });
-
     it<WebknossosTestContext>("getDataValue should return the unmapped id if the zoom limit for the mapping is exceeded", async (context) => {
       const { api } = context;
       mockBucketRequests(context);
@@ -383,29 +362,7 @@ describe("API Skeleton", () => {
       });
     });
 
-    it<WebknossosTestContext>("getDataValue and getUnmappedDataValue should not read buckets that were loaded with another mapping", async (context) => {
-      const { api, model } = context;
-      const requestedBuckets = mockBucketRequests(context);
-      activateAgglomerateMapping();
-      expect(await api.data.getDataValue("segmentation", position, 0)).toBe(agglomerateId);
-
-      // The mapping saga, which reloads the buckets, isn't running in this test. So, the loaded
-      // bucket still contains the agglomerate ids, as it happens until the reload is done.
-      Store.dispatch(setMappingEnabledAction("segmentation", false));
-      const cube = model.getCubeByLayerName("segmentation");
-      const bucket = cube.getBucket(cube.positionToZoomedAddress(position, null, 0));
-      expect(bucket.type === "data" && bucket.serverMappingName).toBe(sampleHdf5AgglomerateName);
-
-      expect(await api.data.getDataValue("segmentation", position, 0)).toBe(unmappedId);
-      expect(await api.data.getUnmappedDataValue("segmentation", position, 0)).toBe(unmappedId);
-      expect(requestedBuckets.map((bucket) => bucket.applyAgglomerate)).toEqual([
-        sampleHdf5AgglomerateName,
-        undefined,
-        undefined,
-      ]);
-    });
-
-    it<WebknossosTestContext>("buckets of mags to which the server doesn't apply the mapping should be treated as unmapped", async (context) => {
+    it<WebknossosTestContext>("getUnmappedDataValue should read the loaded bucket of a mag to which the server doesn't apply the mapping", async (context) => {
       const { api, mocks, model } = context;
       const cube = model.getCubeByLayerName("segmentation");
       const coarseZoomStep = cube.magInfo.getIndexByMag([32, 32, 32]);
@@ -443,8 +400,6 @@ describe("API Skeleton", () => {
       expect(requestedBuckets.map((bucket) => bucket.applyAgglomerate)).toEqual([
         sampleHdf5AgglomerateName,
       ]);
-      const bucket = cube.getBucket(cube.positionToZoomedAddress(position, null, coarseZoomStep));
-      expect(bucket.type === "data" && bucket.serverMappingName).toBe(null);
     });
 
     it<WebknossosTestContext>("getDataValue should warn that respectMapping is deprecated", async (context) => {

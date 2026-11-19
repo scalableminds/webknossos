@@ -5,10 +5,6 @@ import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
 import constants from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
-import {
-  getServerMappingName,
-  getServerMappingNameForMag,
-} from "viewer/model/accessors/volumetracing_accessor";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import type { DataStoreInfo } from "viewer/store";
@@ -177,17 +173,12 @@ class PullQueue {
     // already - fetched batch needs no further request from any consumer.
     const batch = batchItems.map((item) => item.bucket);
     const wireBatch = batch.map((address) => snapToTBatchAddress(this.cube, address));
-    // Remember the mapping that the server applies so that readers can detect buckets that were
-    // loaded before the mapping changed (see DataBucket.serverMappingName).
-    const serverMappingName = this.cube.isSegmentation
-      ? getServerMappingName(Store.getState(), this.layerName)
-      : null;
 
     let hasErrored = false;
     const failures: Array<BucketFailure> = [];
     try {
       const bucketResults = await asAbortable(
-        requestWithFallback(layerInfo, wireBatch, { serverMappingName }),
+        requestWithFallback(layerInfo, wireBatch),
         this.abortController.signal,
         PULL_ABORTION_ERROR,
       );
@@ -205,7 +196,6 @@ class PullQueue {
                 bucketResult.type === "data" ? bucketResult.data : null,
                 renderMissingDataBlack,
                 batchItems[index].priority,
-                serverMappingName,
               );
               break;
             }
@@ -323,7 +313,6 @@ class PullQueue {
     renderMissingDataBlack: boolean,
     // The priority with which the requested bucket was queued.
     priority: number,
-    serverMappingName: string | null,
   ): void {
     const isBatched = siblingAddresses.length > 1;
 
@@ -342,13 +331,6 @@ class PullQueue {
         // The bucket might already be LOADED or MISSING.
         continue;
       }
-      sibling.serverMappingName =
-        serverMappingName != null
-          ? getServerMappingNameForMag(
-              serverMappingName,
-              this.cube.magInfo.getMagByIndexOrThrow(siblingAddress[3]),
-            )
-          : null;
 
       try {
         if (bucketData == null) {

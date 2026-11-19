@@ -641,8 +641,8 @@ class DataCube {
   }
 
   // Returns the value at the given voxel as contained in the loaded bucket (0 if the bucket isn't
-  // loaded). For segmentation layers, this is the unmapped id unless the server applied a mapping
-  // (see DataBucket.serverMappingName). Use the front-end API to get the rendered id.
+  // loaded). For segmentation layers, this is the unmapped id unless the server applies a mapping
+  // (see getServerMappingName). Use the front-end API to get the rendered id.
   getDataValue(
     _voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,

@@ -1,7 +1,7 @@
 package backend
 
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
-import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshHelper, NativeAdHocMesher}
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMesh, FullMeshHelper, NativeAdHocMesher}
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.{ByteBuffer, ByteOrder}
@@ -15,20 +15,31 @@ class FullMeshHelperTestSuite extends AnyWordSpec with FullMeshHelper {
     (a._2 * b._3 - a._3 * b._2, a._3 * b._1 - a._1 * b._3, a._1 * b._2 - a._2 * b._1)
   private def dot(a: Vec, b: Vec): Double = a._1 * b._1 + a._2 * b._2 + a._3 * b._3
 
+  // An L-shaped segment of four voxels, not touching the border, so marching cubes yields a closed surface
+  private def lShapedMesh: AdHocMesh = {
+    val dims = Vec3Int(4, 4, 4)
+    val segmentVoxels = Set((1, 1, 1), (2, 1, 1), (1, 2, 1), (1, 1, 2))
+    val data = Array.tabulate(dims.x * dims.y * dims.z) { i =>
+      if (segmentVoxels.contains((i % dims.x, i / dims.x % dims.y, i / (dims.x * dims.y)))) 1.toByte else 0.toByte
+    }
+    new NativeAdHocMesher().mesh(data, 1, dims, 1L, Vec3Float(10, 20, 30), Vec3Float(11.24f, 11.24f, 28f))
+  }
+
+  "surfaceArea" should {
+    "equal the surface area of the mesh's STL encoding" in {
+      val mesh = lShapedMesh
+      val area = surfaceArea(mesh)
+      assert(area > 0)
+      assert(area == surfaceAreaFromRawChunkStlBytes(adHocMeshToStl(mesh)))
+    }
+  }
+
   "adHocMeshToStl" should {
     "store each face's own outward normal for an ad-hoc mesh" in {
-      // An L-shaped segment of four voxels, not touching the border, so marching cubes yields a closed surface
-      val dims = Vec3Int(4, 4, 4)
-      val segmentVoxels = Set((1, 1, 1), (2, 1, 1), (1, 2, 1), (1, 1, 2))
-      val data = Array.tabulate(dims.x * dims.y * dims.z) { i =>
-        if (segmentVoxels.contains((i % dims.x, i / dims.x % dims.y, i / (dims.x * dims.y)))) 1.toByte else 0.toByte
-      }
-      val vertices =
-        new NativeAdHocMesher()
-          .mesh(data, 1, dims, 1L, Vec3Float(10, 20, 30), Vec3Float(11.24f, 11.24f, 28f))
-          .triangleSoup
+      val mesh = lShapedMesh
+      val vertices = mesh.triangleSoup
 
-      val stl = ByteBuffer.wrap(adHocMeshToStl(vertices)).order(ByteOrder.LITTLE_ENDIAN)
+      val stl = ByteBuffer.wrap(adHocMeshToStl(mesh)).order(ByteOrder.LITTLE_ENDIAN)
       def readVec(offset: Int): Vec =
         (stl.getFloat(offset).toDouble, stl.getFloat(offset + 4).toDouble, stl.getFloat(offset + 8).toDouble)
       val numFaces = vertices.length / 9

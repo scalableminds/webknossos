@@ -92,6 +92,9 @@ const rightBorderId = "right-border-tab-container";
 // Below this window width, the left border is closed in addition. The value covers laptop screens
 // up to 16" (e.g. 1728px on a 16" MacBook Pro, 1920px on full HD laptops).
 const STATISTICS_MODE_SMALL_WINDOW_WIDTH = 2000;
+// From this window width on, there is enough room for the statistics next to the regular
+// arrangement of the viewports and the left border. Only the right border is widened then.
+const STATISTICS_MODE_LARGE_WINDOW_WIDTH = 2500;
 const STATISTICS_MODE_BORDER_WIDTH_FRACTION = 0.62;
 const STATISTICS_MODE_MIN_BORDER_WIDTH = 500;
 const STATISTICS_MODE_MAX_BORDER_WIDTH = 1100;
@@ -289,7 +292,8 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     return tab != null && (tab as TabNode).isSelected();
   }
 
-  private getStatisticsBorderWidth(): number {
+  // reservedWidth is the space that has to remain for everything besides the right border.
+  private getStatisticsBorderWidth(reservedWidth: number): number {
     const windowWidth = getGroundTruthLayoutRect().width;
     const storedWidth = Number(UserLocalStorage.getItem(statisticsBorderWidthStorageKey, false));
     const preferredWidth =
@@ -301,7 +305,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
           );
     return Math.max(
       STATISTICS_MODE_MIN_BORDER_WIDTH,
-      Math.min(preferredWidth, windowWidth - STATISTICS_MODE_MIN_VIEWPORT_WIDTH),
+      Math.min(preferredWidth, windowWidth - reservedWidth),
     );
   }
 
@@ -320,9 +324,16 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     // Stack the plane viewports as tabs of one tabset on top of the 3D viewport. Tabsets that become
     // empty are removed by flexlayout, so that a single column of viewports remains. The viewports
     // are only moved and not removed, so that the user can still switch between the planes.
+    const windowWidth = getGroundTruthLayoutRect().width;
+    const isLargeWindow = windowWidth >= STATISTICS_MODE_LARGE_WINDOW_WIDTH;
     const xyNode = model.getNodeById(OrthoViews.PLANE_XY);
     const is2dLayout = this.props.layoutKey.endsWith("2d");
-    if (xyNode != null && model.getNodeById(OrthoViews.TDView) != null && !is2dLayout) {
+    if (
+      !isLargeWindow &&
+      xyNode != null &&
+      model.getNodeById(OrthoViews.TDView) != null &&
+      !is2dLayout
+    ) {
       const planeTabsetId = (xyNode.getParent() as TabSetNode).getId();
       for (const viewportId of [OrthoViews.PLANE_YZ, OrthoViews.PLANE_XZ]) {
         const viewportNode = model.getNodeById(viewportId);
@@ -338,7 +349,16 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
       model.doAction(Actions.moveNode(OrthoViews.TDView, planeTabsetId, DockLocation.BOTTOM, -1));
     }
 
-    this.appliedStatisticsBorderWidth = this.getStatisticsBorderWidth();
+    // On large windows, two columns of viewports and the left border keep their place.
+    const leftBorder = model
+      .getBorderSet()
+      .getBorders()
+      .find((border) => border.getLocation().getName() === "left");
+    const reservedWidth = isLargeWindow
+      ? 2 * STATISTICS_MODE_MIN_VIEWPORT_WIDTH +
+        (getBorderOpenStatus(model).left ? (leftBorder?.getSize() ?? 0) : 0)
+      : STATISTICS_MODE_MIN_VIEWPORT_WIDTH;
+    this.appliedStatisticsBorderWidth = this.getStatisticsBorderWidth(reservedWidth);
     const rightBorder = this.getRightBorder(model);
     if (rightBorder != null) {
       model.doAction(
@@ -346,7 +366,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
       );
     }
 
-    const isSmallWindow = getGroundTruthLayoutRect().width < STATISTICS_MODE_SMALL_WINDOW_WIDTH;
+    const isSmallWindow = windowWidth < STATISTICS_MODE_SMALL_WINDOW_WIDTH;
     if (isSmallWindow && getBorderOpenStatus(model).left) {
       model.doAction(Actions.selectTab("left-border-tab-container"));
     }

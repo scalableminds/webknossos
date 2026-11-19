@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.box.{Empty, Failure, Full}
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
@@ -341,6 +341,15 @@ class DatasetArray(
     }
     builder.toString
   }
+
+  /* Reads whole chunks, typed and in the order of chunkIndices, with at most maxParallelReads reads at a time. A chunk
+   * that cannot be read is a failure and does not fail the others.
+   */
+  def readChunks(chunkIndices: Seq[Array[Long]], maxParallelReads: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Box[MultiArray]]] =
+    Fox.batchCombined(chunkIndices, maxParallelReads)(getSourceChunkDataWithCache(_).shiftBox)
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean = false)(using
       ec: ExecutionContext,

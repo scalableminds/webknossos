@@ -110,7 +110,7 @@ function AdvancedDatasetTransformationsCard() {
   );
 }
 
-function DatasetTransformationSettingsCard({
+export function DatasetTransformationSettingsCard({
   transformationsMode,
   form,
 }: {
@@ -146,33 +146,15 @@ export enum TransformationsMode {
   ADVANCED = "advanced",
 }
 
-function SimpleDatasetForm({
-  form,
-  dataset,
-}: {
-  form: FormInstance;
-  dataset: APIMaybeUnimportedDataset | null | undefined;
-}) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const onRemoveLayer = (layer: DataLayer) => {
-    const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
-    const newLayers = oldLayers.filter(
-      (existingLayer: DataLayer) => existingLayer.name !== layer.name,
-    );
-    form.setFieldsValue({
-      dataSource: {
-        dataLayers: newLayers,
-      },
-    });
-  };
+export const transformationModeOptions = [
+  { value: TransformationsMode.NONE, label: "None" },
+  { value: TransformationsMode.SIMPLE, label: "Simple" },
+  { value: TransformationsMode.ADVANCED, label: "Advanced" },
+];
 
-  const transformationItems = [
-    { value: TransformationsMode.NONE, label: "None" },
-    { value: TransformationsMode.SIMPLE, label: "Simple" },
-    { value: TransformationsMode.ADVANCED, label: "Advanced" },
-  ];
-
-  const dataSource: Record<string, any> = Form.useWatch("dataSource", { form, preserve: true });
+// Writes the transformations of the selected mode into the data layers of the form.
+// Returns the current transformation mode.
+export function useApplyTransformationsToLayers(form: FormInstance): TransformationsMode {
   const transformationsMode: TransformationsMode = Form.useWatch(["transformationsMode"], form);
   const coordinateTransformationsJSON: string = Form.useWatch(["coordinateTransformations"], form);
 
@@ -242,6 +224,32 @@ function SimpleDatasetForm({
     }
   }, [coordinateTransformationsJSON, form, transformationsMode]);
 
+  return transformationsMode;
+}
+
+function SimpleDatasetForm({
+  form,
+  dataset,
+}: {
+  form: FormInstance;
+  dataset: APIMaybeUnimportedDataset | null | undefined;
+}) {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const onRemoveLayer = (layer: DataLayer) => {
+    const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
+    const newLayers = oldLayers.filter(
+      (existingLayer: DataLayer) => existingLayer.name !== layer.name,
+    );
+    form.setFieldsValue({
+      dataSource: {
+        dataLayers: newLayers,
+      },
+    });
+  };
+
+  const dataSource: Record<string, any> = Form.useWatch("dataSource", { form, preserve: true });
+  const transformationsMode = useApplyTransformationsToLayers(form);
+
   return (
     <div>
       <SettingsCard
@@ -309,7 +317,10 @@ function SimpleDatasetForm({
                   </>
                 }
               >
-                <Select options={transformationItems} style={{ width: LEFT_COLUMN_ITEMS_WIDTH }} />
+                <Select
+                  options={transformationModeOptions}
+                  style={{ width: LEFT_COLUMN_ITEMS_WIDTH }}
+                />
               </FormItemWithInfo>
             </Col>
             <Col span={24} xl={12}>

@@ -22,11 +22,11 @@ author=${author/normanrz/<@U02A9E68E>}
 author=${author/philippotto/<@U02A8PAJK>}
 author=${author/valentin-pinkau/<@U19635SLU>}
 channel="webknossos-bots"
-pullregex="(.*)#([0-9]+)(.*)"
-
-while [[ "$commitmsg" =~ $pullregex ]]; do
-    commitmsg="${BASH_REMATCH[1]}#<https://github.com/scalableminds/webknossos/issues/${BASH_REMATCH[2]}|${BASH_REMATCH[2]}>${BASH_REMATCH[3]}"
-done
+# owner/repo#123 links to that repository, #123 to the one this runs in
+commitmsg=$(sed -E \
+    -e "s@([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#([0-9]+)@<${GITHUB_SERVER_URL}/\\1/issues/\\2|\\1#\\2>@g" \
+    -e "s@(^|[^/A-Za-z0-9_.|-])#([0-9]+)@\\1<${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/issues/\\2|#\\2>@g" \
+    <<<"$commitmsg")
 
 buildlink="<${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}|ready>"
 mesg="${author} WEBKNOSSOS docker image \`${DOCKER_TAG}\` for “${commitmsg}” is ${buildlink}."

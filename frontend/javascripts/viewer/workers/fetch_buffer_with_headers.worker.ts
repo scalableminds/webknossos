@@ -2,6 +2,9 @@ import handleStatus from "libs/handle_http_status";
 import type { RequestOptions } from "libs/request";
 import { expose, transfer } from "./comlink_core";
 
+// Like fetch_buffer.worker.ts, this worker does not offload CPU work. It only exists
+// to speed up loading when the main thread is under high CPU load. See the comment
+// there for the reasoning and the benchmark results.
 function fetchBufferWithHeaders(
   url: RequestInfo,
   options?: RequestOptions,

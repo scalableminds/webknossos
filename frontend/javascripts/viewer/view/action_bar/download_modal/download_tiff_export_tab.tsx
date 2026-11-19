@@ -1,6 +1,11 @@
 import { useIsJobAvailable, useStartAndPollJob } from "admin/job/job_hooks";
 import { areJobsAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
-import { doWithToken, downloadWithFilename, startExportTiffJob } from "admin/rest_api";
+import {
+  doWithToken,
+  downloadWithFilename,
+  getSharingTokenFromUrlParameters,
+  startExportTiffJob,
+} from "admin/rest_api";
 import { Alert, Button, Checkbox, Col, Divider, Flex, Row, Segmented, Typography } from "antd";
 import type { SegmentedOptions } from "antd/es/segmented";
 import { LayerSelection } from "components/layer_selection";
@@ -269,6 +274,8 @@ export function DownloadTiffTab({
         selectedLayerInfos.annotationId,
         selectedLayerInfos.displayName,
         exportFormat,
+        // Lets users export datasets they can only see via a sharing link.
+        getSharingTokenFromUrlParameters(),
       );
       return [exportKey(selectedLayerInfos, mag), job.id];
     });

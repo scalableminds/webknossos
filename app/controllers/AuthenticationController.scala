@@ -7,22 +7,11 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.Origin
-import com.webauthn4j.data.{
-  AuthenticationParameters,
-  PublicKeyCredentialParameters,
-  PublicKeyCredentialType,
-  RegistrationParameters
-}
-import com.webauthn4j.server.ServerProperty
-import com.webauthn4j.WebAuthnManager
-import com.webauthn4j.credential.CredentialRecordImpl as WebAuthnCredentialRecord
 import mail.{AccountEmailService, MailchimpClient, MailchimpTag, OrganizationEmailService}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user.*
-import Box.tryo
 import models.team.TeamMembership
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
@@ -48,7 +37,6 @@ import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters.*
 
 case class CreateOrganizationWithExistingUserParams(userId: ObjectId, newOrganizationName: String)
     derives JsonAutoFormat
@@ -110,16 +98,8 @@ class AuthenticationController @Inject() (
 
   private lazy val origin = new Origin(conf.Http.uri)
   private lazy val usesHttps = conf.Http.uri.startsWith("https://")
-  private lazy val webAuthnPubKeyParams = Array(
-    // COSE Algorithm: EdDSA
-    WebAuthnCreationOptionsPubKeyParam(-8),
-    // COSE Algorithm: ES256
-    WebAuthnCreationOptionsPubKeyParam(-7),
-    // COSE Algorithm: RS256
-    WebAuthnCreationOptionsPubKeyParam(-257)
-  )
-  private lazy val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
   private val webauthnTimeout = 2 minutes
+  private lazy val webAuthnVerifier = new WebAuthnVerifier(origin, webauthnTimeout)
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
@@ -288,14 +268,16 @@ class AuthenticationController @Inject() (
   def accessibleBySwitching(
       datasetId: Option[ObjectId],
       annotationId: Option[ObjectId],
-      workflowHash: Option[String]
+      workflowHash: Option[String],
+      aiModelId: Option[ObjectId]
   ): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       selectedOrganization <- authenticationService.getOrganizationToSwitchTo(
         request.identity,
         datasetId,
         annotationId,
-        workflowHash
+        workflowHash,
+        aiModelId
       )
       selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
     } yield Ok(selectedOrganizationJs)
@@ -506,13 +488,7 @@ class AuthenticationController @Inject() (
       )
       challenge = new Array[Byte](32)
       _ = secureRandom.nextBytes(challenge)
-      assertion = WebAuthnPublicKeyCredentialRequestOptions(
-        challenge = Base64.encodeBase64URLSafeString(challenge),
-        timeout = Some(webauthnTimeout.toMillis.toInt),
-        rpId = Some(origin.getHost),
-        userVerification = Some("preferred"),
-        hints = None
-      )
+      assertion = webAuthnVerifier.authenticationOptions(challenge)
       _ = temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(webauthnTimeout))
     } yield Ok(Json.toJson(assertion)).withCookies(cookie)
   }
@@ -527,10 +503,10 @@ class AuthenticationController @Inject() (
         challenge <- temporaryAssertionStore
           .pop(sessionId)
           .toFox ?~> "Timeout during authentication. Please try again." ~> BAD_REQUEST
-        authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~>
+        authData <- webAuthnVerifier.parseAuthentication(request.body.key).toFox ??~>
           Msg.Passkeys.unauthorized ~> BAD_REQUEST
         credentialId = authData.getCredentialId
-        multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~>
+        multiUserId <- webAuthnVerifier.multiUserIdFromAuthentication(authData).toFox ??~>
           Msg.Passkeys.unauthorized ~> BAD_REQUEST
         multiUser <- multiUserDAO.findOneById(multiUserId)(using GlobalAccessContext) ??~>
           Msg.Passkeys.unauthorized ~> BAD_REQUEST
@@ -538,24 +514,10 @@ class AuthenticationController @Inject() (
           GlobalAccessContext
         ) ??~>
           Msg.Passkeys.unauthorized ~> BAD_REQUEST
-        serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
-
-        params = new AuthenticationParameters(
-          serverProperty,
-          credential.credentialRecord,
-          null,
-          false, // User verification is not required put preferred.
-          false // User presence is not required.
-        )
-        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> Msg.Passkeys.unauthorized ~> BAD_REQUEST
-        oldSignCount = credential.credentialRecord.getCounter
-        newSignCount = authData.getAuthenticatorData.getSignCount
-        _ = credential.credentialRecord.setCounter(newSignCount)
-        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Msg.Passkeys.unauthorized ~> BAD_REQUEST
-
-        // Sign count is 0 if not used by the authenticator.
-        _ <- Fox.fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~>
+        // Rejects sign count regressions and updates the credential record's counter in place.
+        _ <- webAuthnVerifier.verifyAuthentication(authData, challenge, credential.credentialRecord).toFox ??~>
           Msg.Passkeys.unauthorized ~> BAD_REQUEST
+        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Msg.Passkeys.unauthorized ~> BAD_REQUEST
         userId <- multiUser._lastLoggedInIdentity.toFox
         resultWithCookie <- loginUser(userId, "passkey/webauthn")
       } yield resultWithCookie
@@ -566,24 +528,11 @@ class AuthenticationController @Inject() (
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Passkeys.notEnabled
       _ <- Fox.fromBool(usesHttps) ?~> Msg.Passkeys.requiresHttps
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      user = WebAuthnCreationOptionsUser(
-        displayName = multiUser.fullName,
-        id = Base64.encodeBase64URLSafeString(multiUser._id.toString.getBytes),
-        name = multiUser.email
-      )
       credentials <- webAuthnCredentialDAO.findAllForUser(
         request.identity._multiUser
       ) ?~> "Failed to fetch Passkeys" ~> INTERNAL_SERVER_ERROR
-      excludeCredentials = credentials
-        .map(c =>
-          WebAuthnCreationOptionsExcludeCredentials(
-            id = Base64.encodeBase64URLSafeString(c.credentialRecord.getAttestedCredentialData.getCredentialId)
-          )
-        )
-        .toArray
       challenge = new Array[Byte](32)
       _ = secureRandom.nextBytes(challenge)
-      encodedChallenge = Base64.encodeBase64URLSafeString(challenge)
       sessionId = UUID.randomUUID().toString
       cookie = Cookie(
         "webauthn-registration",
@@ -594,17 +543,12 @@ class AuthenticationController @Inject() (
         sameSite = Some(Cookie.SameSite.Strict)
       )
       _ = temporaryRegistrationStore.insert(sessionId, WebAuthnChallenge(challenge), Some(webauthnTimeout))
-      options = WebAuthnPublicKeyCredentialCreationOptions(
-        authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(),
-        challenge = encodedChallenge,
-        excludeCredentials = excludeCredentials,
-        pubKeyCredParams = webAuthnPubKeyParams,
-        timeout = webauthnTimeout.toMillis.toInt,
-        rp = WebAuthnCreationOptionsRelyingParty(
-          id = origin.getHost,
-          name = origin.getHost
-        ),
-        user = user
+      options = webAuthnVerifier.registrationOptions(
+        challenge,
+        multiUser._id,
+        displayName = multiUser.fullName,
+        email = multiUser.email,
+        excludeCredentialIds = credentials.map(_.credentialRecord.getAttestedCredentialData.getCredentialId)
       )
     } yield Ok(Json.toJson(options)).withCookies(cookie)
   }
@@ -614,26 +558,13 @@ class AuthenticationController @Inject() (
       for {
         _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Passkeys.notEnabled
         _ <- Fox.fromBool(usesHttps) ?~> Msg.Passkeys.requiresHttps
-        registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
+        registrationData <- webAuthnVerifier.parseRegistration(request.body.key).toFox
         cookie <- request.cookies.get("webauthn-registration").toFox
         sessionId = cookie.value
         challenge <- temporaryRegistrationStore
           .pop(sessionId)
           .toFox ?~> "Timeout during registration. Please try again." ~> BAD_REQUEST
-        serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
-        publicKeyParams = webAuthnPubKeyParams.map(k =>
-          new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg))
-        )
-        registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
-        _ <- tryo(webAuthnManager.verify(registrationData, registrationParams)).toFox
-        attestationObject = registrationData.getAttestationObject
-        credentialRecord = new WebAuthnCredentialRecord(
-          attestationObject,
-          null, // clientData - Client data is not collected.
-          null, // clientExtensions - Client extensions are ignored.
-          null // transports - All transports are allowed.
-        )
-        _ = registrationData
+        credentialRecord <- webAuthnVerifier.verifyRegistration(registrationData, challenge).toFox
         credential = WebAuthnCredential(
           _id = ObjectId.generate,
           _multiUser = request.identity._multiUser,

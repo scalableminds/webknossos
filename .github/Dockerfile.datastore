@@ -1,9 +1,5 @@
 FROM eclipse-temurin:21-jre-jammy
 
-RUN apt-get update \
-  && apt-get -y install libbrotli1 libdraco4 \
-  && rm -rf /var/lib/apt/lists/*
-
 RUN mkdir -p /webknossos-datastore/binaryData \
   && groupadd -g 1000 -r webknossos \
   && useradd -u 1000 -r -g webknossos webknossos \
@@ -18,7 +14,7 @@ COPY --chown=webknossos:webknossos target/universal/stage .
 RUN chmod +x bin/webknossos-datastore \
   && chmod go+w .
 
-RUN echo '#!/bin/bash\numask 002\nbin/webknossos-datastore "$@"\n' > /docker-entrypoint.sh \
+RUN echo '#!/bin/bash\numask 002\nbin/webknossos-datastore -J-XX:-UseBASE64Intrinsics "$@"\n' > /docker-entrypoint.sh \
   && chmod +x /docker-entrypoint.sh
 
 USER webknossos

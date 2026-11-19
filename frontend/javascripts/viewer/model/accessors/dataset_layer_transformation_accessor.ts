@@ -10,6 +10,7 @@ import type {
   APIDataset,
   APISkeletonLayer,
   CoordinateTransformation,
+  VoxelSize,
 } from "types/api_types";
 import { Identity4x4, IdentityTransform, type Vector3, Vector3Indices } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
@@ -31,6 +32,7 @@ import {
   type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getDataLayers, getLayerBoundingBox, getLayerByName } from "./dataset_accessor";
 
 function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
@@ -218,6 +220,56 @@ export function getTransformsForSkeletonLayer(
       nativelyRenderedLayerName,
     ) || IdentityTransform
   );
+}
+
+// Maximum cosine of the angle between two global axis steps that still counts as perpendicular.
+const PERPENDICULARITY_TOLERANCE = 1e-3;
+
+// Returns the voxel size of the global space, i.e., the space of the flycam position and of
+// everything that is rendered in the viewports. The scene is scaled by it.
+// The dataset's voxel size refers to the untransformed space. The skeleton transform maps
+// the untransformed space to the global space (e.g., the inverse transform of the natively
+// rendered layer). A step along a global axis is mapped back into the untransformed space,
+// and its physical length is the voxel size along that axis.
+// This is only exact if the three steps are perpendicular to each other in physical space.
+// That is the case for translations, scaling, 90° rotations and mirroring (and for any
+// rotation if the voxels are isotropic). Otherwise, the dataset's voxel size is used.
+function _getGlobalVoxelSize(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): VoxelSize {
+  const voxelSize = dataset.dataSource.scale;
+  const transform = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  if (transform.type !== "affine" || equalsIdentityTransform(transform)) {
+    return voxelSize;
+  }
+  // The columns of the inverse matrix (stored row-major) are the global axis steps
+  // in the untransformed space.
+  const inverse = transform.affineMatrixInv;
+  const physicalSteps = Vector3Indices.map((column) =>
+    Vector3Indices.map((row) => inverse[row * 4 + column] * voxelSize.factor[row]),
+  );
+  const lengths = physicalSteps.map((step) => Math.hypot(...step)) as Vector3;
+  for (const [a, b] of [
+    [0, 1],
+    [0, 2],
+    [1, 2],
+  ]) {
+    let dotProduct = 0;
+    for (const i of Vector3Indices) {
+      dotProduct += physicalSteps[a][i] * physicalSteps[b][i];
+    }
+    if (Math.abs(dotProduct / (lengths[a] * lengths[b])) > PERPENDICULARITY_TOLERANCE) {
+      return voxelSize;
+    }
+  }
+  return { factor: lengths, unit: voxelSize.unit };
+}
+
+export const getGlobalVoxelSize = reuseInstanceOnEquality(memoizeWithTwoKeys(_getGlobalVoxelSize));
+
+export function getGlobalVoxelSizeFromState(state: WebknossosState): VoxelSize {
+  return getGlobalVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName);
 }
 
 function _getTransformsPerLayer(

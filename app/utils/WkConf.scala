@@ -90,6 +90,11 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         get[FiniteDuration]("webKnossos.alignmentProjects.inputDataCleanupInterval")
     }
 
+    object StorageWarningEmails {
+      val enabled: Boolean = get[Boolean]("webKnossos.storageWarningEmails.enabled")
+      val thresholdsPercent: List[Int] = getList[Int]("webKnossos.storageWarningEmails.thresholdsPercent")
+    }
+
     object SampleOrganization {
       val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
 
@@ -141,6 +146,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         Cache,
         PricingPlanExpiryReminder,
         AlignmentProjects,
+        StorageWarningEmails,
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,

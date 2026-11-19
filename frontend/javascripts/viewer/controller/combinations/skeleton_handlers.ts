@@ -9,6 +9,7 @@ import { OrthoViews, OrthoViewToNumber } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
   getFlycamRotationWithAppendedRotation,
@@ -46,7 +47,7 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { showContextMenuAction } from "viewer/model/actions/ui_actions";
 import Dimensions from "viewer/model/dimensions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { api } from "viewer/singletons";
@@ -215,8 +216,7 @@ export function moveNode(
   flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
   const vectorRotated = movementVector.set(...vector).applyMatrix4(flycamRotationMatrix);
 
-  const zoomFactor = state.flycam.zoomStep;
-  const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep);
 
   const op = (val: number) => {
     if (useFloat || isFlycamRotated) {
@@ -235,9 +235,9 @@ export function moveNode(
   };
 
   const delta = [
-    op(vectorRotated.x * zoomFactor * scaleFactor[0]),
-    op(vectorRotated.y * zoomFactor * scaleFactor[1]),
-    op(vectorRotated.z * zoomFactor * scaleFactor[2]),
+    op(vectorRotated.x * voxelPerPixel[0]),
+    op(vectorRotated.y * voxelPerPixel[1]),
+    op(vectorRotated.z * voxelPerPixel[2]),
   ];
   const [x, y, z] = getNodePosition(activeNode, state);
 

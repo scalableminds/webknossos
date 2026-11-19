@@ -6,6 +6,7 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   calculateGlobalDelta,
@@ -19,7 +20,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import type { DimensionIndices, DimensionMap } from "viewer/model/dimensions";
 import Dimension from "viewer/model/dimensions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
@@ -50,7 +51,7 @@ function getDistanceToBoundingBoxEdge(
   max: Vector3,
   compareToMin: boolean,
   primaryAndSecondaryDim: [DimensionIndices, DimensionIndices],
-  planeRatio: Vector3,
+  voxelPerPixel: Vector3,
 ) {
   // This method calculates the distance between the given pos and a single edge of a cross section
   // of bounding box given min and max that is displayed in a certain viewport.
@@ -75,15 +76,13 @@ function getDistanceToBoundingBoxEdge(
   //           |                                                      |
   //           |  edge extends along x direction -> primary dim = x   |
   //           |                                                      |
-  // As the planeRatio is multiplied to the global coordinates passed to this method,
-  // the distance between the mouse and the bounding box is distorted by the factor of planeRatio.
-  // That's why we later divide exactly by this factor to let the hit box / distance
-  // between the mouse and bounding box be the same in each dimension.
+  // The distance is measured in screen pixels so that the hit box is the same in each dimension.
+  // Therefore, the voxel differences are divided by voxelPerPixel.
   const [primaryEdgeDim, secondaryEdgeDim] = primaryAndSecondaryDim;
   const cornerToCompareWith = compareToMin ? min : max;
 
   const toScreenSpace = (value: number, dimension: DimensionIndices) =>
-    value / planeRatio[dimension];
+    value / voxelPerPixel[dimension];
 
   if (pos[primaryEdgeDim] < min[primaryEdgeDim]) {
     // Case 1: Distance to the min corner is needed in primaryEdgeDim.
@@ -146,7 +145,7 @@ function computeDistanceArray(
   boundingBoxBounds: BoundingBoxMinMaxType,
   globalPosition: Vector3,
   indices: DimensionMap,
-  planeRatio: Vector3,
+  voxelPerPixel: Vector3,
 ): DistanceArray {
   const { min, max } = boundingBoxBounds;
   const distanceArray = [0, 1, 2, 3].map((edgeId) => {
@@ -157,7 +156,7 @@ function computeDistanceArray(
       max,
       !isMaxEdge,
       getEdgeDimensions(edgeId, indices),
-      planeRatio,
+      voxelPerPixel,
     );
   });
   return distanceArray as any as DistanceArray;
@@ -189,17 +188,17 @@ const _getEdgeInfoFromId = (
 function isGrabbedCloseToCorner(
   edge: SelectedEdge,
   boundingBox: BoundingBoxMinMaxType,
-  planeRatio: Vector3,
+  voxelPerPixel: Vector3,
   maxDistanceToSelection: number,
 ): boolean {
   const { resizableDimension: dim, isMaxEdge, grabOffset } = edge;
   // Positive inside of the box, negative outside of it.
-  const inwardOffset = (isMaxEdge ? grabOffset : -grabOffset) / planeRatio[dim];
-  const boxSize = (boundingBox.max[dim] - boundingBox.min[dim]) / planeRatio[dim];
+  const inwardOffset = (isMaxEdge ? grabOffset : -grabOffset) / voxelPerPixel[dim];
+  const boxSize = (boundingBox.max[dim] - boundingBox.min[dim]) / voxelPerPixel[dim];
   return inwardOffset < Math.min(maxDistanceToSelection, boxSize / 4);
 }
 
-// Return the edge or edges of the given bounding boxes closest to the position if their distance is below maxDistanceToSelection.
+// Return the edge or edges of the given bounding boxes closest to the position if their distance is below maxDistanceToSelection (in screen pixels).
 // If no edge is close to the position null is returned instead. Otherwise the first entry is always the closest edge.
 // If the position is close to a corner of the closest edge, the neighbouring edge of that corner is the second entry of the array.
 // Otherwise, the second entry is null.
@@ -207,7 +206,7 @@ export function getClosestEdgesAtPosition(
   userBoundingBoxes: ReadonlyArray<UserBoundingBox>,
   position: Vector3,
   indices: DimensionMap,
-  planeRatio: Vector3,
+  voxelPerPixel: Vector3,
   maxDistanceToSelection: number,
 ): [SelectedEdge, SelectedEdge | null] | null {
   const thirdDim = indices[2];
@@ -226,7 +225,7 @@ export function getClosestEdgesAtPosition(
 
     // In getNeighbourEdgeIndexByEdgeIndex is a visualization
     // of how the indices of the array map to the visible bbox edges.
-    const distanceArray = computeDistanceArray(bbox.boundingBox, position, indices, planeRatio);
+    const distanceArray = computeDistanceArray(bbox.boundingBox, position, indices, voxelPerPixel);
     const minimumDistance = Math.min(...distanceArray);
 
     if (minimumDistance < currentNearestDistance) {
@@ -241,13 +240,11 @@ export function getClosestEdgesAtPosition(
   }
 
   const { id: boxId, boundingBox } = currentNearestBoundingBox;
-  // maxDistanceToSelection is scaled by the zoom step, see getClosestHoveredBoundingBox.
-  const zoomStep = maxDistanceToSelection / MAX_DISTANCE_TO_SELECTION;
   const getEdgeInfo = (edgeId: number): SelectedEdge => {
     const edge = _getEdgeInfoFromId(boxId, indices, edgeId, 0);
     const dim = edge.resizableDimension;
     const { min, max } = boundingBox;
-    if (isThinDimensionOverlappingOnScreen(boundingBox, dim, planeRatio, zoomStep)) {
+    if (isThinDimensionOverlappingOnScreen(boundingBox, dim, voxelPerPixel)) {
       const nearestValueInExtent = Math.min(Math.max(position[dim], min[dim]), max[dim]);
       return {
         ...edge,
@@ -281,7 +278,7 @@ export function getClosestEdgesAtPosition(
   const isCornerGrabbed =
     secondaryEdge != null &&
     [primaryEdge, secondaryEdge].every((edge) =>
-      isGrabbedCloseToCorner(edge, boundingBox, planeRatio, maxDistanceToSelection),
+      isGrabbedCloseToCorner(edge, boundingBox, voxelPerPixel, maxDistanceToSelection),
     );
 
   return [primaryEdge, isCornerGrabbed ? secondaryEdge : null];
@@ -304,8 +301,8 @@ export function getClosestHoveredBoundingBox(
     userBoundingBoxes,
     globalPosition.rounded,
     Dimension.getIndices(plane),
-    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
-    MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep,
+    getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep),
+    MAX_DISTANCE_TO_SELECTION,
   );
 }
 
@@ -406,14 +403,13 @@ export const highlightAndSetCursorOnHoveredBoundingBox = throttle(
 export function isThinDimensionOverlappingOnScreen(
   boundingBox: BoundingBoxMinMaxType,
   dimension: DimensionIndices,
-  planeRatio: Vector3,
-  zoomStep: number,
+  voxelPerPixel: Vector3,
 ): boolean {
   const extents = V3.sub(boundingBox.max, boundingBox.min);
   if (extents.some((extent) => extent < extents[dimension])) {
     return false;
   }
-  const extentInScreenPixels = extents[dimension] / planeRatio[dimension] / zoomStep;
+  const extentInScreenPixels = extents[dimension] / voxelPerPixel[dimension];
   return extentInScreenPixels <= MAX_SCREEN_GAP_OF_OVERLAPPING_EDGES;
 }
 

@@ -17,6 +17,7 @@ import {
   getElementClass,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   AnnotationTool,
   isBrushTool,
@@ -76,7 +77,7 @@ import {
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
 import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
@@ -296,12 +297,12 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     if (isBrushTool(activeTool)) {
       const brushSize = yield* select((state) => state.userConfiguration.brushSize);
-      const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
+      const voxelSize = yield* select(getGlobalVoxelSizeFromState);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
       const planeAxis = dimIndices[2] as 0 | 1 | 2;
       const diameterInMag = getBrushDiameterInMag(
         brushSize,
-        getBaseVoxelFactorsInUnit(voxelSize),
+        getVoxelPerPixel(voxelSize),
         labeledMag,
       );
       // Not rounded: together with the strict inside test of the rasterizer, a

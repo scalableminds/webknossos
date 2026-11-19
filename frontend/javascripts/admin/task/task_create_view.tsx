@@ -2,6 +2,7 @@ import { FileAddOutlined, UploadOutlined } from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
 import TaskCreateBulkView from "admin/task/task_create_bulk_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
+import TaskSetupGuide from "admin/task/task_setup_guide";
 import { Tabs, type TabsProps, theme } from "antd";
 import { useState } from "react";
 
@@ -52,6 +53,7 @@ const TaskCreateView = () => {
         />
       }
     >
+      <TaskSetupGuide />
       {activeTab === TaskCreateMode.Single ? (
         <TaskCreateFormView embedded />
       ) : (

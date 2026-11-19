@@ -30,6 +30,7 @@ import {
   getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -39,7 +40,7 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import { jsConvertCellIdToRGBA } from "viewer/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "viewer/shaders/utils.glsl";
 import { Store } from "viewer/singletons";
@@ -626,16 +627,16 @@ export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEqual
 );
 
 /**
- * Per-axis brush diameter in voxels of `mag`. brushSize is a diameter in "base voxels"
- * (units of the finest axis of the voxel size), so this folds in both the voxel size
- * (so the brush is a sphere in physical space, not an ellipsoid) and the mag.
+ * Per-axis brush diameter in voxels of `mag`. brushSize is a diameter in pixels at zoom
+ * step 1 (see getVoxelPerPixel), so this folds in both the voxel size (so the brush is
+ * a sphere in physical space, not an ellipsoid) and the mag.
  */
 export function getBrushDiameterInMag(
   brushSize: number,
-  baseVoxelFactors: Vector3,
+  voxelPerPixel: Vector3,
   mag: Vector3,
 ): Vector3 {
-  return [0, 1, 2].map((axis) => (brushSize * baseVoxelFactors[axis]) / mag[axis]) as Vector3;
+  return [0, 1, 2].map((axis) => (brushSize * voxelPerPixel[axis]) / mag[axis]) as Vector3;
 }
 
 /**
@@ -671,7 +672,7 @@ function _getBrushCenterPosition(state: WebknossosState): Vector3 | null {
   const { mag } = maybeMagWithZoomStep;
   const diameterInMag = getBrushDiameterInMag(
     state.userConfiguration.brushSize,
-    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+    getVoxelPerPixel(getGlobalVoxelSizeFromState(state)),
     mag,
   );
   const planeAxis = Dimensions.getIndices(state.viewModeData.plane.activeViewport)[2];

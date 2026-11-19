@@ -1,0 +1,32 @@
+@(name: String, organizationName: String, usedStorage: String, includedStorage: String, usagePercent: Long, isExceeded: Boolean, organizationUrl: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+@if(isExceeded) {
+<p>
+  your organization <i>@{organizationName}</i> has used up its included storage: it currently uses
+  <b>@{usedStorage}</b> of <b>@{includedStorage}</b>.
+</p>
+
+<p>
+  New dataset uploads and jobs that create new data are blocked until storage is freed up or the storage is upgraded.
+</p>
+} else {
+<p>
+  your organization <i>@{organizationName}</i> is running out of storage: it currently uses <b>@{usedStorage}</b>
+  of <b>@{includedStorage}</b> (@{usagePercent}%).
+</p>
+
+<p>
+  Once the included storage is used up, new dataset uploads and jobs that create new data will be blocked.
+  To avoid this, delete datasets you no longer need or upgrade your storage.
+</p>
+}
+
+@emailButton("Manage Storage", organizationUrl)
+
+<p>If you would like to discuss your options, simply reply to this email.</p>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

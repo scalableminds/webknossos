@@ -1132,10 +1132,17 @@ export class QuickSelectToolController extends VolumeToolController {
 
         quickSelectGeometry.setCoordinates(startPos, currentPos);
       },
-      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+      leftClick: (pos: Point2, _plane: OrthoView, event: MouseEvent, _isTouch: boolean) => {
+        isDragging = false;
+        if (event.shiftKey) {
+          // Shift+drag resizes the rectangle symmetrically, but a shift+click without
+          // dragging activates the clicked segment id (as in the other volume tools).
+          Store.dispatch(setQuickSelectStateAction("inactive"));
+          handlePickCell(pos);
+          return;
+        }
         const state = Store.getState();
         const clickedPos = calculateGlobalPos(state, pos).rounded;
-        isDragging = false;
 
         const quickSelectConfig = state.userConfiguration.quickSelect;
         const isAISelectAvailable =
@@ -1162,6 +1169,7 @@ export class QuickSelectToolController extends VolumeToolController {
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
+      ...(shiftKey ? { leftClick: "Activate Segment ID" } : {}),
       leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
       rightClick: "Context Menu",
     };

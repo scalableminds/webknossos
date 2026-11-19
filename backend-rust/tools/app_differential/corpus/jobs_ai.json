@@ -1,0 +1,1065 @@
+{
+ "version": 1,
+ "description": "Jobs (worker protocol with the dev worker), submissions and lifecycle, AI model uploads, trainings and inferences. Needs features.jobsEnabled/voxelyticsEnabled and the dev worker row (both set up by stack.py).",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "db_divergences": {
+  "tokens": {
+   "reason": "Play mints a new Job token for the job's user every time /jobs/request hands out jobs (one per job); Rust reuses a Job token created within the last hour that stays valid for at least another hour (hardening 46552fe734: workers poll every few seconds). Workers only receive the token in job_kwargs.user_auth_token, which is ignored per step.",
+   "rows": [
+    {
+     "tokentype": "Job"
+    }
+   ]
+  }
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "worker-request-unknown-key",
+   "method": "GET",
+   "path": "/api/jobs/request",
+   "query": {
+    "key": "wrongKey"
+   }
+  },
+  {
+   "name": "worker-heartbeat",
+   "method": "GET",
+   "path": "/api/jobs/request",
+   "query": {
+    "key": "secretWorkerKey",
+    "workerVersion": "diff-1.0"
+   }
+  },
+  {
+   "name": "jobs-status",
+   "method": "GET",
+   "path": "/api/jobs/status",
+   "as": "admin"
+  },
+  {
+   "name": "jobs-status-user2",
+   "method": "GET",
+   "path": "/api/jobs/status",
+   "as": "user2"
+  },
+  {
+   "name": "credit-cost",
+   "method": "GET",
+   "path": "/api/jobs/getCreditCost",
+   "as": "admin",
+   "query": {
+    "command": "infer_neurons",
+    "boundingBoxInMag": "0,0,0,512,512,512"
+   }
+  },
+  {
+   "name": "credit-cost-unknown-command",
+   "method": "GET",
+   "path": "/api/jobs/getCreditCost",
+   "as": "admin",
+   "query": {
+    "command": "bogus",
+    "boundingBoxInMag": "0,0,0,10,10,10"
+   }
+  },
+  {
+   "name": "credit-cost-invalid-bbox",
+   "method": "GET",
+   "path": "/api/jobs/getCreditCost",
+   "as": "admin",
+   "query": {
+    "command": "infer_neurons",
+    "boundingBoxInMag": "0,0,0"
+   }
+  },
+  {
+   "name": "run-find-largest",
+   "method": "POST",
+   "path": "/api/jobs/run/findLargestSegmentId/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "layerName": "segmentation"
+   },
+   "capture": {
+    "jobLargest": "$.id"
+   }
+  },
+  {
+   "name": "run-segment-index",
+   "method": "POST",
+   "path": "/api/jobs/run/computeSegmentIndexFile/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "layerName": "segmentation"
+   },
+   "capture": {
+    "jobIndex": "$.id"
+   }
+  },
+  {
+   "name": "run-mesh",
+   "method": "POST",
+   "path": "/api/jobs/run/computeMeshFile/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "layerName": "segmentation",
+    "mag": "1-1-1"
+   },
+   "capture": {
+    "jobMesh": "$.id"
+   }
+  },
+  {
+   "name": "run-export-tiff",
+   "method": "POST",
+   "path": "/api/jobs/run/exportTiff/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "bbox": "0,0,0,64,64,64",
+    "layerName": "color",
+    "mag": "1-1-1",
+    "exportFormat": "ome_tiff"
+   },
+   "capture": {
+    "jobExport": "$.id"
+   }
+  },
+  {
+   "name": "run-export-tiff-too-large",
+   "method": "POST",
+   "path": "/api/jobs/run/exportTiff/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "bbox": "0,0,0,100000,100000,100000",
+    "layerName": "color",
+    "mag": "1-1-1",
+    "exportFormat": "ome_tiff"
+   }
+  },
+  {
+   "name": "run-export-tiff-bad-format",
+   "method": "POST",
+   "path": "/api/jobs/run/exportTiff/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "bbox": "0,0,0,64,64,64",
+    "layerName": "color",
+    "exportFormat": "jpeg"
+   }
+  },
+  {
+   "name": "run-bad-layer-name",
+   "method": "POST",
+   "path": "/api/jobs/run/findLargestSegmentId/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "layerName": "../evil"
+   }
+  },
+  {
+   "name": "run-missing-dataset",
+   "method": "POST",
+   "path": "/api/jobs/run/findLargestSegmentId/0123456789abcdef01234567",
+   "as": "admin",
+   "query": {
+    "layerName": "segmentation"
+   }
+  },
+  {
+   "name": "run-anonymous",
+   "method": "POST",
+   "path": "/api/jobs/run/findLargestSegmentId/68b80290d4000090f8f4aa62",
+   "query": {
+    "layerName": "segmentation"
+   }
+  },
+  {
+   "name": "run-as-user2",
+   "method": "POST",
+   "path": "/api/jobs/run/findLargestSegmentId/68b80290d4000090f8f4aa62",
+   "as": "user2",
+   "query": {
+    "layerName": "segmentation"
+   },
+   "capture": {
+    "jobUser2": "$.id"
+   }
+  },
+  {
+   "name": "run-align-sections",
+   "method": "POST",
+   "path": "/api/jobs/run/alignSections/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": {
+    "newDatasetName": "diff_aligned",
+    "layerName": "color"
+   }
+  },
+  {
+   "name": "run-render-animation",
+   "method": "POST",
+   "path": "/api/jobs/run/renderAnimation/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "boundingBox": {
+     "topLeft": [
+      0,
+      0,
+      0
+     ],
+     "width": 64,
+     "height": 64,
+     "depth": 64
+    },
+    "includeWatermark": true,
+    "meshes": [],
+    "movieResolution": "SD",
+    "movieDuration": "SHORT",
+    "cameraPosition": "MOVING",
+    "magForTextures": [
+     1,
+     1,
+     1
+    ],
+    "includeSkeletons": false,
+    "hideImageData": false,
+    "saveBlenderFile": false,
+    "segmentationLayerName": "segmentation"
+   },
+   "capture": {
+    "jobAnimation": "$.id"
+   }
+  },
+  {
+   "name": "run-render-animation-hd",
+   "method": "POST",
+   "path": "/api/jobs/run/renderAnimation/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "boundingBox": {
+     "topLeft": [
+      0,
+      0,
+      0
+     ],
+     "width": 64,
+     "height": 64,
+     "depth": 64
+    },
+    "includeWatermark": true,
+    "meshes": [],
+    "movieResolution": "HD",
+    "movieDuration": "SHORT",
+    "cameraPosition": "MOVING",
+    "magForTextures": [
+     1,
+     1,
+     1
+    ],
+    "includeSkeletons": false,
+    "hideImageData": false,
+    "saveBlenderFile": false,
+    "segmentationLayerName": "segmentation"
+   }
+  },
+  {
+   "name": "run-render-animation-no-watermark",
+   "method": "POST",
+   "path": "/api/jobs/run/renderAnimation/68b80290d4000090f8f4aa62",
+   "as": "user2",
+   "json": {
+    "layerName": "color",
+    "boundingBox": {
+     "topLeft": [
+      0,
+      0,
+      0
+     ],
+     "width": 64,
+     "height": 64,
+     "depth": 64
+    },
+    "includeWatermark": false,
+    "meshes": [],
+    "movieResolution": "SD",
+    "movieDuration": "SHORT",
+    "cameraPosition": "MOVING",
+    "magForTextures": [
+     1,
+     1,
+     1
+    ],
+    "includeSkeletons": false,
+    "hideImageData": false,
+    "saveBlenderFile": false,
+    "segmentationLayerName": "segmentation"
+   }
+  },
+  {
+   "name": "run-render-animation-invalid",
+   "method": "POST",
+   "path": "/api/jobs/run/renderAnimation/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "json": {
+    "layerName": "color"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   }
+  },
+  {
+   "name": "jobs-list",
+   "method": "GET",
+   "path": "/api/jobs",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "jobs-list-command",
+   "method": "GET",
+   "path": "/api/jobs",
+   "as": "admin",
+   "query": {
+    "command": "find_largest_segment_id"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "jobs-list-user2",
+   "method": "GET",
+   "path": "/api/jobs",
+   "as": "user2",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "job-get",
+   "method": "GET",
+   "path": "/api/jobs/{jobLargest}",
+   "as": "admin"
+  },
+  {
+   "name": "job-get-user2-foreign",
+   "method": "GET",
+   "path": "/api/jobs/{jobLargest}",
+   "as": "user2"
+  },
+  {
+   "name": "job-get-missing",
+   "method": "GET",
+   "path": "/api/jobs/0123456789abcdef01234567",
+   "as": "admin"
+  },
+  {
+   "name": "worker-request-assign",
+   "method": "GET",
+   "path": "/api/jobs/request",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "unordered": [
+    "$.to_run"
+   ],
+   "ignore": [
+    {
+     "path": "$.to_run[*].job_kwargs.user_auth_token",
+     "reason": "fresh random token per job and side"
+    }
+   ]
+  },
+  {
+   "name": "worker-status-started",
+   "method": "POST",
+   "path": "/api/jobs/{jobLargest}/status",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": {
+    "state": "STARTED",
+    "latestRunId": "run-1",
+    "started": 1790000000000
+   }
+  },
+  {
+   "name": "worker-status-success",
+   "method": "POST",
+   "path": "/api/jobs/{jobLargest}/status",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": {
+    "state": "SUCCESS",
+    "latestRunId": "run-1",
+    "returnValue": "4711",
+    "started": 1790000000000,
+    "ended": 1790000100000
+   }
+  },
+  {
+   "name": "worker-status-bad-key",
+   "method": "POST",
+   "path": "/api/jobs/{jobLargest}/status",
+   "query": {
+    "key": "wrongKey"
+   },
+   "json": {
+    "state": "SUCCESS"
+   }
+  },
+  {
+   "name": "worker-status-invalid",
+   "method": "POST",
+   "path": "/api/jobs/{jobLargest}/status",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": {
+    "state": "DONE"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   }
+  },
+  {
+   "name": "job-get-success",
+   "method": "GET",
+   "path": "/api/jobs/{jobLargest}",
+   "as": "admin"
+  },
+  {
+   "name": "cancel-index",
+   "method": "PATCH",
+   "path": "/api/jobs/{jobIndex}/cancel",
+   "as": "admin"
+  },
+  {
+   "name": "cancel-foreign-user2",
+   "method": "PATCH",
+   "path": "/api/jobs/{jobMesh}/cancel",
+   "as": "user2"
+  },
+  {
+   "name": "worker-request-cancel",
+   "method": "GET",
+   "path": "/api/jobs/request",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "unordered": [
+    "$.to_run",
+    "$.to_cancel"
+   ],
+   "ignore": [
+    {
+     "path": "$.to_run[*].job_kwargs.user_auth_token",
+     "reason": "fresh random token per job and side"
+    },
+    {
+     "path": "$.to_cancel[*].job_kwargs.user_auth_token",
+     "reason": "fresh random token per job and side"
+    }
+   ]
+  },
+  {
+   "name": "worker-status-cancelled",
+   "method": "POST",
+   "path": "/api/jobs/{jobIndex}/status",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": {
+    "state": "CANCELLED",
+    "latestRunId": "run-2"
+   }
+  },
+  {
+   "name": "worker-status-failure",
+   "method": "POST",
+   "path": "/api/jobs/{jobExport}/status",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": {
+    "state": "FAILURE",
+    "latestRunId": "run-3",
+    "errorDetails": {
+     "message": "boom"
+    },
+    "started": 1790000000000,
+    "ended": 1790000200000
+   }
+  },
+  {
+   "name": "job-get-failure",
+   "method": "GET",
+   "path": "/api/jobs/{jobExport}",
+   "as": "admin"
+  },
+  {
+   "name": "export-redirect-unfinished",
+   "method": "GET",
+   "path": "/api/jobs/{jobExport}/export",
+   "as": "admin"
+  },
+  {
+   "name": "export-redirect-wrong-command",
+   "method": "GET",
+   "path": "/api/jobs/{jobLargest}/export",
+   "as": "admin"
+  },
+  {
+   "name": "retry-failed",
+   "method": "PATCH",
+   "path": "/api/jobs/{jobExport}/retry",
+   "as": "admin"
+  },
+  {
+   "name": "retry-succeeded",
+   "method": "PATCH",
+   "path": "/api/jobs/{jobLargest}/retry",
+   "as": "admin"
+  },
+  {
+   "name": "attach-voxelytics",
+   "method": "POST",
+   "path": "/api/jobs/{jobLargest}/attachVoxelyticsWorkflow",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": "diffworkflowhash"
+  },
+  {
+   "name": "attach-voxelytics-bad-key",
+   "method": "POST",
+   "path": "/api/jobs/{jobLargest}/attachVoxelyticsWorkflow",
+   "query": {
+    "key": "wrongKey"
+   },
+   "json": "diffworkflowhash"
+  },
+  {
+   "name": "attach-dataset-not-inference",
+   "method": "POST",
+   "path": "/api/jobs/{jobLargest}/attachDatasetToInference",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": "l4_sample_remote"
+  },
+  {
+   "name": "jobs-status-after",
+   "method": "GET",
+   "path": "/api/jobs/status",
+   "as": "admin"
+  },
+  {
+   "name": "jobs-list-after",
+   "method": "GET",
+   "path": "/api/jobs",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "ai-models-list-empty",
+   "method": "GET",
+   "path": "/api/aiModels",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "ai-inferences-list-empty",
+   "method": "GET",
+   "path": "/api/aiModels/inferences",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "ai-reserve-upload",
+   "method": "POST",
+   "path": "/api/aiModels/reserveUploadToPath",
+   "as": "admin",
+   "json": {
+    "dataStoreName": "localhost",
+    "name": "diff model",
+    "comment": "uploaded",
+    "category": "em_neurons"
+   },
+   "capture": {
+    "modelId": "$.id"
+   }
+  },
+  {
+   "name": "ai-reserve-upload-name-taken",
+   "method": "POST",
+   "path": "/api/aiModels/reserveUploadToPath",
+   "as": "admin",
+   "json": {
+    "dataStoreName": "localhost",
+    "name": "diff model"
+   }
+  },
+  {
+   "name": "ai-reserve-upload-unknown-store",
+   "method": "POST",
+   "path": "/api/aiModels/reserveUploadToPath",
+   "as": "admin",
+   "json": {
+    "dataStoreName": "nowhere",
+    "name": "other model"
+   }
+  },
+  {
+   "name": "ai-reserve-upload-invalid",
+   "method": "POST",
+   "path": "/api/aiModels/reserveUploadToPath",
+   "as": "admin",
+   "json": {
+    "name": "no store"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   }
+  },
+  {
+   "name": "ai-model-get",
+   "method": "GET",
+   "path": "/api/aiModels/{modelId}",
+   "as": "admin"
+  },
+  {
+   "name": "ai-model-get-user2",
+   "method": "GET",
+   "path": "/api/aiModels/{modelId}",
+   "as": "user2"
+  },
+  {
+   "name": "ai-model-voxel-size",
+   "method": "GET",
+   "path": "/api/aiModels/{modelId}/voxelSize",
+   "as": "admin",
+   "expected_divergence": {
+    "reason": "Failed store RPC: Play's message embeds the internal RPC URL, a per-process RPC counter and the store's response body; Rust returns a generic message (see CUTOVER.md). Both 400.",
+    "paths": [
+     "$.messages"
+    ]
+   }
+  },
+  {
+   "name": "ai-model-update",
+   "method": "PUT",
+   "path": "/api/aiModels/{modelId}",
+   "as": "admin",
+   "json": {
+    "name": "diff model renamed",
+    "comment": "renamed",
+    "sharedOrganizationIds": []
+   }
+  },
+  {
+   "name": "ai-model-update-user2",
+   "method": "PUT",
+   "path": "/api/aiModels/{modelId}",
+   "as": "user2",
+   "json": {
+    "name": "hijacked"
+   }
+  },
+  {
+   "name": "ai-finish-upload",
+   "method": "POST",
+   "path": "/api/aiModels/{modelId}/finishUploadToPath",
+   "as": "admin"
+  },
+  {
+   "name": "ai-finish-upload-again",
+   "method": "POST",
+   "path": "/api/aiModels/{modelId}/finishUploadToPath",
+   "as": "admin"
+  },
+  {
+   "name": "ai-reserve-for-finished",
+   "method": "POST",
+   "path": "/api/aiModels/reserveUploadToPath",
+   "as": "admin",
+   "json": {
+    "existingAiModelId": "{modelId}",
+    "dataStoreName": "localhost",
+    "name": "diff model renamed"
+   }
+  },
+  {
+   "name": "ai-model-get-finished",
+   "method": "GET",
+   "path": "/api/aiModels/{modelId}",
+   "as": "admin"
+  },
+  {
+   "name": "create-training-annotation",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Skeleton",
+     "name": "Skeleton"
+    }
+   ],
+   "capture": {
+    "trainAnn": "$.id"
+   }
+  },
+  {
+   "name": "ai-train-neuron",
+   "method": "POST",
+   "path": "/api/aiModels/runNeuronModelTraining",
+   "as": "admin",
+   "json": {
+    "trainingAnnotations": [
+     {
+      "annotationId": "{trainAnn}",
+      "colorLayerName": "color",
+      "segmentationLayerName": "segmentation",
+      "mag": [
+       1,
+       1,
+       1
+      ]
+     }
+    ],
+    "name": "diff trained",
+    "aiModelCategory": "em_neurons",
+    "comment": "trained"
+   },
+   "capture": {
+    "trainedId": "$.id"
+   }
+  },
+  {
+   "name": "ai-train-neuron-name-taken",
+   "method": "POST",
+   "path": "/api/aiModels/runNeuronModelTraining",
+   "as": "admin",
+   "json": {
+    "trainingAnnotations": [
+     {
+      "annotationId": "{trainAnn}",
+      "colorLayerName": "color",
+      "segmentationLayerName": "segmentation",
+      "mag": [
+       1,
+       1,
+       1
+      ]
+     }
+    ],
+    "name": "diff trained"
+   }
+  },
+  {
+   "name": "ai-train-zero-annotations",
+   "method": "POST",
+   "path": "/api/aiModels/runNeuronModelTraining",
+   "as": "admin",
+   "json": {
+    "trainingAnnotations": [],
+    "name": "empty training"
+   }
+  },
+  {
+   "name": "ai-train-instance",
+   "method": "POST",
+   "path": "/api/aiModels/runInstanceModelTraining",
+   "as": "admin",
+   "json": {
+    "trainingAnnotations": [
+     {
+      "annotationId": "{trainAnn}",
+      "colorLayerName": "color",
+      "segmentationLayerName": "segmentation",
+      "mag": [
+       1,
+       1,
+       1
+      ]
+     }
+    ],
+    "name": "diff instance",
+    "instanceDiameterNm": 800
+   }
+  },
+  {
+   "name": "ai-train-as-user2",
+   "method": "POST",
+   "path": "/api/aiModels/runNeuronModelTraining",
+   "as": "user2",
+   "json": {
+    "trainingAnnotations": [
+     {
+      "annotationId": "{trainAnn}",
+      "colorLayerName": "color",
+      "segmentationLayerName": "segmentation",
+      "mag": [
+       1,
+       1,
+       1
+      ]
+     }
+    ],
+    "name": "user2 training"
+   }
+  },
+  {
+   "name": "ai-infer-neuron",
+   "method": "POST",
+   "path": "/api/aiModels/inferences/runNeuronModelInference",
+   "as": "admin",
+   "json": {
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "aiModelId": "576500000000000000000001",
+    "colorLayerName": "color",
+    "boundingBox": "0,0,0,64,64,64",
+    "newDatasetName": "diff_inferred",
+    "doSplitMergerEvaluation": true,
+    "evalUseSparseTracing": true,
+    "evalMaxEdgeLength": 12,
+    "evalSparseTubeThresholdNm": 2.5
+   },
+   "capture": {
+    "inferenceId": "$.id"
+   }
+  },
+  {
+   "name": "ai-infer-instance",
+   "method": "POST",
+   "path": "/api/aiModels/inferences/runInstanceModelInference",
+   "as": "admin",
+   "json": {
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "aiModelId": "576500000000000000000003",
+    "colorLayerName": "color",
+    "boundingBox": "0,0,0,64,64,64",
+    "newDatasetName": "diff_inferred_instances",
+    "seedGeneratorDistanceThreshold": 1000
+   }
+  },
+  {
+   "name": "ai-infer-uploaded-model-without-files",
+   "method": "POST",
+   "path": "/api/aiModels/inferences/runNeuronModelInference",
+   "as": "admin",
+   "json": {
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "aiModelId": "{modelId}",
+    "colorLayerName": "color",
+    "boundingBox": "0,0,0,64,64,64",
+    "newDatasetName": "diff_inferred_uploaded"
+   },
+   "expected_divergence": {
+    "reason": "Failed store RPC: Play's message embeds the internal RPC URL, a per-process RPC counter and the store's response body; Rust returns a generic message (see CUTOVER.md). Both 400.",
+    "paths": [
+     "$.messages"
+    ]
+   }
+  },
+  {
+   "name": "ai-infer-name-taken",
+   "method": "POST",
+   "path": "/api/aiModels/inferences/runNeuronModelInference",
+   "as": "admin",
+   "json": {
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "aiModelId": "576500000000000000000001",
+    "colorLayerName": "color",
+    "boundingBox": "0,0,0,64,64,64",
+    "newDatasetName": "l4_sample_remote"
+   }
+  },
+  {
+   "name": "ai-infer-pending-model",
+   "method": "POST",
+   "path": "/api/aiModels/inferences/runNeuronModelInference",
+   "as": "admin",
+   "json": {
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "aiModelId": "{trainedId}",
+    "colorLayerName": "color",
+    "boundingBox": "0,0,0,64,64,64",
+    "newDatasetName": "diff_inferred_pending"
+   },
+   "expected_divergence": {
+    "reason": "Failed store RPC: Play's message embeds the internal RPC URL, a per-process RPC counter and the store's response body; Rust returns a generic message (see CUTOVER.md). Both 400.",
+    "paths": [
+     "$.messages"
+    ]
+   }
+  },
+  {
+   "name": "ai-infer-bad-bbox",
+   "method": "POST",
+   "path": "/api/aiModels/inferences/runNeuronModelInference",
+   "as": "admin",
+   "json": {
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "aiModelId": "{modelId}",
+    "colorLayerName": "color",
+    "boundingBox": "nonsense",
+    "newDatasetName": "diff_bad"
+   }
+  },
+  {
+   "name": "ai-infer-missing-layer",
+   "method": "POST",
+   "path": "/api/aiModels/inferences/runNeuronModelInference",
+   "as": "admin",
+   "json": {
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "aiModelId": "{modelId}",
+    "colorLayerName": "nope",
+    "boundingBox": "0,0,0,64,64,64",
+    "newDatasetName": "diff_bad2"
+   }
+  },
+  {
+   "name": "ai-inference-get",
+   "method": "GET",
+   "path": "/api/aiModels/inferences/{inferenceId}",
+   "as": "admin"
+  },
+  {
+   "name": "ai-inference-get-user2",
+   "method": "GET",
+   "path": "/api/aiModels/inferences/{inferenceId}",
+   "as": "user2"
+  },
+  {
+   "name": "ai-inferences-list",
+   "method": "GET",
+   "path": "/api/aiModels/inferences",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "ai-models-list",
+   "method": "GET",
+   "path": "/api/aiModels",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "ai-models-list-user2",
+   "method": "GET",
+   "path": "/api/aiModels",
+   "as": "user2",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "ai-delete-referenced",
+   "method": "DELETE",
+   "path": "/api/aiModels/576500000000000000000001",
+   "as": "admin"
+  },
+  {
+   "name": "ai-delete-uploaded",
+   "method": "DELETE",
+   "path": "/api/aiModels/{modelId}",
+   "as": "admin"
+  },
+  {
+   "name": "ai-delete-trained",
+   "method": "DELETE",
+   "path": "/api/aiModels/{trainedId}",
+   "as": "admin"
+  },
+  {
+   "name": "ai-delete-missing",
+   "method": "DELETE",
+   "path": "/api/aiModels/0123456789abcdef01234567",
+   "as": "admin"
+  },
+  {
+   "name": "ai-model-get-deleted",
+   "method": "GET",
+   "path": "/api/aiModels/{trainedId}",
+   "as": "admin"
+  },
+  {
+   "name": "jobs-list-final",
+   "method": "GET",
+   "path": "/api/jobs",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "organization-credits",
+   "method": "GET",
+   "path": "/api/organizations/sample_organization",
+   "as": "admin"
+  }
+ ]
+}

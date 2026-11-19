@@ -1,0 +1,224 @@
+//! Output side of Scala `ZarrStreamingController`: wk layers exposed as Zarr v2 / v3 arrays
+//! (`Zarr3OutputHelper`, `ZarrCoordinatesParser`, `Zarr3ArrayHeader.fromDataLayer`,
+//! `convertLayerToZarrLayer`) and the `datastoreZarrDatasourceDir` directory listing.
+use std::fmt::Write;
+
+use serde_json::{Map, Value, json};
+
+pub use crate::datareaders::zarr::reorder_additional_axes;
+use crate::{
+    datareaders::RequestedAdditionalCoordinate,
+    error::{DsError, DsResult},
+    models::{
+        AdditionalAxis, AxisOrder, BUCKET_LENGTH, BoundingBox, DataFormat, ElementClass,
+        MagLocator, StaticLayer, UPath, Vec3Int,
+    },
+};
+use webknossos_common::text::escape_html;
+
+pub const FILENAME_ZARR_JSON: &str = "zarr.json";
+
+const INVALID_FIRST_CHUNK_COORD: &str = "First channel must be 0.";
+const NOT_ENOUGH_COORDINATES: &str =
+    "Invalid number of chunk coordinates. Expected to get at least 3 dimensions and channel 0.";
+const INVALID_ADDITIONAL_COORDINATES: &str = "Invalid additional coordinates for this data layer.";
+
+/// Java `String.split(regex)` for a single literal character: trailing empty strings are removed,
+/// but a string without any separator yields itself.
+fn java_split(value: &str, separator: char) -> Vec<&str> {
+    if !value.contains(separator) {
+        return vec![value];
+    }
+    let mut parts: Vec<&str> = value.split(separator).collect();
+    while parts.last() == Some(&"") {
+        parts.pop();
+    }
+    parts
+}
+
+/// Scala `ZarrCoordinatesParser.parseNDimensionalDotCoordinates`: `c.<additional>.x.y.z`.
+pub fn parse_dot_coordinates(
+    coordinates: &str,
+    reordered_axes: &[AdditionalAxis],
+) -> DsResult<(i32, i32, i32, Option<Vec<RequestedAdditionalCoordinate>>)> {
+    let ints = java_split(coordinates, '.')
+        .into_iter()
+        .map(|literal| {
+            literal
+                .parse::<i32>()
+                .map_err(|_| DsError::number_format(literal))
+        })
+        .collect::<DsResult<Vec<i32>>>()?;
+    let Some(&channel) = ints.first() else {
+        return Err(DsError::empty());
+    };
+    if channel != 0 {
+        return Err(DsError::failure(INVALID_FIRST_CHUNK_COORD));
+    }
+    if ints.len() < 4 {
+        return Err(DsError::failure(NOT_ENOUGH_COORDINATES));
+    }
+    let n = ints.len();
+    if reordered_axes.len() != n - 4 {
+        return Err(DsError::failure(INVALID_ADDITIONAL_COORDINATES));
+    }
+    let additional = (n > 4).then(|| {
+        ints[1..n - 3]
+            .iter()
+            .zip(reordered_axes)
+            .map(|(value, axis)| RequestedAdditionalCoordinate {
+                name: axis.name.clone(),
+                value: *value,
+                length: None,
+            })
+            .collect()
+    });
+    Ok((ints[n - 3], ints[n - 2], ints[n - 1], additional))
+}
+
+/// Scala `Zarr3ArrayHeader.forArray` (also behind `fromDataLayer`) rendered by
+/// `Zarr3ArrayHeaderFormat.writes`: a wk layer or volume tracing exposed as a zarr v3 array.
+pub fn zarr3_array_header_json(
+    element_class: ElementClass,
+    bbox: &BoundingBox,
+    additional_axes: &[AdditionalAxis],
+    mag: Vec3Int,
+) -> Value {
+    // Same order as expected by `parse_dot_coordinates` for chunk keys
+    let axes = reorder_additional_axes(additional_axes);
+    let (channels, dtype) = element_class.to_channel_and_zarr3_string();
+    let mut shape: Vec<i64> = vec![i64::from(channels)];
+    shape.extend(axes.iter().map(|a| i64::from(a.upper_bound().unwrap_or(0))));
+    shape.extend([
+        i64::from(bbox.width.wrapping_add(bbox.top_left.x) / mag.x),
+        i64::from(bbox.height.wrapping_add(bbox.top_left.y) / mag.y),
+        i64::from(bbox.depth.wrapping_add(bbox.top_left.z) / mag.z),
+    ]);
+    let mut chunk_shape: Vec<i64> = vec![i64::from(channels)];
+    chunk_shape.extend(axes.iter().map(|_| 1));
+    chunk_shape.extend([i64::from(BUCKET_LENGTH); 3]);
+    let rank = axes.len() + 4;
+    let order: Vec<usize> = (0..rank).rev().collect();
+    let mut dimension_names = vec!["c".to_owned()];
+    dimension_names.extend(axes.iter().map(|a| a.name.clone()));
+    dimension_names.extend(["x", "y", "z"].map(str::to_owned));
+    json!({
+        "zarr_format": 3,
+        "node_type": "array",
+        "shape": shape,
+        "data_type": dtype,
+        "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": chunk_shape}},
+        "chunk_key_encoding": {"name": "v2", "configuration": {"separator": "."}},
+        "fill_value": 0,
+        "attributes": Map::new(),
+        "codecs": [
+            {"name": "transpose", "configuration": {"order": order}},
+            {"name": "bytes", "configuration": {"endian": "little"}},
+        ],
+        "dimension_names": dimension_names,
+    })
+}
+
+/// Scala `convertLayerToZarrLayer`: the layer as served under `/zarr` (v2) or `/zarr3`.
+pub fn convert_layer_to_zarr_layer(layer: &StaticLayer, zarr_version: u8) -> DsResult<StaticLayer> {
+    let rank = layer.additional_axes.as_ref().map_or(0, Vec::len) as i32 + 4;
+    let mags = layer
+        .sorted_mags()
+        .into_iter()
+        .map(|mag| {
+            Ok(MagLocator {
+                path: Some(UPath::parse(&format!(
+                    "./{}/{}",
+                    layer.name,
+                    mag.to_mag_literal(true)
+                ))?),
+                axis_order: Some(AxisOrder::c_additional_xyz(rank)),
+                ..MagLocator::new(mag)
+            })
+        })
+        .collect::<DsResult<Vec<_>>>()?;
+    Ok(StaticLayer {
+        data_format: if zarr_version == 2 {
+            DataFormat::Zarr
+        } else {
+            DataFormat::Zarr3
+        },
+        mags,
+        // Scala builds a new Static*Layer without attachments.
+        attachments: None,
+        additional_axes: layer
+            .additional_axes
+            .as_deref()
+            .map(reorder_additional_axes),
+        ..layer.clone()
+    })
+}
+
+/// Scala `views.html.datastoreZarrDatasourceDir(kind, name, folderContents)`.
+pub fn directory_html(kind: &str, name: &str, folder_contents: &[String]) -> String {
+    let kind = escape_html(kind);
+    let name = escape_html(name);
+    let mut items = String::new();
+    for entry in folder_contents {
+        let entry = escape_html(entry);
+        let _ = write!(
+            items,
+            "\n        <li><a href=\"{entry}\">{entry}</a></li>\n      "
+        );
+    }
+    // Byte-identical to the Twirl output: no leading newline, trailing spaces kept (`{sp}`, so
+    // editors cannot strip them), the removed `@* *@` comment and a blank CSS line leave their
+    // indentation (`{blank4}`, `{blank6}`).
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>WEBKNOSSOS {kind}</title>
+    <meta name="robot" content="noindex" />
+    <script type="text/javascript">
+      // forward to path with trailing slash
+      if (!window.location.pathname.endsWith('/')) {{
+        var url = window.location.protocol + '//' +{sp}
+                  window.location.host +{sp}
+                  window.location.pathname + '/' +{sp}
+                  window.location.search;
+        window.location.replace(url);
+      }}
+    </script>
+{blank4}
+    <style>
+      * {{
+        font-family: "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+        sans-serif;
+        text-align: center
+      }}
+{blank6}
+      ul {{
+        list-style: none;
+      }}
+
+      p#hint {{
+        color: #777;
+        margin-top: 4em
+      }}
+    </style>
+  </head>
+  <body>
+    <p id="hint">This is the WEBKNOSSOS {kind} “{name}” folder.</p>
+    <p>The following are the contents of the folder:</p>
+    <ul>
+      {items}
+    </ul>
+  </body>
+</html>
+"#,
+        sp = " ",
+        blank4 = " ".repeat(4),
+        blank6 = " ".repeat(6),
+    )
+}
+
+#[cfg(test)]
+mod services_zarr_streaming_tests;

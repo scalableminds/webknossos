@@ -1,0 +1,1091 @@
+{
+ "version": 1,
+ "description": "Annotation flows not covered by annotations_tasks.json: NML/zip upload through the real tracingstores, merge without type, id reservation per domain, annotation sources for the datastore (by id and private link), finish-all, reset of task annotations; other users, missing ids and invalid input.",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "user2-token",
+   "method": "GET",
+   "path": "/api/auth/token",
+   "as": "user2",
+   "capture": {
+    "user2Token": "$.token"
+   },
+   "ignore": [
+    {
+     "path": "$.token",
+     "reason": "random token per side"
+    }
+   ]
+  },
+  {
+   "name": "upload-nml",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "diff-upload.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"upload tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"upload tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"upload group\"/></groups></things>"
+     }
+    }
+   },
+   "capture": {
+    "uploadedId": "$.annotation.id"
+   }
+  },
+  {
+   "name": "uploaded-info",
+   "method": "GET",
+   "path": "/api/annotations/{uploadedId}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   },
+   "capture": {
+    "uploadedSkeletonId": "$.annotationLayers[0].tracingId"
+   }
+  },
+  {
+   "name": "uploaded-download",
+   "method": "GET",
+   "path": "/api/annotations/{uploadedId}/download",
+   "as": "admin"
+  },
+  {
+   "name": "upload-two-nmls-grouped",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "true",
+     "description": "two files"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "first.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"first tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"first tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"first group\"/></groups></things>"
+     },
+     "nmlFile1": {
+      "filename": "second.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"second tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"second group\"/></groups></things>"
+     }
+    }
+   },
+   "capture": {
+    "uploadedTwoId": "$.annotation.id"
+   }
+  },
+  {
+   "name": "uploaded-two-download",
+   "method": "GET",
+   "path": "/api/annotations/{uploadedTwoId}/download",
+   "as": "admin"
+  },
+  {
+   "name": "upload-two-nmls-prefixed",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "first.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"first tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"first tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"first group\"/></groups></things>"
+     },
+     "nmlFile1": {
+      "filename": "second.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"second tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"second group\"/></groups></things>"
+     }
+    }
+   },
+   "capture": {
+    "uploadedPrefixedId": "$.annotation.id"
+   }
+  },
+  {
+   "name": "uploaded-prefixed-download",
+   "method": "GET",
+   "path": "/api/annotations/{uploadedPrefixedId}/download",
+   "as": "admin"
+  },
+  {
+   "name": "upload-zip",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "zipFile": {
+      "filename": "diff-nmls.zip",
+      "content_b64": "UEsDBBQAAAAAAAAAQV25ZdHxwgcAAMIHAAAFAAAAYS5ubWw8dGhpbmdzPjxwYXJhbWV0ZXJzPjxleHBlcmltZW50IG5hbWU9Imw0X3NhbXBsZV9yZW1vdGUiIG9yZ2FuaXphdGlvbj0ic2FtcGxlX29yZ2FuaXphdGlvbiIgZGF0YXNldElkPSI2OGI4MDI5MGQ0MDAwMDkwZjhmNGFhNjIiIGRlc2NyaXB0aW9uPSJ1cGxvYWRlZCBieSB0aGUgZGlmZmVyZW50aWFsIi8+PHNjYWxlIHg9IjExLjI0IiB5PSIxMS4yNCIgej0iMjguMCIgdW5pdD0ibmFub21ldGVyIi8+PG9mZnNldCB4PSIwIiB5PSIwIiB6PSIwIi8+PHRpbWUgbXM9IjE3OTAwMDAwMDAwMDAiLz48ZWRpdFBvc2l0aW9uIHg9IjM1ODQiIHk9IjM1ODQiIHo9IjEwMjQiLz48ZWRpdFJvdGF0aW9uIHhSb3Q9IjAuMCIgeVJvdD0iMC4wIiB6Um90PSIwLjAiLz48em9vbUxldmVsIHpvb209IjIuMCIvPjwvcGFyYW1ldGVycz48dGhpbmcgaWQ9IjEiIGNvbG9yLnI9IjEuMCIgY29sb3IuZz0iMC4wIiBjb2xvci5iPSIwLjAiIGNvbG9yLmE9IjEuMCIgbmFtZT0iemlwcGVkIGEgdHJlZSAxIiBncm91cElkPSIxIj48bm9kZXM+PG5vZGUgaWQ9IjEiIHJhZGl1cz0iMTIwLjAiIHg9IjM1ODQiIHk9IjM1ODUiIHo9IjEwMjQiIHJvdFg9IjAuMCIgcm90WT0iMC4wIiByb3RaPSIwLjAiIGluVnA9IjAiIGluTWFnPSIwIiBiaXREZXB0aD0iOCIgaW50ZXJwb2xhdGlvbj0iZmFsc2UiIHRpbWU9IjE3OTAwMDAwMDAwMDAiLz48bm9kZSBpZD0iMiIgcmFkaXVzPSIxMjAuMCIgeD0iMzU5NCIgeT0iMzU4NSIgej0iMTAyNCIgcm90WD0iMC4wIiByb3RZPSIwLjAiIHJvdFo9IjAuMCIgaW5WcD0iMCIgaW5NYWc9IjAiIGJpdERlcHRoPSI4IiBpbnRlcnBvbGF0aW9uPSJmYWxzZSIgdGltZT0iMTc5MDAwMDAwMDAwMCIvPjxub2RlIGlkPSIzIiByYWRpdXM9IjEyMC4wIiB4PSIzNjA0IiB5PSIzNTg1IiB6PSIxMDI0IiByb3RYPSIwLjAiIHJvdFk9IjAuMCIgcm90Wj0iMC4wIiBpblZwPSIwIiBpbk1hZz0iMCIgYml0RGVwdGg9IjgiIGludGVycG9sYXRpb249ImZhbHNlIiB0aW1lPSIxNzkwMDAwMDAwMDAwIi8+PC9ub2Rlcz48ZWRnZXM+PGVkZ2Ugc291cmNlPSIxIiB0YXJnZXQ9IjIiLz48ZWRnZSBzb3VyY2U9IjIiIHRhcmdldD0iMyIvPjwvZWRnZXM+PC90aGluZz48dGhpbmcgaWQ9IjIiIGNvbG9yLnI9IjEuMCIgY29sb3IuZz0iMC4wIiBjb2xvci5iPSIwLjAiIGNvbG9yLmE9IjEuMCIgbmFtZT0iemlwcGVkIGEgdHJlZSAyIiBncm91cElkPSIxIj48bm9kZXM+PG5vZGUgaWQ9IjQiIHJhZGl1cz0iMTIwLjAiIHg9IjM1ODQiIHk9IjM1ODYiIHo9IjEwMjQiIHJvdFg9IjAuMCIgcm90WT0iMC4wIiByb3RaPSIwLjAiIGluVnA9IjAiIGluTWFnPSIwIiBiaXREZXB0aD0iOCIgaW50ZXJwb2xhdGlvbj0iZmFsc2UiIHRpbWU9IjE3OTAwMDAwMDAwMDAiLz48bm9kZSBpZD0iNSIgcmFkaXVzPSIxMjAuMCIgeD0iMzU5NCIgeT0iMzU4NiIgej0iMTAyNCIgcm90WD0iMC4wIiByb3RZPSIwLjAiIHJvdFo9IjAuMCIgaW5WcD0iMCIgaW5NYWc9IjAiIGJpdERlcHRoPSI4IiBpbnRlcnBvbGF0aW9uPSJmYWxzZSIgdGltZT0iMTc5MDAwMDAwMDAwMCIvPjxub2RlIGlkPSI2IiByYWRpdXM9IjEyMC4wIiB4PSIzNjA0IiB5PSIzNTg2IiB6PSIxMDI0IiByb3RYPSIwLjAiIHJvdFk9IjAuMCIgcm90Wj0iMC4wIiBpblZwPSIwIiBpbk1hZz0iMCIgYml0RGVwdGg9IjgiIGludGVycG9sYXRpb249ImZhbHNlIiB0aW1lPSIxNzkwMDAwMDAwMDAwIi8+PC9ub2Rlcz48ZWRnZXM+PGVkZ2Ugc291cmNlPSI0IiB0YXJnZXQ9IjUiLz48ZWRnZSBzb3VyY2U9IjUiIHRhcmdldD0iNiIvPjwvZWRnZXM+PC90aGluZz48YnJhbmNocG9pbnRzPjxicmFuY2hwb2ludCBpZD0iMiIgdGltZT0iMTc5MDAwMDAwMDAwMCIvPjwvYnJhbmNocG9pbnRzPjxjb21tZW50cz48Y29tbWVudCBub2RlPSIxIiBjb250ZW50PSJmaXJzdCBub2RlIi8+PC9jb21tZW50cz48Z3JvdXBzPjxncm91cCBpZD0iMSIgbmFtZT0iemlwcGVkIGEgZ3JvdXAiLz48L2dyb3Vwcz48L3RoaW5ncz5QSwMEFAAAAAAAAABBXf5zGoANBQAADQUAAAUAAABiLm5tbDx0aGluZ3M+PHBhcmFtZXRlcnM+PGV4cGVyaW1lbnQgbmFtZT0ibDRfc2FtcGxlX3JlbW90ZSIgb3JnYW5pemF0aW9uPSJzYW1wbGVfb3JnYW5pemF0aW9uIiBkYXRhc2V0SWQ9IjY4YjgwMjkwZDQwMDAwOTBmOGY0YWE2MiIgZGVzY3JpcHRpb249InVwbG9hZGVkIGJ5IHRoZSBkaWZmZXJlbnRpYWwiLz48c2NhbGUgeD0iMTEuMjQiIHk9IjExLjI0IiB6PSIyOC4wIiB1bml0PSJuYW5vbWV0ZXIiLz48b2Zmc2V0IHg9IjAiIHk9IjAiIHo9IjAiLz48dGltZSBtcz0iMTc5MDAwMDAwMDAwMCIvPjxlZGl0UG9zaXRpb24geD0iMzU4NCIgeT0iMzU4NCIgej0iMTAyNCIvPjxlZGl0Um90YXRpb24geFJvdD0iMC4wIiB5Um90PSIwLjAiIHpSb3Q9IjAuMCIvPjx6b29tTGV2ZWwgem9vbT0iMi4wIi8+PC9wYXJhbWV0ZXJzPjx0aGluZyBpZD0iMSIgY29sb3Iucj0iMS4wIiBjb2xvci5nPSIwLjAiIGNvbG9yLmI9IjAuMCIgY29sb3IuYT0iMS4wIiBuYW1lPSJ6aXBwZWQgYiB0cmVlIDEiIGdyb3VwSWQ9IjEiPjxub2Rlcz48bm9kZSBpZD0iMSIgcmFkaXVzPSIxMjAuMCIgeD0iMzU4NCIgeT0iMzU4NSIgej0iMTAyNCIgcm90WD0iMC4wIiByb3RZPSIwLjAiIHJvdFo9IjAuMCIgaW5WcD0iMCIgaW5NYWc9IjAiIGJpdERlcHRoPSI4IiBpbnRlcnBvbGF0aW9uPSJmYWxzZSIgdGltZT0iMTc5MDAwMDAwMDAwMCIvPjxub2RlIGlkPSIyIiByYWRpdXM9IjEyMC4wIiB4PSIzNTk0IiB5PSIzNTg1IiB6PSIxMDI0IiByb3RYPSIwLjAiIHJvdFk9IjAuMCIgcm90Wj0iMC4wIiBpblZwPSIwIiBpbk1hZz0iMCIgYml0RGVwdGg9IjgiIGludGVycG9sYXRpb249ImZhbHNlIiB0aW1lPSIxNzkwMDAwMDAwMDAwIi8+PG5vZGUgaWQ9IjMiIHJhZGl1cz0iMTIwLjAiIHg9IjM2MDQiIHk9IjM1ODUiIHo9IjEwMjQiIHJvdFg9IjAuMCIgcm90WT0iMC4wIiByb3RaPSIwLjAiIGluVnA9IjAiIGluTWFnPSIwIiBiaXREZXB0aD0iOCIgaW50ZXJwb2xhdGlvbj0iZmFsc2UiIHRpbWU9IjE3OTAwMDAwMDAwMDAiLz48L25vZGVzPjxlZGdlcz48ZWRnZSBzb3VyY2U9IjEiIHRhcmdldD0iMiIvPjxlZGdlIHNvdXJjZT0iMiIgdGFyZ2V0PSIzIi8+PC9lZGdlcz48L3RoaW5nPjxicmFuY2hwb2ludHM+PGJyYW5jaHBvaW50IGlkPSIyIiB0aW1lPSIxNzkwMDAwMDAwMDAwIi8+PC9icmFuY2hwb2ludHM+PGNvbW1lbnRzPjxjb21tZW50IG5vZGU9IjEiIGNvbnRlbnQ9ImZpcnN0IG5vZGUiLz48L2NvbW1lbnRzPjxncm91cHM+PGdyb3VwIGlkPSIxIiBuYW1lPSJ6aXBwZWQgYiBncm91cCIvPjwvZ3JvdXBzPjwvdGhpbmdzPlBLAQIUAxQAAAAAAAAAQV25ZdHxwgcAAMIHAAAFAAAAAAAAAAAAAACAAQAAAABhLm5tbFBLAQIUAxQAAAAAAAAAQV3+cxqADQUAAA0FAAAFAAAAAAAAAAAAAACAAeUHAABiLm5tbFBLBQYAAAAAAgACAGYAAAAVDQAAAAA="
+     }
+    }
+   },
+   "capture": {
+    "uploadedZipId": "$.annotation.id"
+   }
+  },
+  {
+   "name": "uploaded-zip-info",
+   "method": "GET",
+   "path": "/api/annotations/{uploadedZipId}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "upload-fallbacks",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false",
+     "fallbackEditPosition": "1,2,3",
+     "fallbackEditRotation": "0,90,0",
+     "fallbackZoomLevel": "1.5"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "fallbacks.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"fallbacks tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"fallbacks tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"fallbacks group\"/></groups></things>"
+     }
+    }
+   },
+   "capture": {
+    "uploadedFallbackId": "$.annotation.id"
+   }
+  },
+  {
+   "name": "uploaded-fallbacks-download",
+   "method": "GET",
+   "path": "/api/annotations/{uploadedFallbackId}/download",
+   "as": "admin"
+  },
+  {
+   "name": "upload-overwrite-dataset",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false",
+     "datasetId": "68b80290d4000090f8f4aa62"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "other.nml",
+      "content": "<things><parameters><experiment name=\"nope\" organization=\"sample_organization\" datasetId=\"0123456789abcdef01234567\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"other tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"other tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"other group\"/></groups></things>"
+     }
+    }
+   }
+  },
+  {
+   "name": "upload-unknown-dataset",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "unknown.nml",
+      "content": "<things><parameters><experiment name=\"nope\" organization=\"sample_organization\" datasetId=\"0123456789abcdef01234567\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"unknown tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"unknown tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"unknown group\"/></groups></things>"
+     }
+    }
+   }
+  },
+  {
+   "name": "upload-invalid-nml",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "broken.nml",
+      "content": "<things><thing id="
+     }
+    }
+   },
+   "expected_divergence": {
+    "reason": "NML syntax errors quote the XML parser's own message after the common prefix: Java's SAX parser (Xerces) vs Rust's XML reader word and position the error differently. Same status.",
+    "paths": [
+     "$.messages[0].error"
+    ]
+   }
+  },
+  {
+   "name": "upload-volume-without-data",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "volume.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"volume tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"volume tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><volume id=\"0\" location=\"Volume.zip\" fallbackLayer=\"segmentation\" name=\"Volume\"/><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"volume group\"/></groups></things>"
+     }
+    }
+   }
+  },
+  {
+   "name": "upload-invalid-fallback-position",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false",
+     "fallbackEditPosition": "1,2"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "a.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"a tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"a tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"a group\"/></groups></things>"
+     }
+    }
+   }
+  },
+  {
+   "name": "upload-no-files",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {}
+   }
+  },
+  {
+   "name": "upload-without-group-flag",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "admin",
+   "multipart": {
+    "fields": {},
+    "files": {
+     "nmlFile0": {
+      "filename": "flagless.nml",
+      "content": "<things><parameters><experiment name=\"nope\" organization=\"sample_organization\" datasetId=\"0123456789abcdef01234567\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"flagless tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"flagless tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"flagless group\"/></groups></things>"
+     }
+    }
+   },
+   "expected_divergence": {
+    "reason": "Play bug: AnnotationIOController.upload reads the form field createGroupForEachFile with dataParts(\u2026) (Map.apply), so a request without it throws NoSuchElementException and Play answers 500 with its HTML error page before looking at the files; Rust treats the missing field as false and reports the actual problem (400, unknown dataset; with a valid NML it uploads). The frontend always sends the field.",
+    "paths": [
+     "$"
+    ],
+    "status_differs": true,
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "upload-user2-no-dataset-access",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "user2",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "user2.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"user2 tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"user2 tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"user2 group\"/></groups></things>"
+     }
+    }
+   }
+  },
+  {
+   "name": "dataset-teams-default",
+   "method": "PATCH",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/teams",
+   "as": "admin",
+   "json": [
+    "{seedTeamId}"
+   ]
+  },
+  {
+   "name": "upload-user2",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "as": "user2",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "user2.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"user2 tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"user2 tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"user2 group\"/></groups></things>"
+     }
+    }
+   },
+   "capture": {
+    "uploadedUser2Id": "$.annotation.id"
+   }
+  },
+  {
+   "name": "upload-anonymous",
+   "method": "POST",
+   "path": "/api/annotations/upload",
+   "multipart": {
+    "fields": {
+     "createGroupForEachFile": "false"
+    },
+    "files": {
+     "nmlFile0": {
+      "filename": "anon.nml",
+      "content": "<things><parameters><experiment name=\"l4_sample_remote\" organization=\"sample_organization\" datasetId=\"68b80290d4000090f8f4aa62\" description=\"uploaded by the differential\"/><scale x=\"11.24\" y=\"11.24\" z=\"28.0\" unit=\"nanometer\"/><offset x=\"0\" y=\"0\" z=\"0\"/><time ms=\"1790000000000\"/><editPosition x=\"3584\" y=\"3584\" z=\"1024\"/><editRotation xRot=\"0.0\" yRot=\"0.0\" zRot=\"0.0\"/><zoomLevel zoom=\"2.0\"/></parameters><thing id=\"1\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"anon tree 1\" groupId=\"1\"><nodes><node id=\"1\" radius=\"120.0\" x=\"3584\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"2\" radius=\"120.0\" x=\"3594\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"3\" radius=\"120.0\" x=\"3604\" y=\"3585\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"1\" target=\"2\"/><edge source=\"2\" target=\"3\"/></edges></thing><thing id=\"2\" color.r=\"1.0\" color.g=\"0.0\" color.b=\"0.0\" color.a=\"1.0\" name=\"anon tree 2\" groupId=\"1\"><nodes><node id=\"4\" radius=\"120.0\" x=\"3584\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"5\" radius=\"120.0\" x=\"3594\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/><node id=\"6\" radius=\"120.0\" x=\"3604\" y=\"3586\" z=\"1024\" rotX=\"0.0\" rotY=\"0.0\" rotZ=\"0.0\" inVp=\"0\" inMag=\"0\" bitDepth=\"8\" interpolation=\"false\" time=\"1790000000000\"/></nodes><edges><edge source=\"4\" target=\"5\"/><edge source=\"5\" target=\"6\"/></edges></thing><branchpoints><branchpoint id=\"2\" time=\"1790000000000\"/></branchpoints><comments><comment node=\"1\" content=\"first node\"/></comments><groups><group id=\"1\" name=\"anon group\"/></groups></things>"
+     }
+    }
+   }
+  },
+  {
+   "name": "merge-without-type",
+   "method": "POST",
+   "path": "/api/annotations/{uploadedId}/merge/Explorational/{uploadedTwoId}",
+   "as": "admin",
+   "capture": {
+    "mergedId": "$.id"
+   }
+  },
+  {
+   "name": "merged-download",
+   "method": "GET",
+   "path": "/api/annotations/{mergedId}/download",
+   "as": "admin"
+  },
+  {
+   "name": "merge-without-type-missing",
+   "method": "POST",
+   "path": "/api/annotations/0123456789abcdef01234567/merge/Explorational/{uploadedTwoId}",
+   "as": "admin"
+  },
+  {
+   "name": "merge-without-type-missing-other",
+   "method": "POST",
+   "path": "/api/annotations/{uploadedId}/merge/Explorational/0123456789abcdef01234567",
+   "as": "admin"
+  },
+  {
+   "name": "merge-without-type-bad-type",
+   "method": "POST",
+   "path": "/api/annotations/{uploadedId}/merge/Nope/{uploadedTwoId}",
+   "as": "admin"
+  },
+  {
+   "name": "merge-without-type-user2-foreign",
+   "method": "POST",
+   "path": "/api/annotations/{uploadedId}/merge/Explorational/{uploadedTwoId}",
+   "as": "user2"
+  },
+  {
+   "name": "merge-without-type-user2-own",
+   "method": "POST",
+   "path": "/api/annotations/{uploadedUser2Id}/merge/Explorational/{uploadedId}",
+   "as": "user2"
+  },
+  {
+   "name": "create-volume",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Volume",
+     "name": "Volume",
+     "fallbackLayerName": null,
+     "autoFallbackLayer": false
+    }
+   ],
+   "capture": {
+    "volumeAnnId": "$.id",
+    "volumeId": "$.annotationLayers[0].tracingId"
+   }
+  },
+  {
+   "name": "reserved-before",
+   "method": "GET",
+   "path": "/api/annotations/{volumeAnnId}/reservedIds",
+   "as": "admin",
+   "query": {
+    "tracingId": "{volumeId}",
+    "domain": "Segment"
+   }
+  },
+  {
+   "name": "reserve-segments",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Segment",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 5,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserve-segments-more",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Segment",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 3,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserved-segments",
+   "method": "GET",
+   "path": "/api/annotations/{volumeAnnId}/reservedIds",
+   "as": "admin",
+   "query": {
+    "tracingId": "{volumeId}",
+    "domain": "Segment"
+   }
+  },
+  {
+   "name": "reserve-release",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Segment",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 1,
+    "idsToRelease": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "name": "reserved-after-release",
+   "method": "GET",
+   "path": "/api/annotations/{volumeAnnId}/reservedIds",
+   "as": "admin",
+   "query": {
+    "tracingId": "{volumeId}",
+    "domain": "Segment"
+   }
+  },
+  {
+   "name": "reserve-segment-groups",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "SegmentGroup",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 2,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserve-bounding-boxes",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "BoundingBox",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 2,
+    "idsToRelease": []
+   },
+   "expected_divergence": {
+    "reason": "Failed store RPC: Play's message embeds the internal RPC URL, a per-process RPC counter and the store's response body; Rust returns a generic message (see CUTOVER.md). Both 400.",
+    "paths": [
+     "$.messages"
+    ]
+   }
+  },
+  {
+   "name": "reserved-segment-groups",
+   "method": "GET",
+   "path": "/api/annotations/{volumeAnnId}/reservedIds",
+   "as": "admin",
+   "query": {
+    "tracingId": "{volumeId}",
+    "domain": "SegmentGroup"
+   }
+  },
+  {
+   "name": "reserve-trees",
+   "method": "POST",
+   "path": "/api/annotations/{uploadedId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Tree",
+    "tracingId": "{uploadedSkeletonId}",
+    "numberOfIdsToReserve": 4,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserve-nodes",
+   "method": "POST",
+   "path": "/api/annotations/{uploadedId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Node",
+    "tracingId": "{uploadedSkeletonId}",
+    "numberOfIdsToReserve": 4,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserved-trees",
+   "method": "GET",
+   "path": "/api/annotations/{uploadedId}/reservedIds",
+   "as": "admin",
+   "query": {
+    "tracingId": "{uploadedSkeletonId}",
+    "domain": "Tree"
+   }
+  },
+  {
+   "name": "reserve-too-many",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Segment",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 100000,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserve-zero",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Segment",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 0,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserve-unknown-tracing",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Segment",
+    "tracingId": "nope",
+    "numberOfIdsToReserve": 5,
+    "idsToRelease": []
+   },
+   "expected_divergence": {
+    "reason": "Failed store RPC: Play's message embeds the internal RPC URL, a per-process RPC counter and the store's response body; Rust returns a generic message (see CUTOVER.md). Both 404.",
+    "paths": [
+     "$.messages"
+    ]
+   }
+  },
+  {
+   "name": "reserve-missing-annotation",
+   "method": "POST",
+   "path": "/api/annotations/0123456789abcdef01234567/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Segment",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 5,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserve-user2",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "user2",
+   "json": {
+    "domain": "Segment",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 5,
+    "idsToRelease": []
+   }
+  },
+  {
+   "name": "reserve-invalid-domain",
+   "method": "POST",
+   "path": "/api/annotations/{volumeAnnId}/reserveIds",
+   "as": "admin",
+   "json": {
+    "domain": "Nope",
+    "tracingId": "{volumeId}",
+    "numberOfIdsToReserve": 5,
+    "idsToRelease": []
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "reserved-invalid-domain",
+   "method": "GET",
+   "path": "/api/annotations/{volumeAnnId}/reservedIds",
+   "as": "admin",
+   "query": {
+    "tracingId": "{volumeId}",
+    "domain": "Nope"
+   }
+  },
+  {
+   "name": "reserved-user2",
+   "method": "GET",
+   "path": "/api/annotations/{volumeAnnId}/reservedIds",
+   "as": "user2",
+   "query": {
+    "tracingId": "{volumeId}",
+    "domain": "Segment"
+   }
+  },
+  {
+   "name": "reserved-missing-annotation",
+   "method": "GET",
+   "path": "/api/annotations/0123456789abcdef01234567/reservedIds",
+   "as": "admin",
+   "query": {
+    "tracingId": "{volumeId}",
+    "domain": "Segment"
+   }
+  },
+  {
+   "name": "source-by-id",
+   "method": "GET",
+   "path": "/api/annotations/source/{volumeAnnId}",
+   "query": {
+    "userToken": "secretSampleUserToken"
+   }
+  },
+  {
+   "name": "source-by-id-anonymous",
+   "method": "GET",
+   "path": "/api/annotations/source/{volumeAnnId}"
+  },
+  {
+   "name": "source-by-id-user2",
+   "method": "GET",
+   "path": "/api/annotations/source/{volumeAnnId}",
+   "query": {
+    "userToken": "{user2Token}"
+   }
+  },
+  {
+   "name": "source-missing",
+   "method": "GET",
+   "path": "/api/annotations/source/0123456789abcdef01234567",
+   "query": {
+    "userToken": "secretSampleUserToken"
+   }
+  },
+  {
+   "name": "source-not-an-id",
+   "method": "GET",
+   "path": "/api/annotations/source/not-a-token",
+   "query": {
+    "userToken": "secretSampleUserToken"
+   }
+  },
+  {
+   "name": "zarr-link-create",
+   "method": "POST",
+   "path": "/api/zarrPrivateLinks",
+   "as": "admin",
+   "json": {
+    "annotation": "{volumeAnnId}",
+    "expirationDateTime": null
+   },
+   "capture": {
+    "zarrLinkId": "$.id",
+    "zarrToken": "$.accessToken"
+   },
+   "ignore": [
+    {
+     "path": "$.accessToken",
+     "reason": "random per side"
+    }
+   ]
+  },
+  {
+   "name": "zarr-link-get",
+   "method": "GET",
+   "path": "/api/zarrPrivateLinks/{zarrLinkId}",
+   "as": "admin",
+   "ignore": [
+    {
+     "path": "$.accessToken",
+     "reason": "random per side"
+    }
+   ]
+  },
+  {
+   "name": "zarr-link-get-user2",
+   "method": "GET",
+   "path": "/api/zarrPrivateLinks/{zarrLinkId}",
+   "as": "user2"
+  },
+  {
+   "name": "zarr-link-get-missing",
+   "method": "GET",
+   "path": "/api/zarrPrivateLinks/0123456789abcdef01234567",
+   "as": "admin"
+  },
+  {
+   "name": "source-by-link",
+   "method": "GET",
+   "path": "/api/annotations/source/{zarrToken}"
+  },
+  {
+   "name": "zarr-link-create-expired",
+   "method": "POST",
+   "path": "/api/zarrPrivateLinks",
+   "as": "admin",
+   "json": {
+    "annotation": "{volumeAnnId}",
+    "expirationDateTime": 1600000000000
+   },
+   "capture": {
+    "expiredToken": "$.accessToken"
+   },
+   "ignore": [
+    {
+     "path": "$.accessToken",
+     "reason": "random per side"
+    }
+   ]
+  },
+  {
+   "name": "source-by-expired-link",
+   "method": "GET",
+   "path": "/api/annotations/source/{expiredToken}"
+  },
+  {
+   "name": "create-finish-1",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Skeleton",
+     "name": "Skeleton"
+    }
+   ],
+   "capture": {
+    "finish1": "$.id"
+   }
+  },
+  {
+   "name": "create-finish-2",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Skeleton",
+     "name": "Skeleton"
+    }
+   ],
+   "capture": {
+    "finish2": "$.id"
+   }
+  },
+  {
+   "name": "finish-all",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   },
+   "json": {
+    "annotations": [
+     "{finish1}",
+     "{finish2}"
+    ]
+   }
+  },
+  {
+   "name": "finish-all-again",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   },
+   "json": {
+    "annotations": [
+     "{finish1}"
+    ]
+   }
+  },
+  {
+   "name": "finish-all-with-foreign",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/finish",
+   "as": "user2",
+   "query": {
+    "timestamp": "1900000000000"
+   },
+   "json": {
+    "annotations": [
+     "{uploadedUser2Id}",
+     "{volumeAnnId}"
+    ]
+   }
+  },
+  {
+   "name": "finish-all-missing",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   },
+   "json": {
+    "annotations": [
+     "0123456789abcdef01234567"
+    ]
+   }
+  },
+  {
+   "name": "finish-all-empty",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   },
+   "json": {
+    "annotations": []
+   }
+  },
+  {
+   "name": "finish-all-task-type",
+   "method": "PATCH",
+   "path": "/api/annotations/Task/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   },
+   "json": {
+    "annotations": [
+     "{uploadedZipId}"
+    ]
+   }
+  },
+  {
+   "name": "finish-all-invalid",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   },
+   "json": {
+    "ids": []
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "finished-states",
+   "method": "GET",
+   "path": "/api/annotations/readable",
+   "as": "admin",
+   "query": {
+    "isFinished": "true"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "user2-annotation-after-finish-all",
+   "method": "GET",
+   "path": "/api/annotations/{uploadedUser2Id}/info",
+   "as": "user2",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "task-create",
+   "method": "POST",
+   "path": "/api/tasks",
+   "as": "admin",
+   "json": [
+    {
+     "taskTypeId": "63721e2cef0100470266c485",
+     "neededExperience": {
+      "domain": "diff-flows",
+      "value": 0
+     },
+     "pendingInstances": 1,
+     "projectName": "sampleProject",
+     "scriptId": null,
+     "boundingBox": null,
+     "datasetId": "68b80290d4000090f8f4aa62",
+     "editPosition": [
+      10,
+      20,
+      30
+     ],
+     "editRotation": [
+      0,
+      0,
+      0
+     ],
+     "creationInfo": null,
+     "description": "diff flow task",
+     "baseAnnotation": null
+    }
+   ],
+   "capture": {
+    "taskId": "$.tasks[0].success.id"
+   }
+  },
+  {
+   "name": "task-assign-user2",
+   "method": "POST",
+   "path": "/api/tasks/{taskId}/assign",
+   "as": "admin",
+   "query": {
+    "userId": "{seedUser2Id}"
+   }
+  },
+  {
+   "name": "task-annotations",
+   "method": "GET",
+   "path": "/api/tasks/{taskId}/annotations",
+   "as": "admin",
+   "capture": {
+    "taskAnnId": "$[0].id"
+   }
+  },
+  {
+   "name": "task-annotation-merge-into",
+   "method": "POST",
+   "path": "/api/annotations/Task/{taskAnnId}/merge/Explorational/{uploadedId}",
+   "as": "admin"
+  },
+  {
+   "name": "reset-user2",
+   "method": "PUT",
+   "path": "/api/annotations/Task/{taskAnnId}/reset",
+   "as": "user2"
+  },
+  {
+   "name": "reset",
+   "method": "PUT",
+   "path": "/api/annotations/Task/{taskAnnId}/reset",
+   "as": "admin"
+  },
+  {
+   "name": "reset-explorational",
+   "method": "PUT",
+   "path": "/api/annotations/Explorational/{uploadedId}/reset",
+   "as": "admin"
+  },
+  {
+   "name": "reset-missing",
+   "method": "PUT",
+   "path": "/api/annotations/Task/0123456789abcdef01234567/reset",
+   "as": "admin"
+  },
+  {
+   "name": "task-annotation-after-reset",
+   "method": "GET",
+   "path": "/api/annotations/{taskAnnId}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "task-delete",
+   "method": "DELETE",
+   "path": "/api/tasks/{taskId}",
+   "as": "admin"
+  }
+ ]
+}

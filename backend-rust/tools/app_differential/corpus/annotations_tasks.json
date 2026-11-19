@@ -1,0 +1,716 @@
+{
+ "version": 1,
+ "description": "Annotation and task lifecycle through the real tracingstores (Play embedded vs Scala standalone calling back Rust).",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "user2-experience",
+   "method": "PATCH",
+   "path": "/api/users/{seedUser2Id}",
+   "as": "admin",
+   "json": {
+    "firstName": "Non-Admin",
+    "lastName": "User",
+    "email": "sample2@scm.io",
+    "isActive": true,
+    "isAdmin": false,
+    "isDatasetManager": false,
+    "teams": [
+     {
+      "id": "{seedTeamId}",
+      "name": "Default",
+      "isTeamManager": false
+     }
+    ],
+    "experiences": {
+     "diff-domain": 3
+    }
+   }
+  },
+  {
+   "name": "create-skeleton",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Skeleton",
+     "name": "Skeleton"
+    }
+   ],
+   "capture": {
+    "annId": "$.id",
+    "skeletonTracingId": "$.annotationLayers[0].tracingId"
+   }
+  },
+  {
+   "name": "create-hybrid",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Skeleton",
+     "name": "Skeleton"
+    },
+    {
+     "typ": "Volume",
+     "name": "Volume",
+     "fallbackLayerName": null,
+     "autoFallbackLayer": false
+    }
+   ],
+   "capture": {
+    "annId2": "$.id"
+   }
+  },
+  {
+   "name": "create-missing-dataset",
+   "method": "POST",
+   "path": "/api/datasets/0123456789abcdef01234567/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Skeleton",
+     "name": "Skeleton"
+    }
+   ]
+  },
+  {
+   "name": "info",
+   "method": "GET",
+   "path": "/api/annotations/{annId}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "info-typed",
+   "method": "GET",
+   "path": "/api/annotations/Explorational/{annId2}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "info-as-user2",
+   "method": "GET",
+   "path": "/api/annotations/{annId}/info",
+   "as": "user2",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "edit",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId}/edit",
+   "as": "admin",
+   "json": {
+    "name": "diff annotation",
+    "description": "desc",
+    "visibility": "Internal",
+    "tags": [
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "name": "info-after-edit",
+   "method": "GET",
+   "path": "/api/annotations/{annId}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "shared-teams-set",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId}/sharedTeams",
+   "as": "admin",
+   "json": [
+    "{seedTeamId}"
+   ]
+  },
+  {
+   "name": "shared-teams-get",
+   "method": "GET",
+   "path": "/api/annotations/Explorational/{annId}/sharedTeams",
+   "as": "admin"
+  },
+  {
+   "name": "info-as-user2-shared",
+   "method": "GET",
+   "path": "/api/annotations/{annId}/info",
+   "as": "user2",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "mutex-acquire",
+   "method": "POST",
+   "path": "/api/annotations/{annId}/acquireMutex",
+   "as": "admin",
+   "query": {
+    "sessionId": "diff-session-1"
+   }
+  },
+  {
+   "name": "mutex-acquire-other-session",
+   "method": "POST",
+   "path": "/api/annotations/{annId}/acquireMutex",
+   "as": "admin",
+   "query": {
+    "sessionId": "diff-session-2"
+   }
+  },
+  {
+   "name": "mutex-release",
+   "method": "POST",
+   "path": "/api/annotations/{annId}/releaseMutex",
+   "as": "admin",
+   "query": {
+    "sessionId": "diff-session-1"
+   }
+  },
+  {
+   "name": "collaboration-mode",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId}/collaborationMode",
+   "as": "admin",
+   "query": {
+    "collaborationMode": "OwnerOnly"
+   }
+  },
+  {
+   "name": "lock",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId}/editLockedState",
+   "as": "admin",
+   "query": {
+    "isLockedByOwner": "true"
+   }
+  },
+  {
+   "name": "unlock",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId}/editLockedState",
+   "as": "admin",
+   "query": {
+    "isLockedByOwner": "false"
+   }
+  },
+  {
+   "name": "duplicate",
+   "method": "POST",
+   "path": "/api/annotations/Explorational/{annId}/duplicate",
+   "as": "admin",
+   "capture": {
+    "dupId": "$.id",
+    "dupSkeletonId": "$.annotationLayers[0].tracingId"
+   }
+  },
+  {
+   "name": "download-nml",
+   "method": "GET",
+   "path": "/api/annotations/{annId}/download",
+   "as": "admin"
+  },
+  {
+   "name": "download-typed",
+   "method": "GET",
+   "path": "/api/annotations/Explorational/{annId2}/download",
+   "as": "admin",
+   "query": {
+    "skipVolumeData": "true"
+   }
+  },
+  {
+   "name": "merge",
+   "method": "POST",
+   "path": "/api/annotations/Explorational/{annId}/merge/Explorational/{dupId}",
+   "as": "admin",
+   "capture": {
+    "mergedId": "$.id"
+   }
+  },
+  {
+   "name": "readable",
+   "method": "GET",
+   "path": "/api/annotations/readable",
+   "as": "admin",
+   "query": {
+    "includeTotalCount": "true"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "user-annotations",
+   "method": "GET",
+   "path": "/api/user/annotations",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "readable-finished",
+   "method": "GET",
+   "path": "/api/annotations/readable",
+   "as": "admin",
+   "query": {
+    "isFinished": "true",
+    "includeTotalCount": "true"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "readable-active-by-dataset",
+   "method": "GET",
+   "path": "/api/annotations/readable",
+   "as": "admin",
+   "query": {
+    "isFinished": "false",
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "includeTotalCount": "true",
+    "limit": "1",
+    "pageNumber": "1"
+   }
+  },
+  {
+   "name": "readable-user2",
+   "method": "GET",
+   "path": "/api/annotations/readable",
+   "as": "user2",
+   "query": {
+    "includeTotalCount": "true"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "user-annotations-user2",
+   "method": "GET",
+   "path": "/api/user/annotations",
+   "as": "user2",
+   "query": {
+    "includeTotalCount": "true"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "users-as-user2",
+   "method": "GET",
+   "path": "/api/users",
+   "as": "user2",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "users-not-editable",
+   "method": "GET",
+   "path": "/api/users",
+   "as": "admin",
+   "query": {
+    "isEditable": "false",
+    "isAdmin": "false"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "users-not-team-manager-user2",
+   "method": "GET",
+   "path": "/api/users",
+   "as": "user2",
+   "query": {
+    "isTeamManagerOrAdmin": "false"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "zarr-link-create",
+   "method": "POST",
+   "path": "/api/zarrPrivateLinks",
+   "as": "admin",
+   "json": {
+    "annotation": "{annId2}",
+    "expirationDateTime": null
+   },
+   "capture": {
+    "zarrLinkId": "$.id",
+    "zarrToken": "$.accessToken"
+   },
+   "ignore": [
+    {
+     "path": "$.accessToken",
+     "reason": "random per side"
+    }
+   ]
+  },
+  {
+   "name": "zarr-link-update",
+   "method": "PUT",
+   "path": "/api/zarrPrivateLinks/{zarrLinkId}",
+   "as": "admin",
+   "json": {
+    "annotation": "{annId2}",
+    "expirationDateTime": 1893456000000
+   },
+   "ignore": [
+    {
+     "path": "$.accessToken",
+     "reason": "random per side"
+    }
+   ]
+  },
+  {
+   "name": "zarr-links-by-annotation",
+   "method": "GET",
+   "path": "/api/zarrPrivateLinks/byAnnotation/{annId2}",
+   "as": "admin",
+   "ignore": [
+    {
+     "path": "$[*].accessToken",
+     "reason": "random per side"
+    }
+   ]
+  },
+  {
+   "name": "zarr-link-delete",
+   "method": "DELETE",
+   "path": "/api/zarrPrivateLinks/{zarrLinkId}",
+   "as": "admin"
+  },
+  {
+   "name": "transfer",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{dupId}/transfer",
+   "as": "admin",
+   "json": {
+    "userId": "{seedUser2Id}"
+   }
+  },
+  {
+   "name": "finish",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId2}/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "finish-again",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId2}/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "reopen",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId2}/reopen",
+   "as": "admin"
+  },
+  {
+   "name": "cancel-explorational",
+   "method": "DELETE",
+   "path": "/api/annotations/{dupId}",
+   "as": "admin"
+  },
+  {
+   "name": "sandbox",
+   "method": "GET",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/sandbox/skeleton",
+   "as": "admin"
+  },
+  {
+   "name": "dataset-teams-default",
+   "method": "PATCH",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/teams",
+   "as": "admin",
+   "json": [
+    "{seedTeamId}"
+   ]
+  },
+  {
+   "name": "task-create",
+   "method": "POST",
+   "path": "/api/tasks",
+   "as": "admin",
+   "json": [
+    {
+     "taskTypeId": "63721e2cef0100470266c485",
+     "neededExperience": {
+      "domain": "diff-domain",
+      "value": 1
+     },
+     "pendingInstances": 2,
+     "projectName": "sampleProject",
+     "scriptId": null,
+     "boundingBox": {
+      "topLeft": [
+       0,
+       0,
+       0
+      ],
+      "width": 100,
+      "height": 100,
+      "depth": 100
+     },
+     "datasetId": "68b80290d4000090f8f4aa62",
+     "editPosition": [
+      10,
+      20,
+      30
+     ],
+     "editRotation": [
+      0,
+      0,
+      0
+     ],
+     "creationInfo": null,
+     "description": "diff task",
+     "baseAnnotation": null
+    }
+   ],
+   "capture": {
+    "taskId": "$.tasks[0].success.id"
+   }
+  },
+  {
+   "name": "task-create-empty",
+   "method": "POST",
+   "path": "/api/tasks",
+   "as": "admin",
+   "json": []
+  },
+  {
+   "name": "task-read",
+   "method": "GET",
+   "path": "/api/tasks/{taskId}",
+   "as": "admin"
+  },
+  {
+   "name": "task-update",
+   "method": "PUT",
+   "path": "/api/tasks/{taskId}",
+   "as": "admin",
+   "json": {
+    "taskTypeId": "63721e2cef0100470266c485",
+    "neededExperience": {
+     "domain": "diff-domain",
+     "value": 1
+    },
+    "pendingInstances": 3,
+    "projectName": "sampleProject",
+    "scriptId": null,
+    "boundingBox": {
+     "topLeft": [
+      0,
+      0,
+      0
+     ],
+     "width": 100,
+     "height": 100,
+     "depth": 100
+    },
+    "datasetId": "68b80290d4000090f8f4aa62",
+    "editPosition": [
+     10,
+     20,
+     30
+    ],
+    "editRotation": [
+     0,
+     0,
+     0
+    ],
+    "creationInfo": null,
+    "description": "updated",
+    "baseAnnotation": null
+   }
+  },
+  {
+   "name": "tasks-list",
+   "method": "POST",
+   "path": "/api/tasks/list",
+   "as": "admin",
+   "json": {
+    "project": "{seedProjectId}"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "project-tasks",
+   "method": "GET",
+   "path": "/api/projects/{seedProjectId}/tasks",
+   "as": "admin"
+  },
+  {
+   "name": "task-type-tasks",
+   "method": "GET",
+   "path": "/api/taskTypes/63721e2cef0100470266c485/tasks",
+   "as": "admin"
+  },
+  {
+   "name": "peek-user2",
+   "method": "GET",
+   "path": "/api/user/tasks/peek",
+   "as": "user2"
+  },
+  {
+   "name": "request-user2",
+   "method": "POST",
+   "path": "/api/user/tasks/request",
+   "as": "user2",
+   "capture": {
+    "taskAnnId": "$.id"
+   }
+  },
+  {
+   "name": "user2-tasks",
+   "method": "GET",
+   "path": "/api/user/tasks",
+   "as": "user2"
+  },
+  {
+   "name": "task-annotations",
+   "method": "GET",
+   "path": "/api/tasks/{taskId}/annotations",
+   "as": "admin"
+  },
+  {
+   "name": "task-ann-info-user2",
+   "method": "GET",
+   "path": "/api/annotations/Task/{taskAnnId}/info",
+   "as": "user2",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "task-ann-finish-user2",
+   "method": "PATCH",
+   "path": "/api/annotations/Task/{taskAnnId}/finish",
+   "as": "user2",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "task-ann-reopen",
+   "method": "PATCH",
+   "path": "/api/annotations/Task/{taskAnnId}/reopen",
+   "as": "admin"
+  },
+  {
+   "name": "task-assign-admin",
+   "method": "POST",
+   "path": "/api/tasks/{taskId}/assign",
+   "as": "admin",
+   "query": {
+    "userId": "{seedAdminId}"
+   },
+   "capture": {
+    "assignedAnnId": "$.id"
+   }
+  },
+  {
+   "name": "project-progress",
+   "method": "GET",
+   "path": "/api/teams/{seedTeamId}/projectProgressReport",
+   "as": "admin"
+  },
+  {
+   "name": "available-tasks",
+   "method": "GET",
+   "path": "/api/teams/{seedTeamId}/availableTasksReport",
+   "as": "admin"
+  },
+  {
+   "name": "projects-with-status",
+   "method": "GET",
+   "path": "/api/projects/withStatus",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "task-ann-cancel",
+   "method": "DELETE",
+   "path": "/api/annotations/Task/{assignedAnnId}",
+   "as": "admin"
+  },
+  {
+   "name": "task-delete",
+   "method": "DELETE",
+   "path": "/api/tasks/{taskId}",
+   "as": "admin"
+  },
+  {
+   "name": "task-read-deleted",
+   "method": "GET",
+   "path": "/api/tasks/{taskId}",
+   "as": "admin"
+  }
+ ]
+}

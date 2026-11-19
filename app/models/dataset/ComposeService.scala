@@ -51,7 +51,7 @@ class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreD
     implicit ec: ExecutionContext
 ) extends ExploreLayerUtils {
 
-  def composeDataset(composeRequest: ComposeRequest, user: User)(using
+  def composeDataset(composeRequest: ComposeRequest, user: User, skipFolderAccessCheck: Boolean = false)(using
       ctx: DBAccessContext
   ): Fox[(UsableDataSource, ObjectId)] =
     for {
@@ -68,7 +68,8 @@ class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreD
         user,
         isVirtual = true,
         creationType = DatasetCreationType.Compose,
-        importURLOpt = None
+        importURLOpt = None,
+        skipFolderAccessCheck = skipFolderAccessCheck
       )
     } yield (dataSource, dataset._id)
 

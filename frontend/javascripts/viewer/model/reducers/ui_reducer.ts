@@ -128,6 +128,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_COPY_DATASET_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showCopyDatasetModal: action.visible,
+      });
+    }
+
     case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showRenderAnimationModal: action.visible,

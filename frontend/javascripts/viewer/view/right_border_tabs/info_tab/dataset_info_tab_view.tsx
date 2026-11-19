@@ -4,6 +4,7 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
+import { isUnifiedDatasetView } from "viewer/model/accessors/unified_dataset_accessor";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import { AnnotationStatisticsSection } from "./annotation_stats_section";
 import { DatasetAnnotationCountLink } from "./dataset_annotation_count_link";
@@ -20,6 +21,7 @@ import { MagInfoRow } from "./mag_info_row";
 import { DatasetOwningOrganizationRow } from "./owning_organization_row";
 import { PeopleSection } from "./people_section";
 import { TaskSection } from "./task_section";
+import { UnifiedDatasetInfoPanel } from "./unified_dataset_info_panel";
 import { VoxelSizeRow } from "./voxel_size_row";
 
 const datasetInfoTabId = "dataset-info-tab";
@@ -28,6 +30,7 @@ export default function DatasetInfoTabView() {
   const isDatasetViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
+  const isUnified = useWkSelector(isUnifiedDatasetView);
 
   return (
     <div id={datasetInfoTabId} className="flex-overflow info-tab">
@@ -38,7 +41,13 @@ export default function DatasetInfoTabView() {
           isVisibleInDom ? (
             <>
               {WkDevFlags.debugging.showCurrentVersionInInfoTab && <DebugInfo />}
-              {isDatasetViewMode ? <DatasetInfoPanel /> : <AnnotationInfoPanel />}
+              {isUnified ? (
+                <UnifiedDatasetInfoPanel />
+              ) : isDatasetViewMode ? (
+                <DatasetInfoPanel />
+              ) : (
+                <AnnotationInfoPanel />
+              )}
             </>
           ) : null
         }

@@ -30,8 +30,9 @@ export function useDeleteDatasetsModal({
   const updateQueryCaches = (datasets: APIDatasetCompact[], deletedIds: string[]) => {
     const deletedDatasets = datasets.filter((ds) => deletedIds.includes(ds.id));
     for (const folderId of uniq(deletedDatasets.map((ds) => ds.folderId))) {
-      queryClient.setQueryData(
-        ["datasetsByFolder", folderId],
+      // Prefix match: also updates the lists with a copies filter (unified datasets prototype).
+      queryClient.setQueriesData(
+        { queryKey: ["datasetsByFolder", folderId] },
         (oldItems: APIDatasetCompact[] | undefined) =>
           oldItems?.filter((item) => !deletedIds.includes(item.id)),
       );

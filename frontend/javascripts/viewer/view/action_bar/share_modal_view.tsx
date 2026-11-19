@@ -63,6 +63,7 @@ import {
   isAnnotationEditableByNonOwners,
   mayEditAnnotationProperties,
 } from "viewer/model/accessors/annotation_accessor";
+import { isBackingAnnotationLoaded } from "viewer/model/accessors/unified_dataset_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { hasEditableMapping, isMappingLocked } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -245,6 +246,13 @@ function ShareModalViewInner(props: Props) {
 
   const annotationVisibility = annotation.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
+  // Unified datasets prototype: read access is the dataset's read access. The visibility of the
+  // backing annotation only acts as an "only me" switch, so Internal and Public are shown as one
+  // option ("Public" is written, see D4 in the plan).
+  const isUnified = useWkSelector(isBackingAnnotationLoaded);
+  const objectNoun = isUnified ? "dataset" : "annotation";
+  const displayedVisibility: APIAnnotationVisibility =
+    isUnified && visibility !== "Private" ? "Public" : visibility;
   const [isChangingInProgress, setIsChangingInProgress] = useState(false);
   const sharingToken = useDatasetSharingToken(dataset);
 
@@ -415,7 +423,12 @@ function ShareModalViewInner(props: Props) {
         annotation.owner,
       )}.`;
     } else if (!hasUpdatePermissions) {
-      message = "You don't have the permission to edit the visibility of this annotation.";
+      message = `You don't have the permission to edit the visibility of this ${objectNoun}.`;
+    } else if (isUnified) {
+      if (visibility === "Private") {
+        message =
+          "The dataset is currently private, so only you, admins and team managers can view it.";
+      }
     } else if (!dataset.isPublic && visibility === "Public") {
       message =
         "The dataset of this annotation is not public. The Sharing Link will make the dataset accessible to everyone you share it with.";
@@ -441,7 +454,7 @@ function ShareModalViewInner(props: Props) {
     Internal: <TeamOutlined />,
     Private: <LockOutlined />,
   };
-  const includeToken = !dataset.isPublic && visibility === "Public";
+  const includeToken = !isUnified && !dataset.isPublic && visibility === "Public";
   const longUrl = useSharingUrl(isOpen, sharingToken, includeToken);
 
   const allowsVolumeAnnotation = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
@@ -463,7 +476,7 @@ function ShareModalViewInner(props: Props) {
 
   return (
     <Modal
-      title="Share this annotation"
+      title={`Share this ${objectNoun}`}
       open={isOpen}
       width={ModalWidth.Large}
       onOk={onOk}
@@ -493,14 +506,14 @@ function ShareModalViewInner(props: Props) {
       </Row>
       <DividerWithSubtitle>
         <Space>
-          {iconMap[visibility]}
+          {iconMap[displayedVisibility]}
           Visibility
         </Space>
       </DividerWithSubtitle>
       {maybeShowWarning()}
       <Row style={{ marginBottom: 16 }}>
         <Col span={6} style={LEFT_COL_STYLE}>
-          <div>Who can view this annotation?</div>
+          <div>Who can view this {objectNoun}?</div>
           <p
             style={{
               fontSize: 12,
@@ -509,55 +522,77 @@ function ShareModalViewInner(props: Props) {
               marginRight: 8,
             }}
           >
-            Users with access will also be able to see who else has modified the annotation.
+            Users with access will also be able to see who else has modified the {objectNoun}.
           </p>
         </Col>
         <Col span={18}>
-          <RadioGroup
-            onChange={handleCheckboxChange}
-            value={visibility}
-            disabled={isChangingInProgress}
-          >
-            <Radio value="Private" disabled={!hasUpdatePermissions}>
-              Private
-            </Radio>
-            <Hint
-              style={{
-                marginLeft: 24,
-              }}
+          {isUnified ? (
+            <RadioGroup
+              onChange={handleCheckboxChange}
+              value={displayedVisibility}
+              disabled={isChangingInProgress}
             >
-              Only you and your team manager can view this annotation.
-            </Hint>
+              <Radio value="Private" disabled={!hasUpdatePermissions}>
+                Private (only me)
+              </Radio>
+              <Hint style={{ marginLeft: 24 }}>
+                Only you, admins and team managers can view this dataset.
+              </Hint>
+              <Radio value="Public" disabled={!hasUpdatePermissions}>
+                Everyone with access to this dataset
+              </Radio>
+              <Hint style={{ marginLeft: 24 }}>
+                Everyone who may access this dataset can view it and copy it to edit it. Who may
+                access the dataset, including public access, is set in the dataset settings.
+              </Hint>
+            </RadioGroup>
+          ) : (
+            <RadioGroup
+              onChange={handleCheckboxChange}
+              value={visibility}
+              disabled={isChangingInProgress}
+            >
+              <Radio value="Private" disabled={!hasUpdatePermissions}>
+                Private
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                Only you and your team manager can view this annotation.
+              </Hint>
 
-            <Radio value="Internal" disabled={!hasUpdatePermissions}>
-              Internal
-            </Radio>
-            <Hint
-              style={{
-                marginLeft: 24,
-              }}
-            >
-              All users in your organization{" "}
-              {dataset.isPublic ? "" : "who have access to this dataset"} can view this annotation
-              and copy it to their accounts to edit it.
-            </Hint>
+              <Radio value="Internal" disabled={!hasUpdatePermissions}>
+                Internal
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                All users in your organization{" "}
+                {dataset.isPublic ? "" : "who have access to this dataset"} can view this annotation
+                and copy it to their accounts to edit it.
+              </Hint>
 
-            <Radio value="Public" disabled={!hasUpdatePermissions}>
-              Public
-            </Radio>
-            <Hint
-              style={{
-                marginLeft: 24,
-              }}
-            >
-              Anyone with the link can see this annotation without having to log in.
-            </Hint>
-          </RadioGroup>
+              <Radio value="Public" disabled={!hasUpdatePermissions}>
+                Public
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                Anyone with the link can see this annotation without having to log in.
+              </Hint>
+            </RadioGroup>
+          )}
         </Col>
       </Row>
       <Row>
         <Col span={6} style={LEFT_COL_STYLE}>
-          For which teams should this annotation be listed?
+          For which teams should this {objectNoun} be listed?
         </Col>
         <Col span={18}>
           <TeamSelectionComponent
@@ -586,7 +621,7 @@ function ShareModalViewInner(props: Props) {
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
         <Row style={{ marginBottom: 16 }}>
           <Col span={6} style={LEFT_COL_STYLE}>
-            Who can edit this annotation?
+            Who can edit this {objectNoun}?
           </Col>
           <Col span={18}>
             <RadioGroup
@@ -602,7 +637,7 @@ function ShareModalViewInner(props: Props) {
                   marginLeft: 24,
                 }}
               >
-                Only the owner can edit the content of this annotation.
+                Only the owner can edit the content of this {objectNoun}.
               </Hint>
 
               <Radio value={true} disabled={!hasUpdatePermissions}>

@@ -37,8 +37,10 @@ import {
 } from "../advanced_dataset/delete_datasets_modal";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
+import { isUnifiedDatasetsMode } from "../dataset/unified_dataset_list_filters";
 import { SidebarSection } from "../sidebar_section";
 import MetadataTable from "./metadata_table";
+import { UnifiedDatasetDetailsSections } from "./unified_dataset_details";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -64,7 +66,9 @@ export function DetailsSidebar({
     if (
       selectedDatasets.some((ds) => ds.folderId !== context.activeFolderId) &&
       context.activeFolderId != null &&
-      context.globalSearchQuery == null
+      context.globalSearchQuery == null &&
+      // The copies of a dataset (unified datasets prototype) can be in any folder.
+      context.copiesOfDatasetId == null
     ) {
       // Ensure that the selected dataset(s) are in the active folder. If not,
       // clear the selection. Don't do this when search results are shown (since
@@ -123,10 +127,13 @@ function DatasetDetails({
     enabled: isForeignOrgaDataset,
   });
   const owningOrganizationName = owningOrganization?.name;
+  const isUnified = isUnifiedDatasetsMode();
   const { data: annotationCount } = useQuery({
     queryKey: ["annotationCount", selectedDataset.id],
     queryFn: () => getAnnotationCountForDataset(selectedDataset.id),
     refetchOnWindowFocus: false,
+    // Unified datasets prototype: annotations aren't listed as such.
+    enabled: !isUnified,
   });
 
   const renderOrganization = () => {
@@ -174,12 +181,21 @@ function DatasetDetails({
         )}
       </SidebarSection>
 
-      <SidebarSection label="Layers">
-        {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
-      </SidebarSection>
+      {isUnified ? (
+        <UnifiedDatasetDetailsSections
+          selectedDataset={selectedDataset}
+          fullDataset={fullDataset}
+        />
+      ) : (
+        <>
+          <SidebarSection label="Layers">
+            {fullDataset && <DatasetLayerTags dataset={fullDataset} />}
+          </SidebarSection>
 
-      {fullDataset?.uploaderFullName != null && (
-        <SidebarSection label="Uploaded By">{fullDataset.uploaderFullName}</SidebarSection>
+          {fullDataset?.uploaderFullName != null && (
+            <SidebarSection label="Uploaded By">{fullDataset.uploaderFullName}</SidebarSection>
+          )}
+        </>
       )}
 
       <SidebarSection label="Datastore">
@@ -220,7 +236,7 @@ function DatasetDetails({
       ) : null}
       <SidebarSection label="Additional Actions">
         <div className="dataset-table-actions">
-          {annotationCount != null && annotationCount > 0 ? (
+          {!isUnified && annotationCount != null && annotationCount > 0 ? (
             <Link to={`/dashboard/annotations?dataset=${encodeURIComponent(selectedDataset.name)}`}>
               <UnorderedListOutlined className="icon-margin-right" />
               Show {annotationCount} {pluralize("Annotation", annotationCount)}

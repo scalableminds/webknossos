@@ -92,8 +92,14 @@ case class Dataset(
     mirrorPath: Option[String] = None,
     created: Instant = Instant.now,
     isDeleted: Boolean = false,
-    thumbnailCacheVersion: Int = 0
-)
+    thumbnailCacheVersion: Int = 0,
+    // Unified datasets prototype: the annotation that holds this dataset's annotation layers, if any.
+    _annotation: Option[ObjectId] = None,
+    // Unified datasets prototype: the dataset this one was copied from, if it is a copy.
+    _copiedFrom: Option[ObjectId] = None
+) {
+  def isCopy: Boolean = _copiedFrom.isDefined
+}
 
 case class DatasetCompactInfo(
     id: ObjectId,
@@ -115,10 +121,36 @@ case class DatasetCompactInfo(
     // Active explorationals listable by the requesting user. Only set if requested.
     annotationCount: Option[Long] = None,
     // Most recently modified of those annotations that are owned by the requesting user. Only set if requested.
-    latestOwnAnnotationId: Option[ObjectId] = None
+    latestOwnAnnotationId: Option[ObjectId] = None,
+    // The following fields belong to the unified datasets prototype and are only set if features.unifiedDatasets is on.
+    // The owner's name is only set for users of the owner's organization.
+    ownerName: Option[String] = None,
+    copiedFromId: Option[ObjectId] = None,
+    backingAnnotationId: Option[ObjectId] = None,
+    annotationLayers: Option[JsValue] = None,
+    // Last modification of the annotation layers, else the dataset's creation.
+    modified: Option[Instant] = None
 ) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
+
+// Unified datasets prototype: which copies the dataset list contains (B6, D5).
+enum DatasetCopiesFilter {
+  // Originals plus copies owned by or shared with the user (via the backing annotation's sharing).
+  case MineAndShared(userId: ObjectId)
+  case All
+  case NoCopies
+  // Only the copies of this dataset.
+  case CopiesOf(datasetId: ObjectId)
+}
+
+case class UnifiedDatasetCompactFields(
+    ownerName: Option[String],
+    copiedFromId: Option[ObjectId],
+    backingAnnotationId: Option[ObjectId],
+    annotationLayers: JsValue,
+    modified: Instant
+)
 
 trait DatasetDAOLike {
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
@@ -190,7 +222,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r.mirrorpath,
       Instant.fromSql(r.created),
       r.isdeleted,
-      r.thumbnailcacheversion
+      r.thumbnailcacheversion,
+      r._annotation.map(ObjectId(_)),
+      r._copiedfrom.map(ObjectId(_))
     )
 
   override def anonymousReadAccessQ(token: Option[String]): SqlToken = {
@@ -294,10 +328,11 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       createdSinceOpt: Option[Instant] = None,
       limitOpt: Option[Int] = None,
       requestingUserOrga: Option[String] = None,
-      includeAnnotationInfo: Boolean = false
+      includeAnnotationInfo: Boolean = false,
+      copiesFilterOpt: Option[DatasetCopiesFilter] = None
   )(using ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
-      selectionPredicates <- buildSelectionPredicates(
+      basicSelectionPredicates <- buildSelectionPredicates(
         isActiveOpt,
         isUnreported,
         organizationIdOpt,
@@ -308,6 +343,10 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         statusOpt,
         createdSinceOpt
       )
+      selectionPredicates = copiesFilterOpt match {
+        case Some(copiesFilter) => q"($basicSelectionPredicates) AND (${copiesPredicate(copiesFilter)})"
+        case None               => basicSelectionPredicates
+      }
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       (annotationColumns, annotationJoin) = requestingUserIdOpt match {
         case Some(requestingUserId) if includeAnnotationInfo =>
@@ -327,6 +366,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         case _ => (q"NULL::BIGINT, NULL::TEXT", q"")
       }
+      // Unified datasets prototype (B4): owners may edit their copies. Only active in unified mode, i.e., with a filter.
+      copyOwnerIsEditable =
+        if (copiesFilterOpt.isDefined) q"OR (d._uploader = u._id AND d._copiedFrom IS NOT NULL)" else q""
       query = q"""
             SELECT
               d._id,
@@ -356,6 +398,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                       WHERE utr._user = u._id AND utr.isTeamManager
                     )
                   )
+                  $copyOwnerIsEditable
                 ), FALSE
               ) AS isEditable,
               COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
@@ -430,6 +473,56 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         latestOwnAnnotationId = row._17
       )
     )
+
+  private def copiesPredicate(copiesFilter: DatasetCopiesFilter): SqlToken =
+    copiesFilter match {
+      case DatasetCopiesFilter.All                   => q"TRUE"
+      case DatasetCopiesFilter.NoCopies              => q"_copiedFrom IS NULL"
+      case DatasetCopiesFilter.CopiesOf(datasetId)   => q"_copiedFrom = $datasetId"
+      case DatasetCopiesFilter.MineAndShared(userId) =>
+        q"""_copiedFrom IS NULL
+            OR _uploader = $userId
+            OR _annotation IN (
+              SELECT a._id FROM webknossos.annotations_ a WHERE ${AnnotationAccessQueries.ownedOrSharedQ(userId, q"a.")}
+            )"""
+    }
+
+  // Unified datasets prototype: the additional list fields (B6) of the given datasets. No access check.
+  def findUnifiedCompactFields(
+      datasetIds: List[ObjectId],
+      requestingUserIdOpt: Option[ObjectId]
+  ): Fox[Map[ObjectId, UnifiedDatasetCompactFields]] =
+    if (datasetIds.isEmpty) Fox.successful(Map.empty)
+    else
+      for {
+        rows <- run(q"""
+          SELECT
+            d._id,
+            CASE WHEN ou._organization = ru._organization THEN omu.firstName || ' ' || omu.lastName END,
+            d._copiedFrom,
+            d._annotation,
+            COALESCE(
+              (SELECT JSON_AGG(JSON_BUILD_OBJECT('name', al.name, 'typ', al.typ) ORDER BY al.name)
+               FROM webknossos.annotation_layers al
+               WHERE al._annotation = d._annotation),
+              '[]'
+            )::TEXT,
+            COALESCE(ba.modified, d.created)
+          FROM webknossos.datasets_ d
+          LEFT JOIN webknossos.users_ ou ON ou._id = COALESCE(
+            d._uploader,
+            (SELECT o._id FROM webknossos.users_ o
+             WHERE o._organization = d._organization AND o.isOrganizationOwner
+             ORDER BY o.created LIMIT 1)
+          )
+          LEFT JOIN webknossos.multiUsers_ omu ON omu._id = ou._multiUser
+          LEFT JOIN webknossos.users_ ru ON ru._id = $requestingUserIdOpt
+          LEFT JOIN webknossos.annotations ba ON ba._id = d._annotation
+          WHERE d._id IN ${SqlToken.tupleFromList(datasetIds)}
+          """.as[(ObjectId, Option[String], Option[ObjectId], Option[ObjectId], String, Instant)])
+      } yield rows.map { case (id, ownerName, copiedFrom, annotation, layersJson, modified) =>
+        id -> UnifiedDatasetCompactFields(ownerName, copiedFrom, annotation, Json.parse(layersJson), modified)
+      }.toMap
 
   private def buildSelectionPredicates(
       isActiveOpt: Option[Boolean],
@@ -883,6 +976,101 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- run(DBIO.sequence(List(deleteMagsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
   }
+
+  // Unified datasets prototype: marks a freshly composed dataset as a copy and takes over the given properties.
+  def updateCopyProperties(
+      datasetId: ObjectId,
+      copiedFrom: ObjectId,
+      isPublic: Boolean,
+      description: Option[String],
+      tags: List[String],
+      metadata: JsArray,
+      createdOpt: Option[Instant] = None
+  ): Fox[Unit] = {
+    val createdUpdate = createdOpt.map(created => q", created = $created, sortingKey = $created").getOrElse(q"")
+    for {
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET _copiedFrom = $copiedFrom, isPublic = $isPublic, description = $description,
+                       tags = $tags, metadata = $metadata $createdUpdate
+                   WHERE _id = $datasetId""".asUpdate)
+    } yield ()
+  }
+
+  // Unified datasets prototype (conversion): moves the annotation to the dataset and makes it its backing annotation.
+  def bindConvertedAnnotation(annotationId: ObjectId, datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(
+        DBIO
+          .sequence(
+            List(
+              q"UPDATE webknossos.annotations SET _dataset = $datasetId WHERE _id = $annotationId".asUpdate,
+              q"UPDATE webknossos.datasets SET _annotation = $annotationId WHERE _id = $datasetId".asUpdate
+            )
+          )
+          .transactionally
+      )
+    } yield ()
+
+  // Unified datasets prototype (conversion): the user's view settings of the source apply to the new dataset.
+  def copyUserDatasetConfigurations(userId: ObjectId, sourceDatasetId: ObjectId, targetDatasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(
+        DBIO
+          .sequence(
+            List(
+              q"""INSERT INTO webknossos.user_datasetConfigurations(_user, _dataset, viewConfiguration)
+                  SELECT _user, $targetDatasetId, viewConfiguration
+                  FROM webknossos.user_datasetConfigurations
+                  WHERE _user = $userId AND _dataset = $sourceDatasetId
+                  ON CONFLICT DO NOTHING""".asUpdate,
+              q"""INSERT INTO webknossos.user_datasetLayerConfigurations(_user, _dataset, layerName, viewConfiguration)
+                  SELECT _user, $targetDatasetId, layerName, viewConfiguration
+                  FROM webknossos.user_datasetLayerConfigurations
+                  WHERE _user = $userId AND _dataset = $sourceDatasetId
+                  ON CONFLICT DO NOTHING""".asUpdate
+            )
+          )
+          .transactionally
+      )
+    } yield ()
+
+  // Unified datasets prototype (batch conversion): explorational annotations that are not yet backing annotations.
+  def findConvertibleAnnotationIds(organizationIdOpt: Option[String], limit: Int): Fox[Seq[ObjectId]] = {
+    val organizationPredicate =
+      organizationIdOpt.map(organizationId => q"AND u._organization = $organizationId").getOrElse(q"")
+    run(q"""SELECT a._id
+            FROM webknossos.annotations_ a
+            JOIN webknossos.users u ON u._id = a._user
+            WHERE a.typ = ${AnnotationType.Explorational}
+            AND a._id NOT IN (SELECT _annotation FROM webknossos.datasets WHERE _annotation IS NOT NULL)
+            $organizationPredicate
+            ORDER BY a.created
+            LIMIT $limit""".as[ObjectId])
+  }
+
+  // Unified datasets prototype: number of existing copies of the dataset, regardless of the requesting user's access.
+  def countCopiesOf(datasetId: ObjectId): Fox[Int] =
+    for {
+      rows <- run(q"SELECT COUNT(*) FROM webknossos.datasets_ WHERE _copiedFrom = $datasetId".as[Int])
+      count <- rows.headOption.toFox
+    } yield count
+
+  // Unified datasets prototype: the dataset that is backed by the given annotation, if any. No access check.
+  def findOneByBackingAnnotation(annotationId: ObjectId): Fox[Option[Dataset]] =
+    for {
+      rows <- run(q"SELECT $columns FROM $existingCollectionName WHERE _annotation = $annotationId".as[DatasetsRow])
+      parsed <- parseAll(rows)
+    } yield parsed.headOption
+
+  // Unified datasets prototype: binds the annotation to the dataset unless another one was bound concurrently.
+  // Returns whether this call won.
+  def claimBackingAnnotation(datasetId: ObjectId, annotationId: ObjectId): Fox[Boolean] =
+    for {
+      updatedRows <- run(q"""UPDATE webknossos.datasets
+                              SET _annotation = $annotationId
+                              WHERE _id = $datasetId
+                              AND _annotation IS NULL""".asUpdate)
+    } yield updatedRows > 0
 
   def deleteDataset(datasetId: ObjectId, onlyMarkAsDeleted: Boolean = false): Fox[Unit] = {
     val deleteMagsQuery =

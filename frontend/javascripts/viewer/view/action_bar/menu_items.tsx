@@ -5,7 +5,7 @@ import {
   ShareAltOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
-import type { MenuItemType, SubMenuType } from "antd/es/menu/interface";
+import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import {
   setKeyboardShortcutConfigModalVisibilityAction,
   setPythonClientModalVisibilityAction,
@@ -56,8 +56,13 @@ const pythonClientMenuItem: MenuItemType = {
   label: "Download",
 };
 
-export function getViewDatasetMenuGroups(layoutMenu: SubMenuType | null): MenuGroup[] {
+// datasetItems are the unified datasets prototype's dataset actions (copy, dataset settings).
+export function getViewDatasetMenuGroups(
+  layoutMenu: SubMenuType | null,
+  datasetItems: ItemType[] = [],
+): MenuGroup[] {
   return [
+    { key: MenuGroupKeys.DATASET, items: datasetItems },
     {
       key: MenuGroupKeys.SHARE_AND_EXPORT,
       items: [

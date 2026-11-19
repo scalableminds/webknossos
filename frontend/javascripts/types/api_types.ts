@@ -255,6 +255,22 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   tags: Array<string>;
   usedStorageBytes: number;
   uploaderFullName: string | null | undefined;
+  // The following fields belong to the unified datasets prototype and are only
+  // present if features.unifiedDatasets is enabled.
+  backingAnnotationId?: string | null;
+  copiedFromId?: string | null;
+  owner?: APIUnifiedDatasetOwner | null;
+  copiedFrom?: { id: string; name: string } | null;
+  layerOrigins?: Record<string, APIDatasetLayerOrigin>;
+  copyCount?: number;
+};
+export type APIUnifiedDatasetOwner = { id: string; fullName: string };
+// Where the data of a linked data layer really lives.
+export type APIDatasetLayerOrigin = {
+  datasetId: string;
+  // null if the source dataset was deleted or is not readable by the requesting user.
+  datasetName: string | null;
+  layerName: string;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -299,6 +315,15 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   annotationCount?: number;
   // Most recently modified of those annotations that are owned by the user. Only present if requested.
   latestOwnAnnotationId?: string;
+  // The following fields belong to the unified datasets prototype and are only present if
+  // features.unifiedDatasets is enabled.
+  // The owner's name is only present for users of the owner's organization.
+  ownerName?: string | null;
+  copiedFromId?: string | null;
+  backingAnnotationId?: string | null;
+  annotationLayers?: Array<{ name: string; typ: AnnotationLayerType }>;
+  // Last change of the annotation layers, else the dataset's creation time.
+  modified?: number;
 };
 
 export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {
@@ -825,6 +850,7 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
   readonly passkeysEnabled: boolean;
+  readonly unifiedDatasets?: boolean;
   readonly registerToDefaultOrgaEnabled?: boolean;
   readonly supportAiAgentUrl?: string;
 };

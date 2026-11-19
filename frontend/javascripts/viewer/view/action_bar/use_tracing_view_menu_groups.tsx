@@ -23,6 +23,7 @@ import messages from "messages";
 import { useMemo } from "react";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
 import Constants, { ControlModeEnum } from "viewer/constants";
+import { isBackingAnnotationLoaded } from "viewer/model/accessors/unified_dataset_accessor";
 import { disableSavingAction } from "viewer/model/actions/save_actions";
 import {
   setDownloadModalVisibilityAction,
@@ -42,6 +43,7 @@ import {
   renderAnimationMenuItem,
   screenshotMenuItem,
 } from "viewer/view/action_bar/menu_items";
+import { useUnifiedDatasetMenuItems } from "viewer/view/action_bar/unified_dataset_menu_items";
 
 // These actions require authentication. Instead of opening a dialog that fails for logged-out
 // users, disable the menu item and explain why.
@@ -151,6 +153,10 @@ export const useTracingViewMenuGroups = (
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isSavingDisabled = useWkSelector((state) => state.save.isSavingDisabled);
+  // Unified datasets prototype: the backing annotation is not an object of its own. Annotation-only
+  // actions (duplicate, merge, lock, archive) are hidden and the remaining ones act on the dataset.
+  const isBackingAnnotation = useWkSelector(isBackingAnnotationLoaded);
+  const unifiedDatasetMenuItems = useUnifiedDatasetMenuItems();
   const { modal } = App.useApp();
 
   const {
@@ -166,13 +172,17 @@ export const useTracingViewMenuGroups = (
   return useMemo(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const isLoggedOut = activeUser == null;
+    const objectNoun = isBackingAnnotation ? "dataset" : "annotation";
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const annotationItems: ItemType[] = [];
     const shareAndExportItems: ItemType[] = [];
     const customizeItems: ItemType[] = [];
 
-    if (!isLoggedOut) {
+    if (isBackingAnnotation) {
+      annotationItems.push(...unifiedDatasetMenuItems);
+    }
+    if (!isLoggedOut && !isBackingAnnotation) {
       annotationItems.push({
         key: "duplicate-button",
         onClick: handleDuplicateOpen,
@@ -180,7 +190,7 @@ export const useTracingViewMenuGroups = (
         label: "Duplicate",
       });
     }
-    if (restrictions.allowSave && isSkeletonMode && !isLoggedOut) {
+    if (restrictions.allowSave && isSkeletonMode && !isLoggedOut && !isBackingAnnotation) {
       annotationItems.push({
         key: "merge-button",
         onClick: handleMergeOpen,
@@ -196,11 +206,11 @@ export const useTracingViewMenuGroups = (
         ...getLoginRequiredProps(
           isLoggedOut,
           "Version History",
-          "Log in to view the version history of this annotation.",
+          `Log in to view the version history of this ${objectNoun}.`,
         ),
       });
     }
-    if (isAnnotationOwner) {
+    if (isAnnotationOwner && !isBackingAnnotation) {
       annotationItems.push({
         key: "lock-unlock-button",
         onClick: () =>
@@ -222,7 +232,7 @@ export const useTracingViewMenuGroups = (
       });
     }
     // Archiving/finishing ends the work on the annotation, so it comes last to avoid misclicks.
-    if (restrictions.allowFinish) {
+    if (restrictions.allowFinish && !isBackingAnnotation) {
       annotationItems.push({
         key: "finish-button",
         onClick: () => handleFinish(annotationId, annotationType, modal),
@@ -235,7 +245,7 @@ export const useTracingViewMenuGroups = (
       key: "share-button",
       onClick: handleShareOpen,
       icon: <ShareAltOutlined />,
-      ...getLoginRequiredProps(isLoggedOut, "Share", "Log in to share this annotation."),
+      ...getLoginRequiredProps(isLoggedOut, "Share", `Log in to share this ${objectNoun}.`),
     });
     // The download is served by the backend. In sandbox mode or when saving was disabled,
     // the backend doesn't know the local changes, so the download would be misleading.
@@ -256,7 +266,7 @@ export const useTracingViewMenuGroups = (
       ...getLoginRequiredProps(
         isLoggedOut,
         "Zarr Links",
-        "Log in to create Zarr links for this annotation.",
+        `Log in to create Zarr links for this ${objectNoun}.`,
       ),
     });
     shareAndExportItems.push(screenshotMenuItem, renderAnimationMenuItem);
@@ -270,7 +280,10 @@ export const useTracingViewMenuGroups = (
     });
 
     const menuGroups: MenuGroup[] = [
-      { key: MenuGroupKeys.ANNOTATION, items: annotationItems },
+      {
+        key: isBackingAnnotation ? MenuGroupKeys.DATASET : MenuGroupKeys.ANNOTATION,
+        items: annotationItems,
+      },
       { key: MenuGroupKeys.SHARE_AND_EXPORT, items: shareAndExportItems },
       { key: MenuGroupKeys.CUSTOMIZE, items: customizeItems },
     ];
@@ -288,5 +301,7 @@ export const useTracingViewMenuGroups = (
     annotationOwner,
     layoutMenu,
     modal,
+    isBackingAnnotation,
+    unifiedDatasetMenuItems,
   ]);
 };

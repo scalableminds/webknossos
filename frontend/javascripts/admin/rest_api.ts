@@ -1368,8 +1368,20 @@ export async function getDatasets(
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
   includeAnnotationInfo: boolean = false,
+  // Unified datasets prototype only (ignored by the backend otherwise): which copies to list
+  // and/or only list the copies of one dataset.
+  copiesOptions: {
+    copies?: "mineAndShared" | "all" | "none" | null;
+    copiesOf?: string | null;
+  } = {},
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
+  if (copiesOptions.copies != null) {
+    params.set("copies", copiesOptions.copies);
+  }
+  if (copiesOptions.copiesOf != null) {
+    params.set("copiesOf", copiesOptions.copiesOf);
+  }
   if (isUnreported != null) {
     params.set("isUnreported", String(isUnreported));
   }
@@ -1460,6 +1472,7 @@ export async function getDatasetLegacy(
 
 export type DatasetUpdater = {
   description?: string | null;
+  name?: string;
   displayName?: string | null;
   sortingKey?: number;
   isPublic?: boolean;

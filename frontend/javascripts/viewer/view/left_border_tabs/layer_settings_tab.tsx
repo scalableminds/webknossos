@@ -28,6 +28,10 @@ import {
   isColorLayer as getIsColorLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import {
+  isBackingAnnotationLoaded,
+  isUnifiedDatasetView,
+} from "viewer/model/accessors/unified_dataset_accessor";
 import { pushSaveQueueTransactionIsolated } from "viewer/model/actions/save_actions";
 import {
   reloadHistogramAction,
@@ -50,6 +54,8 @@ import SegmentationLayerSettings from "./components/segmentation_layer_settings"
 import SkeletonLayerSettings from "./components/skeleton_layer_settings";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
+import UnifiedAddVolumeLayerModal from "./modals/unified_add_volume_layer_modal";
+import UnifiedLayerActions from "./unified_layer_actions";
 
 type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
   ReturnType<typeof mapDispatchToProps> &
@@ -301,6 +307,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               };
             }
           });
+          if (this.props.isBackingAnnotationLoaded) {
+            // Annotation layers of the backing annotation are keyed by tracing id and are not
+            // part of the dataset's default view configuration.
+            const { annotationLayers } = Store.getState().annotation;
+            for (const { tracingId } of annotationLayers) {
+              delete updatedLayers[tracingId];
+            }
+          }
           const updatedConfiguration = {
             ...completeDatasetConfiguration,
             layers: updatedLayers,
@@ -398,7 +412,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {segmentationLayerSettings}
         <SkeletonLayerSettings />
 
-        {this.props.isUpdatingCurrentlyAllowed &&
+        {this.props.isUnifiedDatasetView ? (
+          <UnifiedLayerActions onShowAddVolumeLayerModal={this.showAddVolumeLayerModal} />
+        ) : null}
+
+        {!this.props.isUnifiedDatasetView &&
+        this.props.isUpdatingCurrentlyAllowed &&
         this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
@@ -416,7 +435,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
+        {!this.props.isUnifiedDatasetView &&
+        this.props.isUpdatingCurrentlyAllowed &&
+        canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <FastTooltip title={this.props.changeLayerSetDisabledInfo.explanation}>
               <Button
@@ -433,8 +454,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </Row>
         ) : null}
 
-        {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrDatasetManager ? (
-          <Row justify="center" align="middle">
+        {(this.props.controlMode === ControlModeEnum.VIEW ||
+          this.props.isBackingAnnotationLoaded) &&
+        this.props.isAdminOrDatasetManager ? (
+          <Row
+            justify="center"
+            align="middle"
+            style={this.props.isUnifiedDatasetView ? { marginTop: 10 } : undefined}
+          >
             <FastTooltip title="Save the current view configuration as default for all users.">
               <Button onClick={this.saveViewConfigurationAsDefault} icon={<SaveOutlined />}>
                 Save View Configuration as Default
@@ -450,7 +477,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           />
         ) : null}
 
-        {this.state.isAddVolumeLayerModalVisible ? (
+        {this.state.isAddVolumeLayerModalVisible && this.props.isUnifiedDatasetView ? (
+          <UnifiedAddVolumeLayerModal
+            dataset={this.props.dataset}
+            onCancel={this.hideAddVolumeLayerModal}
+            preselectedLayerName={this.state.preselectedSegmentationLayerName}
+          />
+        ) : null}
+
+        {this.state.isAddVolumeLayerModalVisible && !this.props.isUnifiedDatasetView ? (
           <AddVolumeLayerModal
             dataset={this.props.dataset}
             onCancel={this.hideAddVolumeLayerModal}
@@ -475,6 +510,8 @@ const mapStateToProps = (state: WebknossosState) => ({
   annotationType: state.annotation.annotationType,
   hasSkeletonLayer: state.annotation.skeleton != null,
   controlMode: state.temporaryConfiguration.controlMode,
+  isUnifiedDatasetView: isUnifiedDatasetView(state),
+  isBackingAnnotationLoaded: isBackingAnnotationLoaded(state),
   isAdminOrDatasetManager:
     state.activeUser != null ? isUserAdminOrDatasetManager(state.activeUser) : false,
 });

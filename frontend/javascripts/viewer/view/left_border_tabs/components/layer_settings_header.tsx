@@ -54,6 +54,10 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import {
+  isUnifiedDatasetView,
+  mayEditUnifiedDataset,
+} from "viewer/model/accessors/unified_dataset_accessor";
+import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
@@ -74,9 +78,12 @@ import type { DatasetLayerConfiguration, StoreDataset, VolumeTracing } from "vie
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
+import { removeDataLayerIfConfirmed } from "viewer/view/left_border_tabs/remove_data_layer";
+import { FIXED_DATA_LAYERS_EXPLANATION } from "viewer/view/left_border_tabs/unified_layer_actions";
 import { validateReadableLayerName } from "../modals/add_volume_layer_modal";
 import { DragHandle, DummyDragHandle } from "./drag_handle";
 import LayerInfoIconWithTooltip from "./layer_info_icon_with_tooltip";
+import LayerOriginLine from "./layer_origin_line";
 import { LayerTransformSettingsPopover } from "./layer_transform_settings_popover";
 import LayerTransformationIcon from "./layer_transformation_icon";
 
@@ -206,6 +213,8 @@ export default function LayerSettingsHeader({
   const histogramData = useWkSelector((state) => state.temporaryConfiguration.histogramData);
   const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const task = useWkSelector((state) => state.task);
+  const isUnifiedView = useWkSelector(isUnifiedDatasetView);
+  const mayEditUnified = useWkSelector(mayEditUnifiedDataset);
 
   const [isTransformPopoverOpen, setIsTransformPopoverOpen] = useState(false);
 
@@ -403,7 +412,9 @@ export default function LayerSettingsHeader({
   const getMergeWithFallbackLayerItem = (): ItemType => ({
     key: "mergeWithFallbackLayerButton",
     icon: <MergeCellsOutlined />,
-    label: "Merge this volume annotation with its fallback layer",
+    label: isUnifiedView
+      ? "Merge this volume layer into the segmentation layer it extends"
+      : "Merge this volume annotation with its fallback layer",
     onClick: () => onSetLayerToMergeWithFallback(layer),
   });
 
@@ -413,7 +424,9 @@ export default function LayerSettingsHeader({
     disabled: mayNotEditLayerSet,
     label: (
       <FastTooltip title={reasonForCantEditLayerSet}>
-        <span>Delete this annotation layer</span>
+        <span>
+          {isUnifiedView ? "Remove this annotation layer" : "Delete this annotation layer"}
+        </span>
       </FastTooltip>
     ),
     onClick: () => {
@@ -422,6 +435,19 @@ export default function LayerSettingsHeader({
         deleteAnnotationLayerIfConfirmed(readableName, layerType, tracingId, layer);
       }
     },
+  });
+
+  // Unified datasets prototype (B5): data layers can only be removed from virtual datasets.
+  const getRemoveDataLayerItem = (): ItemType => ({
+    key: "removeDataLayer",
+    icon: <DeleteOutlined />,
+    disabled: !dataset.isVirtual,
+    label: (
+      <FastTooltip title={dataset.isVirtual ? null : FIXED_DATA_LAYERS_EXPLANATION}>
+        <span>Remove this data layer</span>
+      </FastTooltip>
+    ),
+    onClick: () => removeDataLayerIfConfirmed(dataset.id, layerName),
   });
 
   const getClipItem = (): ItemType => {
@@ -535,7 +561,10 @@ export default function LayerSettingsHeader({
       : null,
     dataset.isEditable ? getReloadDataItem() : null,
     getFindDataItem(),
-    isAnnotationLayer && !isOnlyAnnotationLayer ? getDeleteAnnotationLayerItem() : null,
+    isAnnotationLayer && !isOnlyAnnotationLayer && (!isUnifiedView || mayEditUnified)
+      ? getDeleteAnnotationLayerItem()
+      : null,
+    isUnifiedView && !isAnnotationLayer && dataset.isEditable ? getRemoveDataLayerItem() : null,
     isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
     !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,
@@ -582,6 +611,7 @@ export default function LayerSettingsHeader({
             <span style={{ display: "inline-block" }}>
               <EditableTextLabel
                 width={150}
+                disableEditing={isUnifiedView && !mayEditUnified}
                 value={readableName}
                 isInvalid={!readableLayerNameValidationResult.isValid}
                 trimValue
@@ -612,6 +642,7 @@ export default function LayerSettingsHeader({
         ) : (
           layerName
         )}
+        <LayerOriginLine layerName={layerName} />
       </div>
       <Flex
         style={{
@@ -620,7 +651,29 @@ export default function LayerSettingsHeader({
         align="center"
       >
         <LayerInfoIconWithTooltip layer={layer} dataset={dataset} />
-        {canBeMadeEditable ? (
+        {canBeMadeEditable && isUnifiedView ? (
+          mayEditUnified ? (
+            <FastTooltip
+              title={
+                mayNotEditLayerSet
+                  ? reasonForCantEditLayerSet
+                  : "Extend this segmentation layer to brush on it"
+              }
+              placement="left"
+            >
+              <ButtonComponent
+                variant="text"
+                color="default"
+                size="small"
+                icon={<Icon component={BrushIcon} />}
+                disabled={mayNotEditLayerSet}
+                onClick={() => onShowAddVolumeLayerModal(layer.name)}
+              >
+                Edit
+              </ButtonComponent>
+            </FastTooltip>
+          ) : null
+        ) : canBeMadeEditable ? (
           <FastTooltip
             title={
               mayNotEditLayerSet
@@ -656,11 +709,19 @@ export default function LayerSettingsHeader({
             color="default"
             size="small"
             disabled
-            title={`This layer is a volume annotation.${
-              maybeFallbackLayer
-                ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
-                : ""
-            }`}
+            title={
+              isUnifiedView
+                ? `This is a volume annotation layer.${
+                    maybeFallbackLayer
+                      ? ` It extends the segmentation layer ${maybeFallbackLayer}.`
+                      : ""
+                  }`
+                : `This layer is a volume annotation.${
+                    maybeFallbackLayer
+                      ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
+                      : ""
+                  }`
+            }
             tooltipPlacement="left"
             icon={<Icon component={BrushIcon} />}
           />

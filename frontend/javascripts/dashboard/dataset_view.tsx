@@ -49,6 +49,10 @@ import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { FolderBreadcrumb } from "./advanced_dataset/folder_breadcrumb";
+import {
+  CopiesOfDatasetHeader,
+  UnifiedDatasetFilterControls,
+} from "./advanced_dataset/unified_dataset_filters";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
@@ -56,6 +60,7 @@ import {
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
+import { filterByAnnotationLayers } from "./dataset/unified_dataset_list_filters";
 import { useIsCompactDashboard } from "./responsive_sidebar";
 
 type Props = {
@@ -138,10 +143,12 @@ function DatasetView({
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only load the persisted state once, not when the list of a dataset's copies is left.
   useEffect(() => {
     const state = persistence.load() as PersistenceState;
 
-    if (state.searchQuery != null) {
+    // A list of a dataset's copies (unified datasets prototype) shouldn't be replaced by an old search.
+    if (state.searchQuery != null && context.copiesOfDatasetId == null) {
       setSearchQuery(state.searchQuery);
     }
 
@@ -167,11 +174,18 @@ function DatasetView({
     setSearchQuery(null);
     setSearchTags([]);
     setDatasetFilteringMode("onlyShowReported");
+    if (context.unifiedListFilters != null) {
+      context.setUnifiedListFilters({ annotationLayerFilter: "all" });
+    }
   }
 
   function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const value = event.target.value;
+    if (value) {
+      // Searching leaves the list of a dataset's copies (unified datasets prototype).
+      context.setCopiesOfDatasetId(null);
+    }
     setSearchQuery(value);
   }
 
@@ -200,6 +214,15 @@ function DatasetView({
         isLoading={isLoading}
         emptyStateContent={emptyStateContent}
         isCompact={isCompact}
+        extraFilterControls={
+          context.unifiedListFilters != null ? (
+            <UnifiedDatasetFilterControls
+              filters={context.unifiedListFilters}
+              onChange={context.setUnifiedListFilters}
+              showCopyToggles={context.copiesOfDatasetId == null}
+            />
+          ) : null
+        }
       />
     );
   }
@@ -254,9 +277,17 @@ function DatasetView({
   );
 
   const datasets = context.datasets;
-  // Don't show subfolders when the search is active
-  const subfolders = searchQuery == null ? context.getActiveSubfolders() : [];
-  const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
+  const { copiesOfDatasetId } = context;
+  // Don't show subfolders when the search (or the list of a dataset's copies) is active
+  const subfolders =
+    searchQuery == null && copiesOfDatasetId == null ? context.getActiveSubfolders() : [];
+  const filteredDatasets =
+    context.unifiedListFilters != null
+      ? filterByAnnotationLayers(
+          filterDatasetsForUsersOrganization(datasets, user),
+          context.unifiedListFilters.annotationLayerFilter,
+        )
+      : filterDatasetsForUsersOrganization(datasets, user);
 
   const isEmpty =
     datasets.length === 0 &&
@@ -269,7 +300,7 @@ function DatasetView({
       <RenderToPortal portalId="dashboard-TabBarExtraContent">
         {activeTab === renderingTab ? adminHeader : null}
       </RenderToPortal>
-      {searchQuery && (
+      {searchQuery && copiesOfDatasetId == null && (
         <GlobalSearchHeader
           searchQuery={searchQuery}
           isEmpty={isEmpty}
@@ -284,7 +315,14 @@ function DatasetView({
         setTags={setSearchTags}
         localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
       />
-      {!searchQuery && <FolderBreadcrumb context={context} />}
+      {copiesOfDatasetId != null ? (
+        <CopiesOfDatasetHeader
+          datasetId={copiesOfDatasetId}
+          onDismiss={() => context.setCopiesOfDatasetId(null)}
+        />
+      ) : (
+        !searchQuery && <FolderBreadcrumb context={context} />
+      )}
       <NewJobsAlert jobs={jobs} />
       {renderTable(filteredDatasets, subfolders, isLoading)}
     </div>

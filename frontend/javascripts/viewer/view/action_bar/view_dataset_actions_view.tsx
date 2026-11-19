@@ -18,6 +18,7 @@ import CreateAnimationModal from "./create_animation_modal";
 import DownloadModalView from "./download_modal/download_modal_view";
 import { toGroupedMenuItems } from "./menu_groups";
 import { getViewDatasetMenuGroups } from "./menu_items";
+import { useUnifiedDatasetMenuItems } from "./unified_dataset_menu_items";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -65,9 +66,14 @@ export default function ViewDatasetActionsView(props: Props) {
     />
   );
 
+  const unifiedDatasetMenuItems = useUnifiedDatasetMenuItems();
   const overlayMenu: MenuProps = useMemo(
-    () => ({ items: toGroupedMenuItems(getViewDatasetMenuGroups(props.layoutMenu)) }),
-    [props.layoutMenu],
+    () => ({
+      items: toGroupedMenuItems(
+        getViewDatasetMenuGroups(props.layoutMenu, unifiedDatasetMenuItems),
+      ),
+    }),
+    [props.layoutMenu, unifiedDatasetMenuItems],
   );
 
   const renderAnimationModal = (

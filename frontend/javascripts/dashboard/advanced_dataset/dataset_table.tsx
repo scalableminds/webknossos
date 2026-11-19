@@ -19,8 +19,17 @@ import DatasetActionView, {
   getDatasetActionContextMenu,
 } from "dashboard/advanced_dataset/dataset_action_view";
 import { DraggableDatasetType } from "dashboard/advanced_dataset/dnd_types";
+import UnifiedDatasetActionView from "dashboard/advanced_dataset/unified_dataset_action_view";
+import {
+  CopyOfHint,
+  getUnifiedDatasetColumns,
+} from "dashboard/advanced_dataset/unified_dataset_columns";
 import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "dashboard/dataset/queries";
+import {
+  groupCopiesBySource,
+  isUnifiedDatasetsMode,
+} from "dashboard/dataset/unified_dataset_list_filters";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import {
   type DnDDropItemProps,
@@ -72,7 +81,9 @@ type DatasetSortOption =
   | "createdAsc"
   | "name"
   | "storage"
-  | "annotationCount";
+  | "annotationCount"
+  // Unified datasets prototype only.
+  | "modified";
 
 const { ThinSpace } = Unicode;
 
@@ -83,6 +94,7 @@ const DATASET_SORT_OPTIONS: Array<{ key: DatasetSortOption; label: string }> = [
   { key: "name", label: "Name" },
   { key: "storage", label: "Used Storage" },
   { key: "annotationCount", label: "Most Annotations" },
+  { key: "modified", label: "Last modified" },
 ];
 
 const THUMBNAIL_SIZE = 80;
@@ -116,6 +128,8 @@ type Props = {
   emptyStateContent?: React.ReactNode;
   // Shows smaller thumbnails (e.g., on phones).
   isCompact?: boolean;
+  // Additional controls shown in the filter bar above the table.
+  extraFilterControls?: React.ReactNode;
 };
 
 type State = {
@@ -237,6 +251,8 @@ function sortDatasetsByOption(
       return sortBy(datasets, (dataset) => dataset.usedStorageBytes || 0).reverse();
     case "annotationCount":
       return sortBy(datasets, (dataset) => dataset.annotationCount || 0).reverse();
+    case "modified":
+      return sortBy(datasets, (dataset) => dataset.modified ?? dataset.created).reverse();
     default:
       // "lastUsed": rank datasets by recency of use, falling back to creation date.
       return sortBy(datasets, ["lastUsedByUser", "created"]).reverse();
@@ -363,6 +379,8 @@ const components = {
 class DatasetRenderer {
   data: APIDatasetCompact;
   datasetTable: DatasetTable;
+  // Unified datasets prototype: the copies of this dataset, rendered as tree rows by antd.
+  children?: RowRenderer[];
   constructor(data: APIDatasetCompact, datasetTable: DatasetTable) {
     this.data = data;
     this.datasetTable = datasetTable;
@@ -414,6 +432,7 @@ class DatasetRenderer {
         >
           {this.data.name}
         </Link>
+        {this.datasetTable.renderCopyOfHint(this.data)}
         {this.datasetTable.renderInlineActions(this.renderActionsColumn())}
         {this.renderTags()}
         {this.renderMetaLine()}
@@ -447,7 +466,7 @@ class DatasetRenderer {
       <RowMetaLine
         items={[
           this.datasetTable.shouldShowStorage() ? this.renderStorageColumn() : null,
-          annotationCount ? (
+          annotationCount && !isUnifiedDatasetsMode() ? (
             <Link
               key="annotations"
               to={`/dashboard/annotations?dataset=${encodeURIComponent(this.data.name)}`}
@@ -464,6 +483,14 @@ class DatasetRenderer {
     return <FormattedDate timestamp={this.data.created} />;
   }
   renderActionsColumn(): React.ReactNode {
+    if (isUnifiedDatasetsMode() && this.data.isActive) {
+      return (
+        <UnifiedDatasetActionView
+          dataset={this.data}
+          isCompact={this.datasetTable.props.isCompact}
+        />
+      );
+    }
     return <DatasetActionView dataset={this.data} isCompact={this.datasetTable.props.isCompact} />;
   }
 }
@@ -515,6 +542,25 @@ class FolderRenderer {
   renderActionsColumn(): React.ReactNode {
     return this.datasetTable.getFolderSettingsActions(this.data);
   }
+}
+
+// Unified datasets prototype: renders copies as child rows of their source (antd tree data).
+function nestCopiesBelowSources(rows: RowRenderer[]): RowRenderer[] {
+  const { topLevelRows, childrenByRow } = groupCopiesBySource(rows, (row) =>
+    row instanceof DatasetRenderer ? row.data : null,
+  );
+  for (const [row, children] of childrenByRow) {
+    if (row instanceof DatasetRenderer) row.children = children;
+  }
+  return topLevelRows;
+}
+
+function flattenRowsWithChildren(rows: RowRenderer[]): RowRenderer[] {
+  return rows.flatMap((row) =>
+    row instanceof DatasetRenderer && row.children != null
+      ? [row, ...flattenRowsWithChildren(row.children)]
+      : [row],
+  );
 }
 
 class DatasetTable extends PureComponent<Props, State> {
@@ -622,6 +668,15 @@ class DatasetTable extends PureComponent<Props, State> {
     if (!("queries" in this.props.context)) {
       return <p>No Datasets found.</p>;
     }
+    if (this.props.context.copiesOfDatasetId != null) {
+      return (
+        <>
+          <p>There are no copies of this dataset that you can see.</p>
+          {maybeWarning}
+          {maybeClearButton}
+        </>
+      );
+    }
     const emptyListHintText = this.props.isUserAdminOrDatasetManager
       ? "There are no datasets in this folder. Import one or move a dataset from another folder."
       : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
@@ -658,6 +713,16 @@ class DatasetTable extends PureComponent<Props, State> {
     return this.props.isCompact ? (
       <div className="dataset-table-inline-actions">{actions}</div>
     ) : null;
+  }
+
+  // Unified datasets prototype: with ungrouped copies, a copy names its source below its name.
+  renderCopyOfHint(dataset: APIDatasetCompact): React.ReactNode {
+    const filters = this.props.context.unifiedListFilters;
+    if (filters == null || filters.groupCopies || dataset.copiedFromId == null) {
+      return null;
+    }
+    const source = this.props.context.datasets.find((ds) => ds.id === dataset.copiedFromId);
+    return <CopyOfHint sourceName={source?.name ?? null} />;
   }
 
   getFolderSettingsActions(folder: FolderItemWithName): React.ReactNode {
@@ -729,6 +794,11 @@ class DatasetTable extends PureComponent<Props, State> {
         ? new DatasetRenderer(record, this)
         : new FolderRenderer(record, this),
     );
+    const unifiedFilters = context.unifiedListFilters;
+    const isGroupingCopies = unifiedFilters?.groupCopies === true;
+    const tableDataSource = isGroupingCopies
+      ? nestCopiesBelowSources(sortedDataSourceRenderers)
+      : sortedDataSourceRenderers;
 
     let selectedRowKeys: string[] = [];
     if (selectedDatasets.length > 0) {
@@ -749,20 +819,35 @@ class DatasetTable extends PureComponent<Props, State> {
       {
         dataIndex: "name",
         key: "name",
+        title: unifiedFilters != null ? "Name" : undefined,
+        // Unified datasets prototype: keep the name readable next to the additional columns.
+        onCell: unifiedFilters != null ? () => ({ style: { minWidth: 200 } }) : undefined,
         className: "dashboard-list-table-borderless-cell",
         render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
     ];
+    // Unified datasets prototype: Layers, Owner and Last modified columns (with a table header).
+    const showUnifiedColumns = unifiedFilters != null && !this.props.isCompact;
+    if (showUnifiedColumns) {
+      columns.push(
+        ...getUnifiedDatasetColumns<RowRenderer>((row) =>
+          row instanceof DatasetRenderer ? row.data : null,
+        ),
+      );
+    }
     if (!this.props.isCompact) {
       columns.push({
-        width: 200,
+        width: showUnifiedColumns ? 110 : 200,
         key: "actions",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
       });
     }
 
     const availableSortOptions = DATASET_SORT_OPTIONS.filter(
-      (option) => option.key !== "storage" || this.shouldShowStorage(),
+      (option) =>
+        (option.key !== "storage" || this.shouldShowStorage()) &&
+        // Unified datasets prototype: sort by modification instead of by annotation count.
+        (unifiedFilters != null ? option.key !== "annotationCount" : option.key !== "modified"),
     );
     const currentSortLabel =
       availableSortOptions.find((option) => option.key === sortOption)?.label ?? "Last used";
@@ -790,6 +875,7 @@ class DatasetTable extends PureComponent<Props, State> {
             </>
           }
         >
+          {this.props.extraFilterControls}
           <TagFilterChip
             selectedTags={this.props.searchTags}
             availableTags={this.props.datasets.flatMap((dataset) => dataset.tags)}
@@ -845,11 +931,13 @@ class DatasetTable extends PureComponent<Props, State> {
           </FilterChip>
         </ListFilterHeader>
         <Table
-          dataSource={sortedDataSourceRenderers}
+          dataSource={tableDataSource}
           columns={columns}
           rowKey={(renderer: RowRenderer) => renderer.getRowKey()}
           components={components}
-          showHeader={false}
+          showHeader={showUnifiedColumns}
+          // The expand icon of grouped copies goes next to the name, not the thumbnail.
+          expandable={isGroupingCopies ? { expandIconColumnIndex: 1, indentSize: 24 } : undefined}
           bordered
           loading={this.props.isLoading}
           className="dashboard-list-table"
@@ -867,7 +955,9 @@ class DatasetTable extends PureComponent<Props, State> {
             // Workaround to get to the currently rendered entries (since the ordering
             // is managed by antd).
             // Also see https://github.com/ant-design/ant-design/issues/24022.
-            this.currentPageData = currentPageData as RowRenderer[];
+            this.currentPageData = isGroupingCopies
+              ? flattenRowsWithChildren(currentPageData as RowRenderer[])
+              : (currentPageData as RowRenderer[]);
             return null;
           }}
           onRow={(record: RowRenderer) => {

@@ -176,6 +176,7 @@ class DatasetController @Inject() (
     mailchimpClient: MailchimpClient,
     wkExploreRemoteLayerService: WKExploreRemoteLayerService,
     composeService: ComposeService,
+    unifiedDatasetService: UnifiedDatasetService,
     rpc: RPC,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -328,10 +329,24 @@ class DatasetController @Inject() (
       // return only the first n matching datasets.
       limit: Option[Int],
       // include the number of active explorational annotations the requesting user can list per dataset
-      includeAnnotationInfo: Option[Boolean]
+      includeAnnotationInfo: Option[Boolean],
+      // Unified datasets prototype only: which copies to list, one of mineAndShared (default), all, none
+      copies: Option[String],
+      // Unified datasets prototype only: list only the copies of this dataset
+      copiesOf: Option[ObjectId]
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       _ <- Fox.successful(())
+      copiesFilterOpt =
+        if (!conf.Features.unifiedDatasets) None
+        else
+          Some((copiesOf, copies, request.identity) match {
+            case (Some(datasetId), _, _) => DatasetCopiesFilter.CopiesOf(datasetId)
+            case (None, Some("all"), _)  => DatasetCopiesFilter.All
+            case (None, Some("none"), _) => DatasetCopiesFilter.NoCopies
+            case (None, _, Some(user))   => DatasetCopiesFilter.MineAndShared(user._id)
+            case (None, _, None)         => DatasetCopiesFilter.NoCopies
+          })
       organizationIdOpt =
         if (onlyMyOrganization.getOrElse(false))
           request.identity.map(_._organization)
@@ -348,11 +363,35 @@ class DatasetController @Inject() (
         recursive.getOrElse(false),
         limitOpt = limit,
         requestingUserOrga = request.identity.map(_._organization),
-        includeAnnotationInfo = includeAnnotationInfo.getOrElse(false)
+        includeAnnotationInfo = includeAnnotationInfo.getOrElse(false),
+        copiesFilterOpt = copiesFilterOpt
       )
+      datasetInfosWithUnifiedFields <-
+        if (conf.Features.unifiedDatasets) addUnifiedCompactFields(datasetInfos, request.identity.map(_._id))
+        else Fox.successful(datasetInfos)
       _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
-    } yield addRemoteOriginHeaders(Ok(Json.toJson(datasetInfos)))
+    } yield addRemoteOriginHeaders(Ok(Json.toJson(datasetInfosWithUnifiedFields)))
   }
+
+  private def addUnifiedCompactFields(
+      datasetInfos: List[DatasetCompactInfo],
+      requestingUserIdOpt: Option[ObjectId]
+  ): Fox[List[DatasetCompactInfo]] =
+    for {
+      fieldsById <- datasetDAO.findUnifiedCompactFields(datasetInfos.map(_.id), requestingUserIdOpt)
+    } yield datasetInfos.map { info =>
+      fieldsById.get(info.id) match {
+        case Some(fields) =>
+          info.copy(
+            ownerName = fields.ownerName,
+            copiedFromId = fields.copiedFromId,
+            backingAnnotationId = fields.backingAnnotationId,
+            annotationLayers = Some(fields.annotationLayers),
+            modified = Some(fields.modified)
+          )
+        case None => info
+      }
+    }
 
   def accessList(datasetId: ObjectId): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
@@ -744,6 +783,9 @@ class DatasetController @Inject() (
     sil.SecuredAction.fox(validateJson[ComposeRequestLayer]) { implicit request =>
       for {
         _ <- composeService.addLayer(datasetId, request.body, request.identity) ?~> Msg.Dataset.Compose.addLayerFailed
+        _ <- Fox.runIf(conf.Features.unifiedDatasets)(
+          unifiedDatasetService.recordAddedLayerOrigin(datasetId, request.body)
+        )
       } yield Ok
     }
 

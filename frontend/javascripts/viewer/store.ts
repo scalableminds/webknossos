@@ -602,6 +602,7 @@ type UiInformation = {
   readonly showMergeAnnotationModal: boolean;
   readonly showZarrPrivateLinksModal: boolean;
   readonly showDuplicateAnnotationModal: boolean;
+  readonly showCopyDatasetModal: boolean;
   readonly showAddScriptModal: boolean;
   readonly showKeyboardShortcutConfigModal: boolean;
   readonly aIJobDrawerState: StartAiJobDrawerState;

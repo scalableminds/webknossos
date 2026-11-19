@@ -1,10 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
+import { convertAnnotationToDataset, getBackingAnnotation } from "admin/api/unified_datasets";
 import Onboarding from "admin/onboarding";
 import { createExplorational, getShortLink } from "admin/rest_api";
-import { Typography } from "antd";
+import { Button, Result, Typography } from "antd";
 import BrainSpinner from "components/brain_spinner";
 import AsyncRedirect from "components/redirect";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
@@ -17,7 +19,7 @@ import { coalesce, getUrlParamsObjectFromString } from "libs/utils";
 import window from "libs/window";
 import isNumber from "lodash-es/isNumber";
 import { useEffect } from "react";
-import { Navigate, useLocation, useParams } from "react-router";
+import { Link, Navigate, useLocation, useParams } from "react-router";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum, PerformanceMarkEnum } from "viewer/constants";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
@@ -190,13 +192,51 @@ export function TracingViewRouteWrapper() {
   const { type, id } = useParams();
   const initialMaybeCompoundType = type != null ? coalesce(APICompoundTypeEnum, type) : null;
   useEffect(markTracingViewLoadStartEffect, []);
-  return (
+  const annotationView = (
     <TracingLayoutView
       initialMaybeCompoundType={initialMaybeCompoundType}
       initialCommandType={{
         type: ControlModeEnum.TRACE,
         annotationId: id || "",
       }}
+    />
+  );
+  if (features().unifiedDatasets && initialMaybeCompoundType == null && id != null) {
+    return <ConvertedAnnotationRedirect annotationId={id} fallback={annotationView} />;
+  }
+  return annotationView;
+}
+
+// Unified datasets prototype: explorational annotations are converted to datasets when opened, so
+// that old links keep working. Task annotations (and anything that fails) open as today.
+function ConvertedAnnotationRedirect({
+  annotationId,
+  fallback,
+}: {
+  annotationId: string;
+  fallback: React.ReactElement;
+}) {
+  const location = useLocation();
+  const { data, isError } = useQuery({
+    queryKey: ["convertAnnotationToDataset", annotationId],
+    queryFn: () => convertAnnotationToDataset(annotationId),
+    meta: { persist: false },
+    gcTime: 0,
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  if (isError || (data != null && data.datasetId == null)) {
+    return fallback;
+  }
+  if (data == null) {
+    return <BrainSpinner />;
+  }
+  return (
+    <Navigate
+      replace
+      to={`/datasets/${data.datasetName}-${data.datasetId}/view${location.search}${location.hash}`}
     />
   );
 }
@@ -307,13 +347,81 @@ export function TracingViewModeRouteWrapper() {
       />
     );
   }
+  if (features().unifiedDatasets) {
+    return (
+      <UnifiedDatasetViewRouteWrapper datasetId={datasetId || ""} sharingToken={getParams.token} />
+    );
+  }
+  return <DatasetViewModeLayoutView datasetId={datasetId || ""} />;
+}
+
+function DatasetViewModeLayoutView({ datasetId }: { datasetId: string }) {
   return (
     <TracingLayoutView
       initialMaybeCompoundType={null}
       initialCommandType={{
         type: ControlModeEnum.VIEW,
-        datasetId: datasetId || "",
+        datasetId,
       }}
+    />
+  );
+}
+
+// Unified datasets prototype: a dataset's annotation layers live in its backing annotation, which is
+// opened under the dataset's URL. Without one, the dataset opens in plain view mode.
+function UnifiedDatasetViewRouteWrapper({
+  datasetId,
+  sharingToken,
+}: {
+  datasetId: string;
+  sharingToken: string | undefined;
+}) {
+  const { data: backingAnnotation, isError } = useQuery({
+    queryKey: ["backingAnnotation", datasetId, sharingToken],
+    queryFn: () => getBackingAnnotation(datasetId, sharingToken),
+    // The answer depends on permissions and may create the annotation, so never reuse a stale one.
+    meta: { persist: false },
+    gcTime: 0,
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  if (isError) {
+    // The viewer reports why the dataset cannot be opened.
+    return <DatasetViewModeLayoutView datasetId={datasetId} />;
+  }
+  if (backingAnnotation == null) {
+    return <BrainSpinner />;
+  }
+  if (backingAnnotation.annotationId == null) {
+    return <DatasetViewModeLayoutView datasetId={datasetId} />;
+  }
+  if (backingAnnotation.access === "none") {
+    return <PrivateDatasetView />;
+  }
+  return (
+    <TracingLayoutView
+      initialMaybeCompoundType={null}
+      initialCommandType={{
+        type: ControlModeEnum.TRACE,
+        annotationId: backingAnnotation.annotationId,
+      }}
+    />
+  );
+}
+
+function PrivateDatasetView() {
+  return (
+    <Result
+      status="403"
+      title="This dataset is private"
+      subTitle="Its owner has restricted it to themselves. Ask them to share it with you."
+      extra={
+        <Link to="/dashboard">
+          <Button type="primary">Back to the dashboard</Button>
+        </Link>
+      }
     />
   );
 }

@@ -23,6 +23,7 @@ import {
   type FolderItem,
   type FolderUpdater,
 } from "types/api_types";
+import type { DatasetCopiesParam } from "./unified_dataset_list_filters";
 
 export const SEARCH_RESULTS_LIMIT = 100;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
@@ -64,12 +65,29 @@ export function useDatasetQuery(datasetId: string) {
   });
 }
 
+// Unified datasets prototype: the copies parameter is only passed in unified mode. It is part of the
+// query keys then, since the query cache is persisted.
+function withCopiesParam(queryKey: unknown[], copies: DatasetCopiesParam | null | undefined) {
+  return copies != null ? [...queryKey, { copies }] : queryKey;
+}
+
+export function getDatasetsByFolderQueryKey(
+  folderId: string | null,
+  copies?: DatasetCopiesParam | null,
+) {
+  return withCopiesParam(["datasetsByFolder", folderId], copies);
+}
+
 export function useDatasetSearchQuery(
   query: string | null,
   folderId: string | null,
   searchRecursively: boolean,
+  copies?: DatasetCopiesParam | null,
 ) {
-  const queryKey = ["dataset", "search", query, "in", folderId, "recursive?", searchRecursively];
+  const queryKey = withCopiesParam(
+    ["dataset", "search", query, "in", folderId, "recursive?", searchRecursively],
+    copies,
+  );
   return useQuery({
     queryKey,
     queryFn: async () => {
@@ -83,6 +101,7 @@ export function useDatasetSearchQuery(
         searchRecursively,
         SEARCH_RESULTS_LIMIT,
         true,
+        { copies },
       );
     },
     refetchOnWindowFocus: false,
@@ -111,7 +130,24 @@ export function useFolderHierarchyQuery() {
 
 const LIST_REQUEST_DURATION_THRESHOLD = 500;
 const DATASET_POLLING_INTERVAL = 60 * 1000;
-export function useDatasetsInFolderQuery(folderId: string | null) {
+// Unified datasets prototype: lists the copies of a dataset (in all folders). The key lives below
+// ["dataset", "search"] so that dataset mutations invalidate it like the search results.
+export function useDatasetCopiesQuery(datasetId: string | null) {
+  return useQuery({
+    queryKey: ["dataset", "search", "copiesOf", datasetId],
+    queryFn: () =>
+      datasetId == null
+        ? Promise.resolve([])
+        : getDatasets(null, null, null, null, null, true, { copiesOf: datasetId }),
+    refetchOnWindowFocus: false,
+    enabled: datasetId != null,
+  });
+}
+
+export function useDatasetsInFolderQuery(
+  folderId: string | null,
+  copies?: DatasetCopiesParam | null,
+) {
   /*
    * This query is a bit more complex. The default behavior of react-query
    * would be to show the cached data, fetch new data and then update the
@@ -137,7 +173,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
    */
 
   const queryClient = useQueryClient();
-  const queryKey = ["datasetsByFolder", folderId];
+  const queryKey = getDatasetsByFolderQueryKey(folderId, copies);
   const fetchedDatasetsRef = useRef<APIDatasetCompact[] | null>(null);
 
   const queryData = useQuery({
@@ -157,7 +193,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
         return datasets;
       }
 
-      return getDatasets(null, folderId, null, null, null, true);
+      return getDatasets(null, folderId, null, null, null, true, { copies });
     },
     refetchOnWindowFocus: false,
     enabled: false,
@@ -174,7 +210,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
 
     let effectWasCancelled = false;
     const startTime = performance.now();
-    getDatasets(null, folderId, null, null, null, true)
+    getDatasets(null, folderId, null, null, null, true, { copies })
       .then((newDatasets) => {
         if (effectWasCancelled) {
           return;
@@ -243,7 +279,9 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
             if (timeoutId == null) {
               return;
             }
-            const newDatasets = await getDatasets(null, folderId, null, null, null, true);
+            const newDatasets = await getDatasets(null, folderId, null, null, null, true, {
+              copies,
+            });
             const oldDatasets = (queryClient.getQueryData(queryKey) || []) as APIDatasetCompact[];
             queryClient.setQueryData(
               queryKey,
@@ -268,7 +306,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
       }
       Toast.close(`new-datasets-are-available-${folderId || null}`);
     };
-  }, [folderId]);
+  }, [folderId, copies]);
 
   return queryData;
 }
@@ -390,14 +428,17 @@ export function useMoveFolderMutation() {
   });
 }
 
-export function useUpdateDatasetMutation(folderId: string | null) {
+export function useUpdateDatasetMutation(
+  folderId: string | null,
+  copies?: DatasetCopiesParam | null,
+) {
   /*
    * This mutation can either trigger a simple refresh of the dataset
    * (only pass the APIDatasetId) or it can update the actual dataset
    * when the tuple [APIDatasetCompact, string] is passed.
    */
   const queryClient = useQueryClient();
-  const mutationKey = ["datasetsByFolder", folderId];
+  const mutationKey = getDatasetsByFolderQueryKey(folderId, copies);
 
   return useMutation({
     mutationFn: (params: [string, DatasetUpdater] | string) => {
@@ -420,6 +461,8 @@ export function useUpdateDatasetMutation(folderId: string | null) {
         ...convertDatasetToCompact(dataset),
         annotationCount: previousDataset?.annotationCount,
         latestOwnAnnotationId: previousDataset?.latestOwnAnnotationId,
+        // Unified datasets prototype: list-only fields (absent with the feature disabled).
+        ...(copies != null ? getUnifiedListFields(dataset, previousDataset) : {}),
       });
       queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
         (oldItems || [])
@@ -440,7 +483,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       if (targetFolderId !== folderId) {
         // The dataset was moved to another folder. Add the dataset to that target folder
         queryClient.setQueryData(
-          ["datasetsByFolder", targetFolderId],
+          getDatasetsByFolderQueryKey(targetFolderId, copies),
           (oldItems: APIDatasetCompact[] | undefined) => {
             if (oldItems == null) {
               // Don't update the query data, if it doesn't exist, yet.
@@ -475,6 +518,20 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       handleGenericError(err, "Could not update dataset.");
     },
   });
+}
+
+// The full dataset lacks some fields of the compact list entries, so carry them over from the list.
+function getUnifiedListFields(
+  dataset: APIMaybeUnimportedDataset,
+  previousDataset: APIDatasetCompact | undefined,
+): Partial<APIDatasetCompact> {
+  return {
+    ownerName: previousDataset?.ownerName ?? dataset.owner?.fullName,
+    copiedFromId: dataset.copiedFromId ?? previousDataset?.copiedFromId,
+    backingAnnotationId: dataset.backingAnnotationId ?? previousDataset?.backingAnnotationId,
+    annotationLayers: previousDataset?.annotationLayers,
+    modified: previousDataset?.modified,
+  };
 }
 
 function diffDatasets(

@@ -47,6 +47,7 @@ type SetMergeModalVisibilityAction = ReturnType<typeof setMergeModalVisibilityAc
 type SetDuplicateAnnotationModalVisibilityAction = ReturnType<
   typeof setDuplicateAnnotationModalVisibilityAction
 >;
+type SetCopyDatasetModalVisibilityAction = ReturnType<typeof setCopyDatasetModalVisibilityAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -70,6 +71,7 @@ export type UiAction =
   | SetZarrLinksModalVisibilityAction
   | SetKeyboardShortcutConfigModalVisibilityAction
   | SetDuplicateAnnotationModalVisibilityAction
+  | SetCopyDatasetModalVisibilityAction
   | SetIsWkInitializedAction
   | EnterAction
   | EscapeAction
@@ -183,6 +185,12 @@ export const setKeyboardShortcutConfigModalVisibilityAction = (visible: boolean)
 export const setDuplicateAnnotationModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+// Unified datasets prototype: the "Copy dataset" modal.
+export const setCopyDatasetModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_COPY_DATASET_MODAL_VISIBILITY",
     visible,
   }) as const;
 export const setIsWkInitializedAction = (isInitialized: boolean) =>

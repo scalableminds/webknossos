@@ -114,6 +114,7 @@ function DatasetFolderViewInner(props: Props) {
   };
   const { data: selectedFolderDatasets } = useDatasetsInFolderQuery(
     context.selectedFolder?.key || null,
+    context.copiesParam,
   );
   const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
   const datasetCountForDetailsSidebar =

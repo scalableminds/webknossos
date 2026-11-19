@@ -100,6 +100,8 @@ export function FolderTreeSidebar() {
         if (keys.length > 0 && doesEventReferToTreeUi) {
           context.setActiveFolderId(keys[0] as string);
           context.setSelectedDatasets([]);
+          // Unified datasets prototype: opening a folder leaves the list of a dataset's copies.
+          context.setCopiesOfDatasetId(null);
         }
       }
     },

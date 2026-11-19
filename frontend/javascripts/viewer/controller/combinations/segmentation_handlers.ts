@@ -1,8 +1,10 @@
+import { toBigInt } from "libs/bigint_helpers";
 import Toast from "libs/toast";
 import type { Point2, Vector3 } from "viewer/constants";
 import {
   getLayerPositionAndRenderedZoomStep,
   getSegmentIdsAtPosition,
+  warnIfMappingIsHiddenByZoomLimit,
 } from "viewer/controller/combinations/volume_handlers";
 import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
@@ -53,6 +55,7 @@ export function loadAgglomerateTreeAtPosition(position: Vector3): void {
 
   if (agglomerateTreeLoadingInfo) {
     const [layerName, mappingName] = agglomerateTreeLoadingInfo;
+    if (warnIfMappingIsHiddenByZoomLimit(layerName)) return;
     Store.dispatch(loadAgglomerateTreeAtPositionAction(layerName, mappingName, position));
   }
 }
@@ -85,13 +88,16 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
   if (mappingName && isConnectomeEnabled.value) {
     // The connectome mapping might have been activated right before this function is called
     // (see withMappingActivationConfirmation), so the displayed segment id can't be used.
+    if (warnIfMappingIsHiddenByZoomLimit(segmentation.name)) return;
     let segmentId: bigint;
     try {
       const { positionInLayer, zoomStep } = await getLayerPositionAndRenderedZoomStep(
         segmentation.name,
         position,
       );
-      segmentId = await api.data.getMappedDataValue(segmentation.name, positionInLayer, zoomStep);
+      segmentId = toBigInt(
+        await api.data.getDataValue(segmentation.name, positionInLayer, zoomStep),
+      );
     } catch (error) {
       console.error(error);
       Toast.error("Could not determine the segment id at the clicked position.");

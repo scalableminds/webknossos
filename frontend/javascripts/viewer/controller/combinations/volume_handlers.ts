@@ -1,4 +1,6 @@
 import { toBigInt } from "libs/bigint_helpers";
+import Toast from "libs/toast";
+import messages from "messages";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { ContourModeEnum } from "viewer/constants";
@@ -14,6 +16,7 @@ import {
   calculateGlobalPos,
   type PositionWithRounding,
 } from "viewer/model/accessors/view_mode_accessor";
+import { isMappingHiddenByZoomLimit } from "viewer/model/accessors/volumetracing_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   addToContourListAction,
@@ -158,6 +161,17 @@ export async function getLayerPositionAndRenderedZoomStep(
     positionInLayer,
   );
   return { positionInLayer, zoomStep };
+}
+
+// Shows a warning and returns true if the active mapping of the layer isn't rendered, because the
+// zoom limit for mappings is exceeded. Functionality that needs the mapped segment id at a
+// position should be aborted then, since the user sees unmapped segments.
+export function warnIfMappingIsHiddenByZoomLimit(layerName: string): boolean {
+  if (!isMappingHiddenByZoomLimit(Store.getState(), layerName)) {
+    return false;
+  }
+  Toast.warning(messages["tracing.mapping_hidden_by_zoom_limit"]);
+  return true;
 }
 
 function handlePickCellFromGlobalPosition(

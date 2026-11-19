@@ -320,8 +320,8 @@ describe("Live Collaboration", () => {
           async ({ layerName, sourcePos, targetPos, zoomStep }) => {
             const api = await (window as any).webknossos.apiReady();
             return Promise.all([
-              api.data.getMappedDataValue(layerName, sourcePos, zoomStep),
-              api.data.getMappedDataValue(layerName, targetPos, zoomStep),
+              api.data.getDataValue(layerName, sourcePos, zoomStep),
+              api.data.getDataValue(layerName, targetPos, zoomStep),
             ]);
           },
           {

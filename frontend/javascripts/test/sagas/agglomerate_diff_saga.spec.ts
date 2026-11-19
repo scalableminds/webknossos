@@ -279,7 +279,7 @@ describe("Agglomerate diff saga", () => {
     setAgglomerateDiffEnabled(true);
     // The mapped bucket data doesn't contain agglomerate ids, so the agglomerate id at the clicked
     // position is mocked.
-    vi.spyOn(api.data, "getMappedDataValue").mockResolvedValue(clickedAgglomerateId);
+    vi.spyOn(api.data, "getDataValue").mockResolvedValue(clickedAgglomerateId);
   });
 
   it<WebknossosTestContext>("shows the diff of an agglomerate skeleton without adding trees to the annotation", async (context) => {

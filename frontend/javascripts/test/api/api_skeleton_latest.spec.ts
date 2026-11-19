@@ -9,10 +9,15 @@ import {
 } from "test/helpers/apiHelpers";
 import { Euler, MathUtils, Matrix4, Quaternion } from "three";
 import { userSettings } from "types/schemas/user_settings.schema";
-import { OrthoViewToNumber, OrthoViewValuesWithoutTDView, type Vector3 } from "viewer/constants";
+import {
+  MAX_MAG_FOR_AGGLOMERATE_MAPPING,
+  OrthoViewToNumber,
+  OrthoViewValuesWithoutTDView,
+  type Vector3,
+} from "viewer/constants";
 import { getSegmentIdsAtPosition } from "viewer/controller/combinations/volume_handlers";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { isZoomThresholdExceededForAgglomerateMapping } from "viewer/model/accessors/volumetracing_accessor";
+import { isMappingHiddenByZoomLimit } from "viewer/model/accessors/volumetracing_accessor";
 import { setRotationAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import {
   finishMappingInitializationAction,
@@ -328,7 +333,6 @@ describe("API Skeleton", () => {
       api.data.setMapping("segmentation", { [unmappedId]: 7 });
 
       expect(await api.data.getDataValue("segmentation", position, 0)).toBe(7);
-      expect(await api.data.getMappedDataValue("segmentation", position, 0)).toBe(7n);
       expect(await api.data.getUnmappedDataValue("segmentation", position, 0)).toBe(unmappedId);
     });
 
@@ -352,18 +356,15 @@ describe("API Skeleton", () => {
       expect(await promise).toBe(7);
     });
 
-    it<WebknossosTestContext>("getDataValue should return the unmapped id if the zoom limit for the mapping is exceeded, unlike getMappedDataValue", async (context) => {
+    it<WebknossosTestContext>("getDataValue should return the unmapped id if the zoom limit for the mapping is exceeded", async (context) => {
       const { api } = context;
       mockBucketRequests(context);
       api.data.setMapping("segmentation", { [unmappedId]: 7 });
       Store.dispatch(setZoomStepAction(1000));
-      expect(isZoomThresholdExceededForAgglomerateMapping(Store.getState(), "segmentation")).toBe(
-        true,
-      );
+      expect(isMappingHiddenByZoomLimit(Store.getState(), "segmentation")).toBe(true);
 
       // The mapping isn't rendered in this case
       expect(await api.data.getDataValue("segmentation", position, 0)).toBe(unmappedId);
-      expect(await api.data.getMappedDataValue("segmentation", position, 0)).toBe(7n);
     });
 
     it<WebknossosTestContext>("getDataValue should return the agglomerate id if the server applies the mapping", async (context) => {
@@ -372,9 +373,6 @@ describe("API Skeleton", () => {
       activateAgglomerateMapping();
 
       expect(await api.data.getDataValue("segmentation", position, 0)).toBe(agglomerateId);
-      expect(await api.data.getMappedDataValue("segmentation", position, 0)).toBe(
-        BigInt(agglomerateId),
-      );
       expect(requestedBuckets.map((bucket) => bucket.applyAgglomerate)).toEqual([
         sampleHdf5AgglomerateName,
       ]);
@@ -405,6 +403,48 @@ describe("API Skeleton", () => {
         undefined,
         undefined,
       ]);
+    });
+
+    it<WebknossosTestContext>("buckets of mags to which the server doesn't apply the mapping should be treated as unmapped", async (context) => {
+      const { api, mocks, model } = context;
+      const cube = model.getCubeByLayerName("segmentation");
+      const coarseZoomStep = cube.magInfo.getIndexByMag([32, 32, 32]);
+      const getUnmappedBuckets = createBucketResponseFunction(
+        { segmentation: "uint32" },
+        unmappedId,
+      );
+      const getMappedBuckets = createBucketResponseFunction(
+        { segmentation: "uint32" },
+        agglomerateId,
+      );
+      const requestedBuckets: RequestBucketInfo[] = [];
+      vi.mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders).mockImplementation(
+        (url: string, payload: { data: Array<RequestBucketInfo> }) => {
+          requestedBuckets.push(...payload.data);
+          // Like the datastore, the mapping is only applied to mags up to the limit.
+          return payload.data.some(
+            (bucket) =>
+              bucket.applyAgglomerate != null &&
+              Math.max(...bucket.mag) <= MAX_MAG_FOR_AGGLOMERATE_MAPPING,
+          )
+            ? getMappedBuckets(url, payload)
+            : getUnmappedBuckets(url, payload);
+        },
+      );
+      activateAgglomerateMapping();
+
+      expect(await api.data.getDataValue("segmentation", position, coarseZoomStep)).toBe(
+        unmappedId,
+      );
+      expect(await api.data.getUnmappedDataValue("segmentation", position, coarseZoomStep)).toBe(
+        unmappedId,
+      );
+      // The loaded bucket is used by both reads, since it contains unmapped data.
+      expect(requestedBuckets.map((bucket) => bucket.applyAgglomerate)).toEqual([
+        sampleHdf5AgglomerateName,
+      ]);
+      const bucket = cube.getBucket(cube.positionToZoomedAddress(position, null, coarseZoomStep));
+      expect(bucket.type === "data" && bucket.serverMappingName).toBe(null);
     });
 
     it<WebknossosTestContext>("getDataValue should warn that respectMapping is deprecated", async (context) => {

@@ -5,7 +5,10 @@ import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
 import constants from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
-import { getServerMappingName } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getServerMappingName,
+  getServerMappingNameForMag,
+} from "viewer/model/accessors/volumetracing_accessor";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import type { DataStoreInfo } from "viewer/store";
@@ -339,7 +342,13 @@ class PullQueue {
         // The bucket might already be LOADED or MISSING.
         continue;
       }
-      sibling.serverMappingName = serverMappingName;
+      sibling.serverMappingName =
+        serverMappingName != null
+          ? getServerMappingNameForMag(
+              serverMappingName,
+              this.cube.magInfo.getMagByIndexOrThrow(siblingAddress[3]),
+            )
+          : null;
 
       try {
         if (bucketData == null) {

@@ -316,8 +316,8 @@ describe("Proofreading (Single User)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
       vi.mocked(Toast.warning).mockClear();
-      const getMappedDataValueSpy = vi
-        .spyOn(api.data, "getMappedDataValue")
+      const getDataValueSpy = vi
+        .spyOn(api.data, "getDataValue")
         .mockRejectedValue(new Error("Bucket 0,0,0,0, could not be loaded after 3 retries."));
       try {
         yield put(proofreadAtPosition(getPositionForSegmentId(1)));
@@ -329,7 +329,7 @@ describe("Proofreading (Single User)", () => {
           ),
         );
       } finally {
-        getMappedDataValueSpy.mockRestore();
+        getDataValueSpy.mockRestore();
       }
     });
     await task.toPromise();

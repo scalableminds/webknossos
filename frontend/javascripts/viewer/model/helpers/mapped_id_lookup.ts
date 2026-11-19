@@ -109,24 +109,20 @@ const MAPPING_DATA_TIMEOUT_MS = 60_000;
 // data that is needed for rendering is available:
 // - If no mapping is applied locally, the bucket data already contains the rendered id.
 // - If the zoom limit for agglomerate mappings is exceeded, the local mapping isn't applied
-//   during rendering. With ignoreZoomLimit, the id is mapped anyway.
+//   during rendering.
 // - While a JSON mapping is being activated, this waits until its data is available.
 // - If the local HDF5 mapping doesn't know the id (yet), the mapped id is fetched from the
 //   server (0 if the server has no entry for it).
 // Throws if the mapped id can't be fetched. Returns null if the mapping of the layer changed
 // in the meantime. The id needs to be read again then, because the bucket data might change, too.
-export async function mapIdAsRendered(
-  layerName: string,
-  id: bigint,
-  { ignoreZoomLimit = false }: { ignoreZoomLimit?: boolean } = {},
-): Promise<bigint | null> {
+export async function mapIdAsRendered(layerName: string, id: bigint): Promise<bigint | null> {
   const state = Store.getState();
   const bucketRetrievalSource = getBucketRetrievalSourceFn(layerName)(state);
   if (
     id === 0n ||
     bucketRetrievalSource[0] === "REQUESTED-WITH-MAPPING" ||
     bucketRetrievalSource[1] === "NO-LOCAL-MAPPING-APPLIED" ||
-    (!ignoreZoomLimit && isZoomThresholdExceededForAgglomerateMapping(state, layerName))
+    isZoomThresholdExceededForAgglomerateMapping(state, layerName)
   ) {
     return id;
   }

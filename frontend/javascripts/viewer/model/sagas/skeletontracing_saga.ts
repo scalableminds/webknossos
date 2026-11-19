@@ -3,6 +3,7 @@ import {
   getEditableAgglomerateTreeAsSkeletonTracing,
 } from "admin/rest_api";
 import { Modal } from "antd";
+import { toBigInt } from "libs/bigint_helpers";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
@@ -470,11 +471,10 @@ function* loadAgglomerateTreeWithAtPosition(
         layerName,
         action.agglomeratePosition,
       );
-      agglomerateId = yield* call(
-        [api.data, api.data.getMappedDataValue],
-        layerName,
-        positionInLayer,
-        zoomStep,
+      // The caller ensures that the mapping isn't hidden by the zoom limit (see
+      // loadAgglomerateTreeAtPosition), so the rendered id is the agglomerate id.
+      agglomerateId = toBigInt(
+        yield* call([api.data, api.data.getDataValue], layerName, positionInLayer, zoomStep),
       );
     }
 

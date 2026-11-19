@@ -161,7 +161,7 @@ export class DataBucket {
   // can be stored in cachedValueSet.
   cachedValueSet: Set<number> | Set<bigint> | null = null;
   // The agglomerate mapping that the server applied to the received data (null if the data is
-  // unmapped). After the mapping changed, the bucket might still contain the data of the old
+  // unmapped, e.g., because the server doesn't apply mappings to coarse mags). After the mapping changed, the bucket might still contain the data of the old
   // mapping until the buckets of the layer are reloaded.
   serverMappingName: string | null = null;
 

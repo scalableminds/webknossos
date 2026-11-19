@@ -305,17 +305,15 @@ export const getBrushOverlay: ShaderModule = {
       vec2 brushMagUV = transDim(brushMag).xy;
       vec2 voxelCenter = (floor(worldCoordUVW.xy / brushMagUV) + 0.5) * brushMagUV;
 
-      // Compute the anisotropy of the dataset so that the brush looks the same in
-      // each viewport
-      float minVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
-      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / minVoxelSize;
-
-      vec2 delta = (voxelCenter - transDim(brushCenterPosition).xy) * anisotropyFactorUVW.xy;
-      float radius = brushSizeInPixel / 2.0;
+      // Like the rasterizer, measure the distance in voxels of the brush mag, normalized
+      // by the per-axis radius. Since the brush diameter is converted per axis (see
+      // getBrushDiameterInMag), the brush looks the same in each viewport.
+      vec2 radiusUV = transDim(brushDiameterInMag).xy / 2.0;
+      vec2 delta = (voxelCenter - transDim(brushCenterPosition).xy) / brushMagUV / radiusUV;
       // Compare squared values to avoid the imprecise sqrt. Since the brush center
       // is snapped to a voxel center or corner depending on the parity of the brush
-      // size, no voxel center lies exactly on the border for isotropic voxels.
-      if (dot(delta, delta) < radius * radius) {
+      // diameter, no voxel center lies exactly on the border for isotropic voxels.
+      if (dot(delta, delta) < 1.0) {
         brushOverlayColor = vec4(vec3(1.0), 0.5);
       }
 

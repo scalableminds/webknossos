@@ -49,12 +49,18 @@ case class AdHocMesh(vertices: Array[Float], indices: Array[Int], neighbors: Lis
       buffer.array()
     }
 
-  /** The neighbors (see [[neighbors]]) and the vertex count, which locates the indices in an indexed response. */
-  def responseHeaders: List[(String, String)] = List(
-    "NEIGHBORS" -> neighbors.mkString("[", ", ", "]"),
-    "Vertex-Count" -> vertexCount.toString,
-    "Access-Control-Expose-Headers" -> "NEIGHBORS, Vertex-Count"
-  )
+  /** The headers of a response with the body [[toBytes]]: the neighbors (see [[neighbors]]) and, only if indexed, the
+    * vertex count, which locates the indices. So the header is present exactly if the body is indexed.
+    */
+  def responseHeaders(indexed: Boolean): List[(String, String)] =
+    if (indexed)
+      List(
+        "NEIGHBORS" -> neighbors.mkString("[", ", ", "]"),
+        "Vertex-Count" -> vertexCount.toString,
+        "Access-Control-Expose-Headers" -> "NEIGHBORS, Vertex-Count"
+      )
+    else
+      List("NEIGHBORS" -> neighbors.mkString("[", ", ", "]"), "Access-Control-Expose-Headers" -> "NEIGHBORS")
 }
 
 object AdHocMesh {

@@ -315,7 +315,7 @@ class VolumeTracingController @Inject() (
               val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.createAdHocMesh(editableMappingLayer, request.body)
             } else volumeTracingService.createAdHocMesh(annotationId, tracingId, tracing, request.body)
-        } yield Ok(mesh.toBytes(request.body.indexed)).withHeaders(mesh.responseHeaders*)
+        } yield Ok(mesh.toBytes(request.body.indexed)).withHeaders(mesh.responseHeaders(request.body.indexed)*)
       }
     }
 

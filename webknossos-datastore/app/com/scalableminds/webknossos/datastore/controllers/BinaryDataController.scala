@@ -332,7 +332,7 @@ class BinaryDataController @Inject() (
             request.body.findNeighbors
           )
           mesh <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-        } yield Ok(mesh.toBytes(request.body.indexed)).withHeaders(mesh.responseHeaders*)
+        } yield Ok(mesh.toBytes(request.body.indexed)).withHeaders(mesh.responseHeaders(request.body.indexed)*)
       }
     }
 

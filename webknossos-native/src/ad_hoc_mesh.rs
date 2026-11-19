@@ -17,7 +17,7 @@
 
 mod triangle_table;
 
-use std::cell::Cell;
+use std::sync::Mutex;
 
 use jni::EnvUnowned;
 use jni::objects::{JByteArray, JFloatArray, JIntArray, JObject, JObjectArray};
@@ -63,8 +63,25 @@ pub struct Cuboid<'a> {
 }
 
 impl<'a> Cuboid<'a> {
-    /// Validates the arguments of a native call.
+    /// Validates the arguments, like a native call does.
+    #[cfg(test)]
     pub fn new(data: &'a [u8], bytes_per_element: i32, dimensions: &[i32]) -> NativeResult<Self> {
+        let (bytes_per_element, dimensions) =
+            Self::validate(data.len(), bytes_per_element, dimensions)?;
+        Ok(Cuboid {
+            data,
+            bytes_per_element,
+            dimensions,
+        })
+    }
+
+    /// Validates the arguments of a native call for a cuboid of `data_len` bytes. Returns the bytes per element
+    /// and the dimensions.
+    fn validate(
+        data_len: usize,
+        bytes_per_element: i32,
+        dimensions: &[i32],
+    ) -> NativeResult<(usize, [usize; 3])> {
         if !matches!(bytes_per_element, 1 | 2 | 4 | 8) {
             return invalid_argument(format!(
                 "unsupported bytesPerElement value {bytes_per_element}"
@@ -85,16 +102,12 @@ impl<'a> Cuboid<'a> {
             return invalid_argument(format!("cuboid must have at most {MAX_VOXELS} voxels"));
         };
         // Cannot overflow, as voxel_count <= MAX_VOXELS < i32::MAX and bytes_per_element <= 8.
-        if voxel_count * bytes_per_element as usize != data.len() {
+        if voxel_count * bytes_per_element as usize != data_len {
             return invalid_argument(
                 "data length must be the product of the dimensions times bytesPerElement",
             );
         }
-        Ok(Cuboid {
-            data,
-            bytes_per_element: bytes_per_element as usize,
-            dimensions: checked,
-        })
+        Ok((bytes_per_element as usize, checked))
     }
 }
 
@@ -134,15 +147,35 @@ fn mask_row<T: Element>(row: &[u8], segment_id: i64, mask: &mut [u8]) -> bool {
 }
 
 impl SegmentMask {
-    /// Builds the mask in one pass over the cuboid, row by row.
+    /// Builds the mask of a cuboid.
+    #[cfg(test)]
     fn new(cuboid: &Cuboid, segment_id: i64) -> Self {
+        let mut mask = Self::empty(cuboid.dimensions);
+        mask.fill(cuboid, segment_id);
+        mask
+    }
+
+    /// An empty mask for a cuboid of the given dimensions, to be filled by [Self::fill].
+    fn empty(dimensions: [usize; 3]) -> Self {
+        let block_counts = dimensions.map(|d| d.div_ceil(BLOCK_SIZE));
+        SegmentMask {
+            voxels: vec![0u8; dimensions.iter().product()],
+            dimensions,
+            block_counts,
+            occupied_blocks: vec![false; block_counts.iter().product()],
+            neighbors: 0,
+        }
+    }
+
+    /// Fills the empty mask in one pass over the cuboid, row by row. Does not allocate, as it runs inside a JNI
+    /// critical section, see [jni_util::with_bytes_critical].
+    fn fill(&mut self, cuboid: &Cuboid, segment_id: i64) {
+        debug_assert_eq!(cuboid.dimensions, self.dimensions);
         let [width, height, depth] = cuboid.dimensions;
-        let block_counts = cuboid.dimensions.map(|d| d.div_ceil(BLOCK_SIZE));
-        let mut voxels = vec![0u8; width * height * depth];
-        let mut occupied_blocks = vec![false; block_counts.iter().product()];
+        let block_counts = self.block_counts;
+        let voxels = &mut self.voxels;
+        let occupied_blocks = &mut self.occupied_blocks;
         let mut neighbors: Neighbors = 0;
-        // Which x-blocks the current row touches.
-        let mut row_blocks = vec![false; block_counts[0]];
         let row_bytes = width * cuboid.bytes_per_element;
 
         for z in 0..depth {
@@ -190,33 +223,25 @@ impl SegmentMask {
                 }
 
                 // Blocks
-                for (block_x, touched) in row_blocks.iter_mut().enumerate() {
-                    let start = block_x * BLOCK_SIZE;
-                    let end = (start + BLOCK_SIZE + 1).min(width);
-                    *touched = mask[start..end].contains(&1);
-                }
                 let (first_y, last_y) = blocks_containing(y);
                 let (first_z, last_z) = blocks_containing(z);
-                for block_z in first_z..=last_z {
-                    for block_y in first_y..=last_y {
-                        let plane_start = block_counts[0] * (block_y + block_counts[1] * block_z);
-                        let plane =
-                            &mut occupied_blocks[plane_start..plane_start + block_counts[0]];
-                        for (occupied, &touched) in plane.iter_mut().zip(&row_blocks) {
-                            *occupied |= touched;
+                for block_x in 0..block_counts[0] {
+                    let start = block_x * BLOCK_SIZE;
+                    let end = (start + BLOCK_SIZE + 1).min(width);
+                    if !mask[start..end].contains(&1) {
+                        continue;
+                    }
+                    for block_z in first_z..=last_z {
+                        for block_y in first_y..=last_y {
+                            occupied_blocks[block_x
+                                + block_counts[0] * (block_y + block_counts[1] * block_z)] = true;
                         }
                     }
                 }
             }
         }
 
-        SegmentMask {
-            voxels,
-            dimensions: cuboid.dimensions,
-            block_counts,
-            occupied_blocks,
-            neighbors,
-        }
+        self.neighbors = neighbors;
     }
 }
 
@@ -264,14 +289,38 @@ const EDGE_VOXELS: [(usize, [usize; 3]); 12] = {
     table
 };
 
-/// The largest edge table, in entries, that a thread keeps between calls (16 MB, enough for 110³ voxels). Larger
-/// tables are allocated per call.
-const MAX_CACHED_EDGE_TABLE: usize = 4 << 20;
+/// The size, in entries, of the edge tables kept between calls (4 MB, enough for the 65³ voxels the frontend
+/// requests, and up to 70³). Larger tables are allocated per call.
+const CACHED_EDGE_TABLE_LEN: usize = 1 << 20;
 
-thread_local! {
-    /// The edge table of the previous call on this thread, all zeros, see [MeshBuilder::edge_vertices]. Reusing it
-    /// avoids allocating and zeroing megabytes per call; only the entries of the vertices are reset.
-    static EDGE_TABLE: Cell<Vec<u32>> = const { Cell::new(Vec::new()) };
+/// The most edge tables kept between calls, which bounds their memory (32 MB) no matter how many threads mesh.
+const MAX_CACHED_EDGE_TABLES: usize = 8;
+
+/// Edge tables of previous calls, all zeros and [CACHED_EDGE_TABLE_LEN] long, see [MeshBuilder::edge_vertices].
+/// Reusing them avoids allocating and zeroing megabytes per call; only the entries of the vertices are reset.
+static EDGE_TABLES: Mutex<Vec<Vec<u32>>> = Mutex::new(Vec::new());
+
+/// Takes a zeroed edge table with at least `len` entries out of [EDGE_TABLES], or allocates one.
+fn take_edge_table(len: usize) -> Vec<u32> {
+    if len > CACHED_EDGE_TABLE_LEN {
+        return vec![0; len];
+    }
+    let cached = EDGE_TABLES.lock().ok().and_then(|mut tables| tables.pop());
+    // Allocated at the cached size, so it can serve any later call that fits. The pages of a large zeroed
+    // allocation are only backed by memory once they are written.
+    cached.unwrap_or_else(|| vec![0; CACHED_EDGE_TABLE_LEN])
+}
+
+/// Returns an edge table, all zeros again, to [EDGE_TABLES] if it has the cached size and there is room.
+fn return_edge_table(table: Vec<u32>) {
+    if table.len() != CACHED_EDGE_TABLE_LEN {
+        return;
+    }
+    if let Ok(mut tables) = EDGE_TABLES.lock()
+        && tables.len() < MAX_CACHED_EDGE_TABLES
+    {
+        tables.push(table);
+    }
 }
 
 /// Collects the indexed mesh, merging the vertices of the same voxel edge.
@@ -292,11 +341,8 @@ struct MeshBuilder {
 impl MeshBuilder {
     fn new(dimensions: [usize; 3], offset: [f32; 3], scale: [f32; 3]) -> Self {
         let edge_count = 3 * dimensions.iter().product::<usize>();
-        // Taken out of the thread local, so a panic drops it instead of leaving set entries behind.
-        let mut edge_vertices = EDGE_TABLE.take();
-        if edge_vertices.len() < edge_count {
-            edge_vertices = vec![0; edge_count];
-        }
+        // Taken out of the pool, so a panic drops it instead of leaving set entries behind.
+        let edge_vertices = take_edge_table(edge_count);
         let [width, height, _] = dimensions;
         let edge_offsets =
             EDGE_VOXELS.map(|(axis, [vx, vy, vz])| 3 * (vx + width * (vy + height * vz)) + axis);
@@ -336,14 +382,13 @@ impl MeshBuilder {
         self.indices.push(index);
     }
 
-    /// Resets the edge table, keeps it for the next call on this thread if it isn't too large, and returns the
-    /// vertices and indices.
+    /// Resets the edge table, returns it to the pool, and returns the vertices and indices.
     fn finish(mut self) -> (Vec<f32>, Vec<u32>) {
-        if self.edge_vertices.len() <= MAX_CACHED_EDGE_TABLE {
+        if self.edge_vertices.len() == CACHED_EDGE_TABLE_LEN {
             for &slot in &self.vertex_edges {
                 self.edge_vertices[slot] = 0;
             }
-            EDGE_TABLE.set(self.edge_vertices);
+            return_edge_table(self.edge_vertices);
         }
         (self.vertices, self.indices)
     }
@@ -447,11 +492,19 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
         if indices_out.len(env)? != 1 {
             return invalid_argument("indicesOut must have one element");
         }
-        // The cuboid is only needed to build the mask, a single pass, so it is borrowed rather than copied.
-        let mask = jni_util::with_bytes_critical(env, &data, |data| {
-            Cuboid::new(data, bytes_per_element, &dimensions)
-                .map(|cuboid| SegmentMask::new(&cuboid, segment_id))
-        })??;
+        let (bytes_per_element, dimensions) =
+            Cuboid::validate(data.len(env)?, bytes_per_element, &dimensions)?;
+        // The cuboid is only needed to fill the mask, a single pass, so it is borrowed rather than copied. The mask
+        // is allocated beforehand, so the critical section only covers that pass.
+        let mut mask = SegmentMask::empty(dimensions);
+        jni_util::with_bytes_critical(env, &data, |data| {
+            let cuboid = Cuboid {
+                data,
+                bytes_per_element,
+                dimensions,
+            };
+            mask.fill(&cuboid, segment_id)
+        })?;
         let mesh = mesh_segment(&mask, offset, scale);
         neighbors_out.set_region(env, 0, &[jint::from(mesh.neighbors)])?;
         // The indices are below MAX_VOXELS * 3 <= i32::MAX.

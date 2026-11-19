@@ -216,7 +216,20 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     const { layoutName, layoutKey } = this.props;
     const layout = getLayoutConfig(layoutKey, layoutName);
     const model = Model.fromJson(layout);
+    this.removeStatisticsTab(model);
     return model;
+  }
+
+  // The statistics tab is only opened on request (for a layer that offers statistics) and is not
+  // restored from a stored layout. Otherwise it would also show up for datasets without segment
+  // statistics, and opening a dataset would compute statistics that nobody asked for.
+  private removeStatisticsTab(model: Model) {
+    const rightBorderModel = this.getRightBorderModel(model);
+    if (rightBorderModel?.getNodeById(BorderTabs.SegmentStatisticsTab.id) == null) return;
+    rightBorderModel.doAction(Actions.deleteTab(BorderTabs.SegmentStatisticsTab.id));
+    model.doAction(
+      Actions.updateNodeAttributes(rightBorderId, { config: { model: rightBorderModel.toJson() } }),
+    );
   }
 
   private getRightBorderModel(model: Model): Model | null {

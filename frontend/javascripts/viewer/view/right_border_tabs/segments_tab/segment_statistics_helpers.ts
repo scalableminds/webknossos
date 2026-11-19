@@ -7,6 +7,7 @@ import type {
   VoxelSize,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import type { Segment } from "viewer/store";
 
 export type AvailableFileMetrics = {
   maxDistance: boolean;
@@ -99,32 +100,54 @@ export function covarianceMatrixToPrincipalExtents(
 
 export type SegmentStatisticsRow = {
   key: string;
+  segment: Segment;
   additionalCoordinates: string;
   segmentId: bigint;
   segmentName: string;
   groupId: number | undefined | null;
   groupName: string;
-  volumeInUnit3: number | undefined;
-  formattedSize: string | undefined;
-  volumeInVoxel: number | undefined;
-  surfaceAreaInUnit2: number | undefined;
-  formattedSurfaceArea: string | undefined;
-  boundingBoxTopLeft: Vector3 | undefined;
-  boundingBoxTopLeftAsString: string | undefined;
-  boundingBoxPosition: Vector3 | undefined;
-  boundingBoxPositionAsString: string | undefined;
-  maxDistanceInUnit: number | undefined;
-  formattedMaxDistance: string | undefined;
-  sphericity: number | undefined;
-  formattedSphericity: string | undefined;
-  centerOfMass: Vector3 | undefined;
-  centerOfMassAsString: string | undefined;
-  principalExtents: Vector3 | undefined;
-  formattedPrincipalExtents: string | undefined;
-  covarianceMatrix: SegmentCovarianceMatrix | undefined;
+  // The statistics are undefined until they are loaded (or if they are not available).
+  volumeInVoxel?: number;
+  volumeInUnit3?: number;
+  surfaceAreaInUnit2?: number;
+  // Both in mag1 voxels.
+  boundingBoxTopLeft?: Vector3;
+  boundingBoxSize?: Vector3;
+  maxDistanceInUnit?: number;
+  sphericity?: number;
+  centerOfMass?: Vector3;
+  principalExtents?: Vector3;
+  covarianceMatrix?: SegmentCovarianceMatrix;
 };
 
 export type CsvValue = string | number | bigint | undefined;
+
+// A fixed label (e.g. "vx"), or a physical unit that is derived from the dataset's voxel size unit
+// raised to the given dimension (length, area or volume).
+export type StatisticUnit = string | { dimension: 1 | 2 | 3 };
+
+/*
+ * How the value of a statistic is obtained for the table. Numbers are right-aligned, sortable and
+ * get a bar that relates them to the other rows. Vectors are sorted by their first component or by
+ * the product of their components (e.g. the volume of a bounding box).
+ */
+export type StatisticValue =
+  | {
+      kind: "number";
+      unit: StatisticUnit;
+      // How many decimal places are shown. Defaults to 2.
+      fractionDigits?: number;
+      get: (row: SegmentStatisticsRow) => number | undefined;
+    }
+  | {
+      kind: "vector";
+      unit: StatisticUnit;
+      fractionDigits?: number;
+      sortBy: "first" | "product";
+      // Whether the vector is a position in the dataset (in mag1 voxels).
+      isPosition?: boolean;
+      get: (row: SegmentStatisticsRow) => Vector3 | undefined;
+    };
 
 /*
  * Describes one statistic in both of its representations, so that the rendered table and the
@@ -135,8 +158,7 @@ export type CsvValue = string | number | bigint | undefined;
 export type StatisticSpec = {
   key: string;
   title?: string;
-  dataIndex?: keyof SegmentStatisticsRow;
-  width?: number;
+  value?: StatisticValue;
   isLoading?: boolean;
   isError?: boolean;
   csvHeaders: string[];

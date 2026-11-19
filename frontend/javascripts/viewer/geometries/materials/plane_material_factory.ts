@@ -63,10 +63,10 @@ import {
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
   getBrushCenterPosition,
+  getBrushMagInRenderedSpace,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
-  getRenderableMagForActiveSegmentationTracing,
   isZoomThresholdExceededForAgglomerateMapping,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -799,7 +799,7 @@ class PlaneMaterialFactory {
           true,
         ),
         listenToStoreProperty(
-          (storeState) => getRenderableMagForActiveSegmentationTracing(storeState)?.mag,
+          (storeState) => getBrushMagInRenderedSpace(storeState),
           (mag) => {
             // The brush preview should snap to the voxel grid of the mag in which
             // the brush is actually applied.

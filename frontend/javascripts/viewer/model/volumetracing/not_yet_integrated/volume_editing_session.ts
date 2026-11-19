@@ -1,7 +1,7 @@
 import type { TransactionDiff, TransactionId } from "../core/bucket_diff";
 import { resolve } from "../core/flood_fill_resolver";
 import type { BucketAddress, EditContext, MagList, Vector3 } from "../core/volume_annotation_types";
-import type { DataDependentShape, MaskShape } from "../core/volume_edit_intents";
+import type { AffineMap, DataDependentShape, MaskShape } from "../core/volume_edit_intents";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { BucketJournal } from "./bucket_journal";
@@ -23,6 +23,7 @@ export class VolumeEditingSession {
     path: Vector3[];
     radius: Vector3;
     planeAxis: 0 | 1 | 2 | null;
+    voxelToShapeSpace?: AffineMap;
   } | null = null;
 
   /** Every committed transaction, in order. Stands in for the save queue. */
@@ -61,12 +62,14 @@ export class VolumeEditingSession {
     /** Per-axis radius in source-mag voxels (§ volume_edit_intents.ts). */
     radius: Vector3,
     planeAxis: 0 | 1 | 2 | null = 2,
+    /** See the brush shape in volume_edit_intents.ts. */
+    voxelToShapeSpace?: AffineMap,
   ): void {
     if (this.stroke != null) throw new Error("A brush stroke is already open");
     const tx = this.nextTransaction(ctx);
-    this.stroke = { tx, ctx, path: [start], radius, planeAxis };
+    this.stroke = { tx, ctx, path: [start], radius, planeAxis, voxelToShapeSpace };
     // A pointer-down alone already paints a dab.
-    rasterize({ kind: "brush", path: [start], radius, planeAxis }, ctx, tx);
+    rasterize({ kind: "brush", path: [start], radius, planeAxis, voxelToShapeSpace }, ctx, tx);
     tx.flushToCube();
   }
 
@@ -85,6 +88,7 @@ export class VolumeEditingSession {
         path: [previous, point],
         radius: stroke.radius,
         planeAxis: stroke.planeAxis,
+        voxelToShapeSpace: stroke.voxelToShapeSpace,
       },
       stroke.ctx,
       stroke.tx,

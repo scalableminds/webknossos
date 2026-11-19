@@ -30,8 +30,24 @@ export type AnalyticShape =
       radius: Vector3;
       /** null => 3D sphere brush; otherwise paint one slice along this axis. */
       planeAxis: 0 | 1 | 2 | null;
+      /**
+       * Maps source-mag voxel coordinates into the space in which `path`,
+       * `radius` and `planeAxis` are given. Omitted when the two coincide.
+       *
+       * Used when the layer is rendered with a transform: the brush is a
+       * shape in the rendered space, while the voxels belong to the layer.
+       * A voxel is painted if its center lies within the shape and the voxel
+       * intersects the painted slice (see rasterizeTransformedCapsule).
+       */
+      voxelToShapeSpace?: AffineMap;
     }
   | { kind: "box"; min: Vector3; max: Vector3 };
+
+/** `point ↦ linear · point + offset`, with `linear` as a row-major 3×3 matrix. */
+export type AffineMap = {
+  linear: readonly [number, number, number, number, number, number, number, number, number];
+  offset: Vector3;
+};
 
 /**
  * An explicit dense region over an axis-aligned box, in source-mag voxel space.

@@ -14,6 +14,7 @@ import type {
 } from "types/api_types";
 import Constants, {
   type ContourMode,
+  IdentityTransform,
   MAX_MAG_FOR_AGGLOMERATE_MAPPING,
   MappingStatusEnum,
   type Vector3,
@@ -30,7 +31,10 @@ import {
   getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getGlobalVoxelSizeFromState,
+  getTransformsPerLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -60,6 +64,7 @@ import {
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";
+import type { Transform } from "../helpers/transformation_helpers";
 
 export function getVolumeTracings(annotation: StoreAnnotation): Array<VolumeTracing> {
   return annotation.volumes;
@@ -627,6 +632,57 @@ export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEqual
 );
 
 /**
+ * The transform from the voxels of the given segmentation tracing layer into the rendered
+ * space. IdentityTransform if the layer is rendered without a transform.
+ */
+export function getTransformForSegmentationTracing(
+  state: WebknossosState,
+  volumeTracing: VolumeTracing,
+): Transform {
+  return (
+    getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
+      volumeTracing.tracingId
+    ] ?? IdentityTransform
+  );
+}
+
+/**
+ * Per-axis extent of a voxel of `mag` in the rendered space, in mag-1 voxels of that space.
+ * This is the mag itself without a transform and the permuted mag for 90° rotations.
+ * For other rotations, it is the extent of the voxel's bounding box.
+ */
+export function getMagInRenderedSpace(mag: Vector3, transform: Transform): Vector3 {
+  if (transform === IdentityTransform) {
+    return mag;
+  }
+  const matrix = transform.affineMatrix;
+  return [0, 1, 2].map(
+    (row) =>
+      Math.abs(matrix[row * 4]) * mag[0] +
+      Math.abs(matrix[row * 4 + 1]) * mag[1] +
+      Math.abs(matrix[row * 4 + 2]) * mag[2],
+  ) as Vector3;
+}
+
+function _getBrushMagInRenderedSpace(state: WebknossosState): Vector3 | null {
+  const volumeTracing = getActiveSegmentationTracing(state);
+  const magWithZoomStep = getRenderableMagForSegmentationTracing(state, volumeTracing);
+  if (volumeTracing == null || magWithZoomStep == null) {
+    return null;
+  }
+  return getMagInRenderedSpace(
+    magWithZoomStep.mag,
+    getTransformForSegmentationTracing(state, volumeTracing),
+  );
+}
+
+/**
+ * The mag in which the brush paints, in the axes of the rendered space (see
+ * getMagInRenderedSpace). The brush and its preview snap to this grid.
+ */
+export const getBrushMagInRenderedSpace = reuseInstanceOnEquality(_getBrushMagInRenderedSpace);
+
+/**
  * Per-axis brush diameter in voxels of `mag`. brushSize is a diameter in pixels at zoom
  * step 1 (see getVoxelPerPixel), so this folds in both the voxel size (so the brush is
  * a sphere in physical space, not an ellipsoid) and the mag.
@@ -663,13 +719,12 @@ export function getBrushCenterInMag(
 
 function _getBrushCenterPosition(state: WebknossosState): Vector3 | null {
   // Global (mag-1) position of the brush center under the mouse, as used by the
-  // brush preview. Like the preview, this ignores transforms of the segmentation layer.
+  // brush preview.
   const mousePosition = getGlobalMousePositionFloating(state);
-  const maybeMagWithZoomStep = getRenderableMagForActiveSegmentationTracing(state);
-  if (mousePosition == null || maybeMagWithZoomStep == null) {
+  const mag = getBrushMagInRenderedSpace(state);
+  if (mousePosition == null || mag == null) {
     return null;
   }
-  const { mag } = maybeMagWithZoomStep;
   const diameterInMag = getBrushDiameterInMag(
     state.userConfiguration.brushSize,
     getVoxelPerPixel(getGlobalVoxelSizeFromState(state)),

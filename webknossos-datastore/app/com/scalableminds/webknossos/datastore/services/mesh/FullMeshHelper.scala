@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.box.Box
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Float, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
 import Box.tryo
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
@@ -64,19 +64,34 @@ trait FullMeshHelper extends LazyLogging {
         s"Single mesh chunk is too large to encode as STL: $outputNumBytesLong bytes ($numFaces faces)"
       )
     val output = ByteBuffer.allocate(outputNumBytesLong.toInt).order(ByteOrder.LITTLE_ENDIAN)
-    val unused = Array.fill[Byte](2)(0)
-    def vertex(index: Int): Vec3Float = Vec3Float(vertices(3 * index), vertices(3 * index + 1), vertices(3 * index + 2))
+    def putVertex(offset: Int): Unit = {
+      output.putFloat(vertices(offset))
+      output.putFloat(vertices(offset + 1))
+      output.putFloat(vertices(offset + 2))
+    }
+    // Without allocations per face. The normal is computed with the same float operations as
+    // Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize.
     for (faceIndex <- 0 until numFaces) {
-      val v1 = vertex(indices(3 * faceIndex))
-      val v2 = vertex(indices(3 * faceIndex + 1))
-      val v3 = vertex(indices(3 * faceIndex + 2))
-      val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize
-      Seq(norm, v1, v2, v3).foreach { v =>
-        output.putFloat(v.x)
-        output.putFloat(v.y)
-        output.putFloat(v.z)
-      }
-      output.put(unused)
+      val v1 = 3 * indices(3 * faceIndex)
+      val v2 = 3 * indices(3 * faceIndex + 1)
+      val v3 = 3 * indices(3 * faceIndex + 2)
+      val e1x = vertices(v2) - vertices(v1)
+      val e1y = vertices(v2 + 1) - vertices(v1 + 1)
+      val e1z = vertices(v2 + 2) - vertices(v1 + 2)
+      val e2x = vertices(v3) - vertices(v1)
+      val e2y = vertices(v3 + 1) - vertices(v1 + 1)
+      val e2z = vertices(v3 + 2) - vertices(v1 + 2)
+      val nx = e1y * e2z - e1z * e2y
+      val ny = e1z * e2x - e1x * e2z
+      val nz = e1x * e2y - e1y * e2x
+      val inverseLength = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz).toFloat
+      output.putFloat(nx * inverseLength)
+      output.putFloat(ny * inverseLength)
+      output.putFloat(nz * inverseLength)
+      putVertex(v1)
+      putVertex(v2)
+      putVertex(v3)
+      output.putShort(0) // attribute byte count, unused
     }
     output.array()
   }

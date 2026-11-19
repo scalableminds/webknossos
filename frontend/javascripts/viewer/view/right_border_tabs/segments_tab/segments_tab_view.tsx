@@ -28,24 +28,34 @@ function SegmentsTabContent() {
   const meshOperations = useMeshOperations();
   const meshFiles = useMeshFiles();
 
+  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const visibleSegmentationLayerName = visibleSegmentationLayer?.name;
+
   const showStatistics = useCallback(
     (target: SegmentStatisticsTarget) => {
+      if (visibleSegmentationLayerName == null) {
+        return;
+      }
+      const layerName = visibleSegmentationLayerName;
       dispatch(
         setSegmentStatisticsScopeAction(
           target.kind === "group"
             ? // The root group contains all segments, which is the unrestricted default.
               target.groupId === MISSING_GROUP_ID
               ? null
-              : target
-            : { kind: "segments", segmentIds: target.segments.map((segment) => segment.id) },
+              : { kind: "group", layerName, groupId: target.groupId }
+            : {
+                kind: "segments",
+                layerName,
+                segmentIds: target.segments.map((segment) => segment.id),
+              },
         ),
       );
       layoutEmitter.emit(LayoutEvents.showSegmentStatisticsTab);
     },
-    [dispatch],
+    [dispatch, visibleSegmentationLayerName],
   );
 
-  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
   const hasVolumeTracing = useWkSelector((state) => state.annotation.volumes.length > 0);
   // The hierarchy always contains the (virtual) root group node.

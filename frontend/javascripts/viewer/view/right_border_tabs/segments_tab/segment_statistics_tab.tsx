@@ -1,4 +1,4 @@
-import { DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
@@ -8,6 +8,7 @@ import {
   Table,
   type TableColumnsType,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -118,7 +119,11 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
   );
   const tracingId = useWkSelector((state) => getActiveSegmentationTracing(state)?.tracingId);
   const segmentGroups = useWkSelector((state) => getVisibleSegments(state).segmentGroups);
-  const scope = useWkSelector((state) => state.uiInformation.segmentStatisticsScope);
+  // A scope that was chosen in another layer does not apply to this one.
+  const scope = useWkSelector((state) => {
+    const { segmentStatisticsScope } = state.uiInformation;
+    return segmentStatisticsScope?.layerName === layer.name ? segmentStatisticsScope : null;
+  });
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const segments = useSegmentsInScope(scope);
 
@@ -135,12 +140,17 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
     segments.length <= MAX_SEGMENT_COUNT_FOR_AUTOMATIC_COMPUTATION ||
     confirmedScope?.scope === scope;
 
+  // The statistics are not recomputed on every change of the annotation, as this is expensive.
+  // Instead, the user refreshes them when needed.
+  const [refreshToken, setRefreshToken] = useState<number | null>(null);
+
   const { rows, statisticSpecs, isAnyStatisticLoading, fileInfo, areSegmentStatisticsAvailable } =
     useSegmentStatisticsRows({
       layer,
       segments,
       segmentGroups,
       enabled: isComputationConfirmed,
+      refreshToken,
     });
 
   const { containerRef, bodyHeight } = useTableBodyHeight();
@@ -194,6 +204,14 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
           </Tag>
         ) : null}
         <div style={{ flex: 1 }} />
+        <Tooltip title="Recompute the statistics, e.g. after editing segments">
+          <Button
+            icon={<ReloadOutlined />}
+            aria-label="Refresh statistics"
+            disabled={!isComputationConfirmed || isAnyStatisticLoading}
+            onClick={() => setRefreshToken(Date.now())}
+          />
+        </Tooltip>
         <Button
           icon={<DownloadOutlined />}
           disabled={!isComputationConfirmed || isAnyStatisticLoading || rows.length === 0}
@@ -263,7 +281,12 @@ export default function SegmentStatisticsTab() {
       {visibleSegmentationLayer == null ? (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No segmentation layer visible." />
       ) : (
-        <SegmentStatisticsTabContent layer={visibleSegmentationLayer} />
+        // Keyed by the layer, so that no state (e.g. the confirmation to compute the statistics
+        // of many segments) carries over to another layer.
+        <SegmentStatisticsTabContent
+          key={visibleSegmentationLayer.name}
+          layer={visibleSegmentationLayer}
+        />
       )}
     </div>
   );

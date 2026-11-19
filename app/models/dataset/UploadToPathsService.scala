@@ -26,7 +26,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.{BaseDirConfig, BaseDirConfigReader, DataSourceValidation}
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import controllers.{
-  PathDeletionService,
   ReserveAttachmentUploadToPathRequest,
   ReserveDatasetUploadToPathsForPreliminaryRequest,
   ReserveDatasetUploadToPathsRequest,

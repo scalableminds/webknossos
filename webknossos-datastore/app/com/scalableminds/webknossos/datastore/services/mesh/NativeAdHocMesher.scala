@@ -29,8 +29,9 @@ case class AdHocMesh(vertices: Array[Float], indices: Array[Int], neighbors: Lis
 
   /** The response body of an ad-hoc mesh request, little-endian.
     *
-    * Indexed: the vertices as floats, followed by the indices as unsigned 16-bit integers if there are at most 65536
-    * vertices, else as 32-bit integers. Otherwise: the triangle soup as floats.
+    * Indexed: the vertices as floats, followed by the indices as unsigned 16-bit integers if there are at most 65535
+    * vertices, else as 32-bit integers. Not 65536, because WebGL 2 treats the 16-bit index 65535 as primitive
+    * restart. Otherwise: the triangle soup as floats.
     */
   def toBytes(indexed: Boolean): Array[Byte] =
     if (indexed) {
@@ -57,7 +58,7 @@ case class AdHocMesh(vertices: Array[Float], indices: Array[Int], neighbors: Lis
 }
 
 object AdHocMesh {
-  val maxVertexCountForShortIndices: Int = 1 << 16
+  val maxVertexCountForShortIndices: Int = 65535
 }
 
 class NativeAdHocMesher {

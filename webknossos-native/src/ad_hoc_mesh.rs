@@ -77,15 +77,15 @@ impl<'a> Cuboid<'a> {
             return invalid_argument("dimensions must be positive");
         }
         let checked = [x, y, z].map(|d| d as usize);
-        if checked.iter().product::<usize>() > MAX_VOXELS {
-            return invalid_argument(format!("cuboid must have at most {MAX_VOXELS} voxels"));
-        }
-        let expected_length = checked
+        let voxel_count = checked
             .iter()
-            .try_fold(bytes_per_element as usize, |product, &d| {
-                product.checked_mul(d)
-            });
-        if expected_length != Some(data.len()) {
+            .try_fold(1usize, |product, &d| product.checked_mul(d))
+            .filter(|&count| count <= MAX_VOXELS);
+        let Some(voxel_count) = voxel_count else {
+            return invalid_argument(format!("cuboid must have at most {MAX_VOXELS} voxels"));
+        };
+        // Cannot overflow, as voxel_count <= MAX_VOXELS < i32::MAX and bytes_per_element <= 8.
+        if voxel_count * bytes_per_element as usize != data.len() {
             return invalid_argument(
                 "data length must be the product of the dimensions times bytesPerElement",
             );

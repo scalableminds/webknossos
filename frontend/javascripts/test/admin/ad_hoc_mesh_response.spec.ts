@@ -66,13 +66,14 @@ describe("parseAdHocMeshResponse", () => {
     expect(vertices.buffer).not.toBe(indices!.buffer);
   });
 
-  it("parses 32-bit indices above 2^16 vertices", () => {
-    const vertexCount = 2 ** 16 + 1;
-    const body = indexedBody(new Array(vertexCount * 3).fill(0), [0, 65536, 3], Uint32Array);
+  it("parses 32-bit indices from 65536 vertices on", () => {
+    // 16-bit indices would make vertex 65535 the WebGL 2 primitive restart index.
+    const vertexCount = 65536;
+    const body = indexedBody(new Array(vertexCount * 3).fill(0), [0, 65535, 3], Uint32Array);
     const { vertices, indices } = parseAdHocMeshResponse(body, String(vertexCount));
     expect(vertices.length).toBe(vertexCount * 3);
     expect(indices).toBeInstanceOf(Uint32Array);
-    expect(Array.from(indices!)).toEqual([0, 65536, 3]);
+    expect(Array.from(indices!)).toEqual([0, 65535, 3]);
   });
 
   it("parses an empty mesh", () => {

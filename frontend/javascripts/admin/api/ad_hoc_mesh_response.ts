@@ -7,7 +7,8 @@ export type AdHocMeshGeometry = {
 };
 
 // Parses the body of an ad-hoc mesh response. An indexed response contains the vertices,
-// followed by the indices, which are 16-bit if there are at most 2^16 vertices, else 32-bit.
+// followed by the indices, which are 16-bit if there are at most 65535 vertices, else 32-bit
+// (WebGL 2 treats the 16-bit index 65535 as primitive restart).
 // The VERTEX_COUNT header locates the indices. Without it, the body is a triangle soup.
 export function parseAdHocMeshResponse(
   buffer: ArrayBuffer,
@@ -17,7 +18,7 @@ export function parseAdHocMeshResponse(
     return { vertices: new Float32Array(buffer), indices: null };
   }
   const vertexCount = Number(vertexCountHeader);
-  const indexBytes = vertexCount <= 2 ** 16 ? 2 : 4;
+  const indexBytes = vertexCount <= 65535 ? 2 : 4;
   if (
     !/^\d+$/.test(vertexCountHeader) ||
     vertexCount * 12 > buffer.byteLength ||

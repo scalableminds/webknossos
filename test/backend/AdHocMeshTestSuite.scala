@@ -42,15 +42,16 @@ class AdHocMeshTestSuite extends AnyWordSpec {
       assert(mesh.responseHeaders.contains("NEIGHBORS" -> "[2, 5]"))
     }
 
-    "use 16-bit indices up to 65536 vertices and 32-bit indices above" in {
+    "use 16-bit indices up to 65535 vertices and 32-bit indices above" in {
+      // 16-bit index 65535 is the WebGL 2 primitive restart index, so it must not occur.
       def meshWithVertexCount(count: Int) =
         AdHocMesh(new Array[Float](count * 3), Array(0, count - 1, count / 2), List())
-      val short = meshWithVertexCount(65536).toBytes(indexed = true)
-      assert(short.length == 65536 * 12 + 3 * 2)
-      assert((littleEndian(short, 65536 * 12 + 2, 2).getShort & 0xffff) == 65535)
-      val int = meshWithVertexCount(65537).toBytes(indexed = true)
-      assert(int.length == 65537 * 12 + 3 * 4)
-      assert(littleEndian(int, 65537 * 12 + 4, 4).getInt == 65536)
+      val short = meshWithVertexCount(65535).toBytes(indexed = true)
+      assert(short.length == 65535 * 12 + 3 * 2)
+      assert((littleEndian(short, 65535 * 12 + 2, 2).getShort & 0xffff) == 65534)
+      val int = meshWithVertexCount(65536).toBytes(indexed = true)
+      assert(int.length == 65536 * 12 + 3 * 4)
+      assert(littleEndian(int, 65536 * 12 + 4, 4).getInt == 65535)
     }
   }
 }

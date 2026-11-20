@@ -125,10 +125,6 @@ export function findTreeGroupPath(groupNames: string[]): number | null {
   return path.length === groupNames.length ? (path.at(-1)?.groupId ?? null) : null;
 }
 
-// Saves the annotation right away and resolves once everything is saved. After a failed save
-// request, the viewer waits longer and longer before it tries again (up to minutes). SAVE_NOW
-// ends that wait, so that e.g. "Try again" on the page really tries again.
-export async function saveAnnotationNow() {
 // Saves the annotation right away and resolves once everything is saved. If a retry is already
 // scheduled, its delay is skipped so that the retry happens immediately.
 export async function saveAnnotationNow() {

@@ -4,6 +4,7 @@ import {
   setAnnotationDescriptionAction,
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
+import { saveNowAction } from "viewer/model/actions/save_actions";
 import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import {
   addTreesAndGroupsAction,
@@ -17,6 +18,7 @@ import {
   MutableTreeMap,
   type TreeGroup,
 } from "viewer/model/types/tree_types";
+import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
@@ -121,6 +123,14 @@ export function ensureTreeGroupPath(groupNames: string[]): number {
 export function findTreeGroupPath(groupNames: string[]): number | null {
   const path = findExistingTreeGroupPath(groupNames);
   return path.length === groupNames.length ? (path.at(-1)?.groupId ?? null) : null;
+}
+
+// Saves the annotation right away and resolves once everything is saved. If a retry is already
+// scheduled, its delay is skipped so that the retry happens immediately.
+export async function saveAnnotationNow() {
+  // If the save queue draining saga is retrying with a delay, SAVE_NOW ends that delay.
+  Store.dispatch(saveNowAction());
+  await Model.ensureSavedState();
 }
 
 export function setLayerVisibility(layerName: string, isVisible: boolean) {

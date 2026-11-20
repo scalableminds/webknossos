@@ -129,6 +129,10 @@ export function findTreeGroupPath(groupNames: string[]): number | null {
 // request, the viewer waits longer and longer before it tries again (up to minutes). SAVE_NOW
 // ends that wait, so that e.g. "Try again" on the page really tries again.
 export async function saveAnnotationNow() {
+// Saves the annotation right away and resolves once everything is saved. If a retry is already
+// scheduled, its delay is skipped so that the retry happens immediately.
+export async function saveAnnotationNow() {
+  // If the save queue draining saga is retrying with a delay, SAVE_NOW ends that delay.
   Store.dispatch(saveNowAction());
   await Model.ensureSavedState();
 }

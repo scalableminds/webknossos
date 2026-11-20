@@ -1,10 +1,14 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
+
+import scala.concurrent.ExecutionContext
 
 object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
@@ -125,6 +129,18 @@ object ElementClass extends ExtendedEnumeration {
         case _ => largestSegmentId >= 0L && maxSegmentIdValue(elementClass).forall(largestSegmentId <= _)
       }
     }
+
+  def assertLargestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] =
+    if (!segmentationElementClasses.contains(elementClass))
+      Fox.failure(Msg.Annotation.Volume.invalidSegmentationElementClass(elementClass.toString))
+    else
+      largestSegmentIdOpt match {
+        case Some(largestSegmentId) if !largestSegmentIdIsInRange(largestSegmentId, elementClass) =>
+          Fox.failure(Msg.Annotation.Volume.largestSegmentIdExceedsRange(largestSegmentId, elementClass.toString))
+        case _ => Fox.successful(())
+      }
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")

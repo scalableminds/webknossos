@@ -3,9 +3,9 @@ import Constants, { ViewModeValues } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import { setDatasetAction } from "viewer/model/actions/dataset_actions";
 import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
+import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { preprocessDataset } from "viewer/model_initialization";
-import { combinedReducer } from "viewer/store";
 import { apiDatasetForVolumeTracing } from "./dataset_server_object";
 import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
 import { tracing as serverVolumeTracing, VOLUME_TRACING_ID } from "./volumetracing_server_objects";
@@ -17,8 +17,8 @@ const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, nul
 const notEmptyViewportRect = {
   top: 0,
   left: 0,
-  width: Constants.VIEWPORT_WIDTH,
-  height: Constants.VIEWPORT_WIDTH,
+  width: Constants.DEFAULT_VIEWPORT_SIZE_IN_PX,
+  height: Constants.DEFAULT_VIEWPORT_SIZE_IN_PX,
 };
 
 const stateWithoutDatasetInitialization = update(defaultState, {

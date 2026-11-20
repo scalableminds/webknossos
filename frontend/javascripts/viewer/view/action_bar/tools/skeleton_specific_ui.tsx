@@ -3,6 +3,7 @@ import MergerModeIcon from "@images/icons/icon-merger-mode.svg?react";
 import PenIcon from "@images/icons/icon-pen.svg?react";
 import SomaClickingIcon from "@images/icons/icon-single-node-tree.svg?react";
 import SkeletonNewTreeIcon from "@images/icons/icon-skeleton-new-tree.svg?react";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import { Badge, Space } from "antd";
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -61,10 +62,10 @@ export function SkeletonSpecificButtons() {
 
   const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
 
-  const isMaterializeVolumeAnnotationEnabled =
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-      APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION,
-    );
+  const isMaterializeVolumeAnnotationEnabled = useIsJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION,
+  );
 
   return (
     <Space.Compact

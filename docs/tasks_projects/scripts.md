@@ -3,7 +3,7 @@
 Scripts let you run custom JavaScript logic automatically when annotators open assigned tasks.
 They are useful for project-specific keyboard shortcuts, UI helpers, and task setup automation.
 
-For API details, see the WEBKNOSSOS [Frontend API documentation](https://webknossos.org/assets/docs/frontend-api/index.html).
+For API details, see the WEBKNOSSOS [Frontend API documentation](../../frontend-api/index.md).
 
 ## Create a Script
 
@@ -12,7 +12,7 @@ For API details, see the WEBKNOSSOS [Frontend API documentation](https://webknos
 3. Fill in:
    - `Script Name`: Human-readable label shown in selectors.
    - `Gist URL`: URL of the script source, a public [GitHub Gist](https://gist.github.com/) that your setup can access.
-   - `Owner`: User responsible for maintaining the script.
+   - `Owner`: User responsible for maintaining the script. Only the owner can edit or delete it.
 4. Save the script.
 
 After saving, the script appears in the Scripts list and can be selected from the WEBKNOSSOS viewer or during task creation.
@@ -51,7 +51,7 @@ window.webknossos.apiReady(3).then((api) => {
 You can access and run scripts directly from within the WEBKNOSSOS annotation viewer.
 
 1. Open the Menu dropdown in the top navigation bar.
-2. Select "Add Script".
+2. Select "User Scripts" in the "Customize" section.
 3. Either select an available script from the list or enter your script code directly in the text box.
 4. Click "Run Script".
 

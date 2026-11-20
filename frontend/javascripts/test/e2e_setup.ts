@@ -1,7 +1,6 @@
 import fs from "node:fs";
 // @ts-expect-error
 import deepForEach from "deep-for-each";
-import { JSDOM } from "jsdom";
 import cloneDeep from "lodash-es/cloneDeep";
 import shell from "shelljs";
 import type { ArbitraryObject } from "types/type_utils";
@@ -86,12 +85,16 @@ export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   return newObj;
 }
 
+// Port of the backend started by End2EndSpec.scala. Differs from 9000 so that the e2e tests
+// can run while a local dev instance (vite on 9000, backend on 9001) is running.
+export const E2E_BASE_URL = "http://localhost:9010";
+
 const originalFetch = fetch;
 global.fetch = function fetchWrapper(url, options) {
   let newUrl = url;
 
   if (typeof url === "string" && url.indexOf("http:") === -1 && url.indexOf("https:") === -1) {
-    newUrl = `http://localhost:9000${url}`;
+    newUrl = `${E2E_BASE_URL}${url}`;
   }
 
   // Add the token to headers if they exist
@@ -104,21 +107,6 @@ global.fetch = function fetchWrapper(url, options) {
 
   return promise;
 };
-
-// set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
-const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
-  pretendToBeVisual: true,
-  url: "http://example.org/",
-});
-const { window } = jsdom;
-
-// JSDOM does not support matchMedia yet which is why we mock it.
-// https://github.com/jsdom/jsdom/issues/3522
-window.matchMedia = vi.fn().mockImplementation(() => ({
-  matches: false,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-}));
 
 global.localStorage = {
   getItem: vi.fn().mockReturnValue(undefined),

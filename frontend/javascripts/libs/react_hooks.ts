@@ -2,17 +2,17 @@ import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import type { ApiResult } from "admin/api/api_result";
 import { unwrapOrThrow } from "admin/api/api_result";
+import { theme } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { isPlainObject } from "lodash-es";
 import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router";
-import constants from "viewer/constants";
+import constants, { KEYBOARD_BUTTON_LOOP_INTERVAL } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
 import { bigIntReplacer } from "./bigint_helpers";
-import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 /**
  * Hook that returns the previous value of a state or prop.
@@ -54,18 +54,25 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
 });
 
 /**
- * Hook that tracks whether a specific modifier key (Shift, Alt, or Control/Meta) is pressed.
- * @param targetKey - The modifier key to track ("Shift", "Alt", or "ControlOrMeta")
- * @returns Boolean indicating if the key is currently pressed
+ * Registers window listeners that call setKeyPressed with whether targetKey is pressed.
+ * @returns A function that removes the keydown and keyup listeners
  */
-export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
-  // Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
+function subscribeToKeyPress(
+  targetKey: "Shift" | "Alt" | "ControlOrMeta",
+  setKeyPressed: (isPressed: boolean) => void,
+) {
+  function pressKey() {
+    setKeyPressed(true);
+    window.addEventListener("blur", releaseKey);
+  }
 
-  // State for keeping track of whether key is pressed
-  const [keyPressed, setKeyPressed] = useState(false);
+  function releaseKey() {
+    setKeyPressed(false);
+    window.removeEventListener("blur", releaseKey);
+  }
 
   // If pressed key is our target key then set to true
-  function downHandler<K extends keyof WindowEventMap>(this: Window, event: WindowEventMap[K]) {
+  const downHandler = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => {
     const modifierState = extractModifierState(event);
 
     if (modifierState[targetKey] === undefined) {
@@ -79,17 +86,7 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
       // regarding modifiers.
       pressKey();
     }
-  }
-
-  function pressKey() {
-    setKeyPressed(true);
-    window.addEventListener("blur", releaseKey);
-  }
-
-  function releaseKey() {
-    setKeyPressed(false);
-    window.removeEventListener("blur", releaseKey);
-  }
+  };
 
   // If released key is our target key then set to false
   const upHandler = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => {
@@ -109,17 +106,27 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
     }
   };
 
-  // Add event listeners
-  useEffectOnlyOnce(() => {
-    window.addEventListener("keydown", downHandler);
-    window.addEventListener("keyup", upHandler);
-    // Remove event listeners on cleanup
-    return () => {
-      window.removeEventListener("keydown", downHandler);
-      window.removeEventListener("keyup", upHandler);
-    };
-  });
-  // Empty array ensures that effect is only run on mount and unmount
+  window.addEventListener("keydown", downHandler);
+  window.addEventListener("keyup", upHandler);
+  return () => {
+    window.removeEventListener("keydown", downHandler);
+    window.removeEventListener("keyup", upHandler);
+  };
+}
+
+/**
+ * Hook that tracks whether a specific modifier key (Shift, Alt, or Control/Meta) is pressed.
+ * @param targetKey - The modifier key to track ("Shift", "Alt", or "ControlOrMeta")
+ * @returns Boolean indicating if the key is currently pressed
+ */
+export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
+  // Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
+
+  // State for keeping track of whether key is pressed
+  const [keyPressed, setKeyPressed] = useState(false);
+
+  // Only subscribe on mount and unsubscribe on unmount
+  useEffectOnlyOnce(() => subscribeToKeyPress(targetKey, setKeyPressed));
   return keyPressed;
 }
 
@@ -418,4 +425,39 @@ export function useWindowWidth() {
   }, []);
 
   return width;
+}
+
+/** Whether the CSS media query currently matches. Correct from the first render on. */
+export function useMediaQuery(query: string): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (typeof window.matchMedia !== "function") return noop;
+      const mediaQueryList = window.matchMedia(query);
+      mediaQueryList.addEventListener("change", onChange);
+      return () => mediaQueryList.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+  return useSyncExternalStore(subscribe, () =>
+    typeof window.matchMedia === "function" ? window.matchMedia(query).matches : false,
+  );
+}
+
+const MIN_WIDTH_TOKEN_BY_BREAKPOINT = {
+  sm: "screenSMMin",
+  md: "screenMDMin",
+  lg: "screenLGMin",
+  xl: "screenXLMin",
+  xxl: "screenXXLMin",
+} as const;
+
+/**
+ * Whether the screen is at least as wide as the given antd breakpoint, i.e. the same as
+ * antd's `Grid.useBreakpoint()[breakpoint]`. Unlike that hook, it is correct on the first render:
+ * useBreakpoint() returns `{}` until a layout effect has measured the screen, so components
+ * briefly render (and mount children) in the wrong layout.
+ */
+export function useMinScreenWidth(breakpoint: keyof typeof MIN_WIDTH_TOKEN_BY_BREAKPOINT): boolean {
+  const { token } = theme.useToken();
+  return useMediaQuery(`(min-width: ${token[MIN_WIDTH_TOKEN_BY_BREAKPOINT[breakpoint]]}px)`);
 }

@@ -1,0 +1,14 @@
+.upgrade-request-modal {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+}
+
+@media (max-width: 880px) {
+  .upgrade-request-modal {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .upgrade-request-modal-status {
+    display: none !important;
+  }
+}

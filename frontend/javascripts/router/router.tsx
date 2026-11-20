@@ -1,4 +1,6 @@
 import AccountSettingsView from "admin/account/account_settings_view";
+import AlignmentProjectDetailView from "admin/alignment_project/alignment_project_detail_view";
+import AlignmentProjectListView from "admin/alignment_project/alignment_project_list_view";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
@@ -56,7 +58,7 @@ import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_vie
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
-  CreateExplorativeRouteWrapper,
+  CreateAnnotationRouteWrapper,
   DashboardRouteRootWrapper,
   DashboardRouteWrapper,
   DatasetSettingsRouteWrapper,
@@ -347,6 +349,22 @@ const routes: RouteObject[] = [
           </SecuredRoute>
         ),
       },
+      {
+        path: "/alignmentProjects",
+        element: (
+          <SecuredRoute requiresAdminOrDatasetManagerRole>
+            <AlignmentProjectListView />
+          </SecuredRoute>
+        ),
+      },
+      {
+        path: "/alignmentProjects/:alignmentProjectId",
+        element: (
+          <SecuredRoute requiresAdminOrDatasetManagerRole>
+            <AlignmentProjectDetailView />
+          </SecuredRoute>
+        ),
+      },
       { path: "/organizations/:organizationId", element: <Navigate to="/organization" replace /> },
       {
         path: "/organization",
@@ -408,7 +426,7 @@ const routes: RouteObject[] = [
         path: "/datasets/:datasetId/createExplorative/:type",
         element: (
           <SecuredRoute>
-            <CreateExplorativeRouteWrapper />
+            <CreateAnnotationRouteWrapper />
           </SecuredRoute>
         ),
       },

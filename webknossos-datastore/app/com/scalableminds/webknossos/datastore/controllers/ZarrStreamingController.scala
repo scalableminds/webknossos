@@ -61,7 +61,12 @@ class ZarrStreamingController @Inject() (
           datasetId,
           dataLayerName
         ) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-        omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.sortedMags)
+        omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(
+          dataLayerName,
+          dataSource.scale,
+          dataLayer.sortedMags,
+          dataLayer.additionalAxes
+        )
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
@@ -101,7 +106,7 @@ class ZarrStreamingController @Inject() (
             (dataSource, dataLayer) <- datasetCache
               .getWithLayer(annotationSource.datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
             dataSourceOmeNgffHeader = NgffMetadata
-              .fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.sortedMags)
+              .fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.sortedMags, dataLayer.additionalAxes)
           } yield Ok(Json.toJson(dataSourceOmeNgffHeader))
       )
     }

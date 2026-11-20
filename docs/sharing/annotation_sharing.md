@@ -155,7 +155,7 @@ To share an annotation with a certain team, follow these steps:
 
 ![Enable Team Sharing for your annotation](../images/sharing_modal_team.png)
 
-Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](../dashboard/annotations.md). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
+Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](../dashboard/annotations.md). Team members for whom the annotation newly appears in their dashboard are notified by email. Note that it only appears for team members who can also access its dataset. By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
 
 To collaboratively work on the same annotation with multiple users from your team, you can share an annotation and allow modifications. Select "Everybody who can view" under "Who can edit this annotation?" from the sharing UI.
 
@@ -186,7 +186,7 @@ Current limitations of simultaneous editing:
 
 - **Only the [proofreading tool](../proofreading/proofreading_tool.md) is supported.** While simultaneous editing is enabled, regular skeleton editing and volume brushing/tracing tools are disabled for all collaborators; only merging/splitting agglomerates via proofreading remains possible.
 - **Adding, deleting, or converting annotation layers is disabled.** This includes adding a new volume or skeleton annotation layer, deleting a layer, converting a read-only segmentation layer into an editable one, merging a volume layer with its fallback layer, and importing a volume tracing. These changes cannot be safely combined with other collaborators' concurrent edits. The corresponding buttons are shown as disabled with an explanation. If you need to make such a change, temporarily disable simultaneous editing in the sharing settings, perform the change, and enable it again afterward (or ask the annotation's owner if you don't have the permissions).
-- **Undo/redo is disabled.** Use "Restore Older Version" from the dropdown next to the `Save` button instead. Since restoring an older version discards any pending changes of all collaborators, you will be asked to confirm before it happens. Once confirmed, WEBKNOSSOS reloads the annotation for every collaborator who currently has it open, including yourself.
+- **Undo/redo is disabled.** Use "Version History" from the menu next to the `Save` button instead. Since restoring an older version discards any pending changes of all collaborators, you will be asked to confirm before it happens. Once confirmed, WEBKNOSSOS reloads the annotation for every collaborator who currently has it open, including yourself.
 - Support for further annotation types (e.g., bounding boxes, general skeleton and volume annotation) is planned but not yet available.
 
 Even with simultaneous editing enabled, we recommend coordinating with your collaborators (e.g., by working on separate areas of the dataset) to avoid confusing conflicts.

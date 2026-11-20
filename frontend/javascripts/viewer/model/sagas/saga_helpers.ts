@@ -1,4 +1,4 @@
-import type { ActionPattern } from "@redux-saga/types";
+import type { ActionPattern, Channel } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -22,31 +22,37 @@ import {
 
 // Narrows an action-pattern argument (a single action-type string or an array of them)
 // to the matching member(s) of the Action union, so the handler can be typed precisely.
+// For channels, the type of their messages is used.
 // Any other pattern (e.g. a predicate function) falls back to the full Action union.
-type ActionFromPattern<P> = P extends Action["type"]
-  ? Extract<Action, { type: P }>
-  : P extends ReadonlyArray<infer U>
-    ? U extends Action["type"]
-      ? Extract<Action, { type: U }>
-      : Action
-    : Action;
+type ActionFromPattern<P> =
+  P extends Channel<infer A>
+    ? A
+    : P extends Action["type"]
+      ? Extract<Action, { type: P }>
+      : P extends ReadonlyArray<infer U>
+        ? U extends Action["type"]
+          ? Extract<Action, { type: U }>
+          : Action
+        : Action;
 
-export function* takeEveryInOperationContext<P extends ActionPattern>(
+export function* takeEveryInOperationContext<P extends ActionPattern | Channel<Action>>(
   actionDescriptor: P,
   saga: (action: ActionFromPattern<P>, ctx: OperationContext) => Saga<void>,
   options: OperationOptions,
 ): Saga<void> {
-  /* Listens for actions and runs the provided saga inside an operation context,
+  /* Listens for actions (or takes them from a channel, e.g., to buffer actions that are
+   * dispatched before the saga is ready) and runs the provided saga inside an operation context,
    * automatically acquiring and releasing the context. If an action carries an
    * operationContext field, that context is used as the parent (for nested operations);
    * otherwise creates a fresh context.
-   * Ignores the action if the operation context cannot be acquired (i.e., another operation
-   * is already ongoing which doesn't allow additional executions).
+   * By default, ignores the action if the operation context cannot be acquired (i.e., another
+   * operation is already ongoing which doesn't allow additional executions). Pass
+   * behaviorWhenDisallowed: "wait" to run the saga once the other operation is finished instead.
    */
   function* wrapper(action: Action) {
     const existingCtx = (action as any).operationContext ?? null;
     const ctx = yield* getOrCreateOperationContext(
-      { ...options, behaviorWhenDisallowed: "ignore" },
+      { behaviorWhenDisallowed: "ignore", ...options },
       existingCtx,
     );
     if (ctx == null) {
@@ -58,7 +64,8 @@ export function* takeEveryInOperationContext<P extends ActionPattern>(
     }
     yield* ctx.execute(() => saga(action as ActionFromPattern<P>, ctx));
   }
-  yield* takeEvery(actionDescriptor, wrapper);
+  // takeEvery accepts both patterns and channels, but its overloads don't accept the union.
+  yield* takeEvery(actionDescriptor as ActionPattern, wrapper);
 }
 
 type EnsureMappingIsLockedReturnType = {
@@ -259,5 +266,21 @@ export function* waitUntilNoActiveOperations(): Saga<void> {
     if (yield* select((state) => state.operationContext.activeOperations.length === 0)) {
       return;
     }
+  }
+}
+
+// Calls fn with an AbortSignal that is aborted when the calling saga is cancelled
+// (e.g., by takeLatest). Pass the signal to a REST api function so that it stops
+// its request and retries.
+export function* callWithAbortSignal<T>(fn: (signal: AbortSignal) => Promise<T>): Saga<T> {
+  const abortController = new AbortController();
+  try {
+    return yield* call(fn, abortController.signal);
+  } finally {
+    // Don't yield an effect here (e.g., cancelled()): Callers delegate to this generator
+    // via yield*, so a cancelled caller would resume normally afterwards (see runWithCleanup
+    // in operation_context_saga.ts). Aborting unconditionally is fine, because the signal
+    // doesn't have any effect anymore once fn has finished.
+    abortController.abort();
   }
 }

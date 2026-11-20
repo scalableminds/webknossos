@@ -5,9 +5,13 @@ import {
   getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
 import { call, put, take } from "redux-saga/effects";
+import Toast from "libs/toast";
+import { getAgglomeratesForSegmentsFromDatastore } from "admin/rest_api";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  cutAgglomerateFromNeighborsAction,
   minCutAgglomerateWithPositionAction,
+  proofreadAtPosition,
   proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
@@ -16,7 +20,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { Store } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -29,6 +33,7 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
   getPositionForSegmentId,
+  operationFinished,
 } from "./proofreading_test_utils";
 import { waitUntilNoActiveOperations } from "viewer/model/sagas/saga_helpers";
 
@@ -135,14 +140,17 @@ describe("Proofreading (Single User)", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 1n,
-            segmentId2: 2n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 1n,
+              segmentId2: 2n,
+            },
+          ],
+        }),
       );
 
       // Execute the split and wait for the finished mapping.
@@ -200,6 +208,96 @@ describe("Proofreading (Single User)", () => {
       ]);
     });
 
+    await task.toPromise();
+  });
+
+  it("should abort a cut from neighbors without crashing when the segment position cannot be fetched", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Simulate that the datastore cannot be reached.
+      mocks.getPositionForSegmentInAgglomerate.mockResolvedValue({
+        ok: false,
+        error: { kind: "network", message: "Failed to fetch", cause: new Error("Failed to fetch") },
+      });
+
+      // Without a position (e.g., when triggered via the 3D viewport), the position of the
+      // segment needs to be fetched from the datastore.
+      vi.mocked(Toast.warning).mockClear();
+      yield put(cutAgglomerateFromNeighborsAction(null, null, 2n, 1n));
+      yield take(operationFinished("PROOFREADING"));
+
+      expect(mocks.getPositionForSegmentInAgglomerate).toHaveBeenCalled();
+      expect(mocks.getNeighborsForAgglomerateNode).not.toHaveBeenCalled();
+      const mapping = yield* select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping).toEqual(initialMapping);
+      expect(Toast.warning).toHaveBeenCalledWith(
+        expect.stringContaining("Could not determine the position of segment"),
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  it("should show a warning instead of crashing if the agglomerate id of a proofreading click can't be fetched", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+    const fetchAgglomerates = vi.mocked(getAgglomeratesForSegmentsFromDatastore);
+    const originalImplementation = fetchAgglomerates.getMockImplementation();
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      vi.mocked(Toast.warning).mockClear();
+      fetchAgglomerates.mockRejectedValue(new Error("Network error"));
+      try {
+        // Segment 1337 is not known to the local mapping, so its agglomerate id is fetched.
+        yield put(proofreadAtPosition(getPositionForSegmentId(1337)));
+        yield call(() =>
+          vi.waitFor(() =>
+            expect(Toast.warning).toHaveBeenCalledWith(
+              "Could not determine the segment id at the clicked position. Please try again.",
+            ),
+          ),
+        );
+      } finally {
+        fetchAgglomerates.mockImplementation(originalImplementation!);
+      }
+    });
+    await task.toPromise();
+  });
+
+  it("should show a warning instead of crashing if the bucket of a proofreading click can't be loaded", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      vi.mocked(Toast.warning).mockClear();
+      const getDataValueSpy = vi
+        .spyOn(api.data, "getDataValue")
+        .mockRejectedValue(new Error("Bucket 0,0,0,0, could not be loaded after 3 retries."));
+      try {
+        yield put(proofreadAtPosition(getPositionForSegmentId(1)));
+        yield call(() =>
+          vi.waitFor(() =>
+            expect(Toast.warning).toHaveBeenCalledWith(
+              "Could not determine the segment id at the clicked position. Please try again.",
+            ),
+          ),
+        );
+      } finally {
+        getDataValueSpy.mockRestore();
+      }
+    });
     await task.toPromise();
   });
 });

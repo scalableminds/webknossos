@@ -290,8 +290,20 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
     userState.copy(boundingBoxVisibilities = newVisibilities)
   }
 
+  protected def remapSegmentIdsInVolumeUserStates(
+      userStates: Seq[VolumeUserStateProto],
+      segmentIdMap: Map[Long, Long]
+  ): Seq[VolumeUserStateProto] =
+    userStates.map(userState =>
+      userState.copy(
+        activeSegmentId = userState.activeSegmentId.map(id => segmentIdMap.getOrElse(id, id)),
+        segmentVisibilities = mapId64Bools(userState.segmentVisibilities, segmentIdMap)
+      )
+    )
+
   // Merges user states of multiple volume tracings, respecting mapped ids of the tracing elements. The user set is preserved.
-  // Tracing A's group/segment ids are never remapped (see GroupUtils/MergedVolume), so only B's user state needs that mapping.
+  // Tracing A's group ids are never remapped (see GroupUtils), so only B's user state needs that mapping.
+  // Tracing A's segment ids are already remapped before merging (see remapSegmentIdsInVolumeUserStates), so only B's are mapped here.
   // Bounding box ids are the exception (see BoundingBoxMerger): both sides may be remapped, so both bboxIdMaps are applied.
   protected def mergeVolumeUserStates(
       tracingAUserStates: Seq[VolumeUserStateProto],

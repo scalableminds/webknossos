@@ -239,7 +239,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken =
     q"visibility = ${AnnotationVisibility.Public}"
 
-  private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+  private def listAccessQ(requestingUserId: SqlToken, prefix: SqlToken): SqlToken =
     AnnotationAccessQueries.ownedOrSharedQ(
       requestingUserId,
       prefix,
@@ -253,8 +253,33 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       """
     )
 
+  // Same result as listAccessQ, but first narrows down to the annotations owned by or shared with the user via a UNION.
+  // Each branch can use an index, whereas the ORs in listAccessQ make postgres scan and filter all annotations.
+  private def listAccessWithCandidatesQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+    q"""${prefix}_id IN (
+          SELECT _id FROM webknossos.annotations_ WHERE _user = $requestingUserId
+          UNION
+          SELECT ast._annotation
+          FROM webknossos.annotation_sharedTeams ast
+          JOIN webknossos.user_team_roles utr ON ast._team = utr._team
+          WHERE utr._user = $requestingUserId
+          UNION
+          SELECT _annotation FROM webknossos.annotation_contributors WHERE _user = $requestingUserId
+        )
+        AND ${listAccessQ(requestingUserId, prefix)}"""
+
   private def baseListAccessQ(using ctx: DBAccessContext): Fox[SqlToken] =
-    accessQueryFromAccessQWithPrefix(listAccessQ, q"")(using ctx)
+    accessQueryFromAccessQWithPrefix(listAccessQ(_, _), q"")(using ctx)
+
+  // Those of the given users that see the annotation in their annotation list, i.e. as their own or shared with them.
+  def findUserIdsWithListAccess(annotationId: ObjectId, userIds: List[ObjectId]): Fox[Seq[ObjectId]] =
+    if (userIds.isEmpty) Fox.successful(Seq.empty)
+    else
+      run(q"""SELECT u._id
+              FROM webknossos.users_ u
+              JOIN webknossos.annotations_ a ON a._id = $annotationId
+              WHERE u._id IN ${SqlToken.tupleFromList(userIds)}
+              AND ${listAccessQ(q"u._id", q"a.")}""".as[ObjectId])
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
@@ -411,18 +436,18 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   )(using ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
       accessQuery <-
-        if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+        if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessWithCandidatesQ, q"a.")
         else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
       datasetQuery = datasetId.map(d => q"a._dataset = $d").getOrElse(q"TRUE")
       typQuery = q"a.typ = ${AnnotationType.Explorational}"
       query = q"""
-          -- We need to separate the querying of the annotation with all its inner joins from the 1:n join to collect the shared teams
-          -- This is to prevent left-join fanout.
-          -- Note that only one of the left joins in it has 1:n, so they can happen together
-          -- The WITH is structured this way round to get in the LIMIT early and not fetch the shared teams of all annotations first.
-          WITH an AS( -- select annotations with the relevant properties first
+          -- First select the page of annotations using only 1:1 joins, so the LIMIT applies early.
+          -- The 1:n data (layers, shared teams) is then aggregated per annotation of that page via LATERAL subqueries.
+          -- This makes postgres look up layers and teams by index for each annotation of the page, instead of
+          -- e.g. merge-joining against the whole annotation_layers table due to bad row estimates.
+          WITH an AS(
             SELECT
               a._id,
               a.name,
@@ -441,28 +466,19 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
               a.typ,
               a.visibility,
               a.tracingtime,
-              o._id AS organizationId,
-              ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
-              ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
-              ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
-              ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+              o._id AS organizationId
             FROM webknossos.annotations_ AS a
             JOIN webknossos.users_ u ON u._id = a._user
             JOIN webknossos.datasets_ d ON d._id = a._dataset
             JOIN webknossos.organizations_ AS o ON o._id = d._organization
-            JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
             JOIN webknossos.multiusers_ mu ON u._multiUser = mu._id
             WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery AND $datasetQuery
-            GROUP BY
-              a._id, a.name, a.description, a._user, a.collaborationMode, a.modified, a.created,
-              a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
-              mu.firstname, mu.lastname,
-              d.name, d._id, o._id
+            AND EXISTS (SELECT 1 FROM webknossos.annotation_layers al WHERE al._annotation = a._id)
             ORDER BY a._id DESC
             LIMIT $limit
             OFFSET ${pageNumber * limit}
           )
-          SELECT  -- select now add the shared teams, and propagate everything to the output
+          SELECT
             an._id,
             an.name,
             an.description,
@@ -470,9 +486,9 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.firstname,
             an.lastname,
             an.collaborationMode,
-            ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
-            ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
-            ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids,
+            st.team_ids,
+            st.team_names,
+            st.team_organization_ids,
             an.modified,
             an.created,
             an.tags,
@@ -484,37 +500,30 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.visibility,
             an.tracingtime,
             an.organizationId,
-            an.tracing_ids,
-            an.tracing_names,
-            an.tracing_typs,
-            an.annotation_layer_statistics
+            al.tracing_ids,
+            al.tracing_names,
+            al.tracing_typs,
+            al.annotation_layer_statistics
           FROM an
-          LEFT JOIN webknossos.annotation_sharedteams ast ON ast._annotation = an._id
-          LEFT JOIN webknossos.teams_ t ON ast._team = t._id
-          LEFT JOIN webknossos.organizations_ o ON t._organization = o._id
-          GROUP BY
-            an._id,
-            an.name,
-            an.description,
-            an._user,
-            an.firstname,
-            an.lastname,
-            an.collaborationMode,
-            an.modified,
-            an.created,
-            an.tags,
-            an.state,
-            an.isLockedByOwner,
-            an.datasetName,
-            an.datasetId,
-            an.typ,
-            an.visibility,
-            an.tracingtime,
-            an.organizationId,
-            an.tracing_ids,
-            an.tracing_names,
-            an.tracing_typs,
-            an.annotation_layer_statistics
+          CROSS JOIN LATERAL ( -- aggregate without GROUP BY always yields exactly one row
+            SELECT
+              ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
+              ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
+              ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
+              ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+            FROM webknossos.annotation_layers al
+            WHERE al._annotation = an._id
+          ) al
+          CROSS JOIN LATERAL (
+            SELECT
+              ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
+              ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
+              ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids
+            FROM webknossos.annotation_sharedteams ast
+            JOIN webknossos.teams_ t ON ast._team = t._id
+            LEFT JOIN webknossos.organizations_ o ON t._organization = o._id
+            WHERE ast._annotation = an._id
+          ) st
           ORDER BY an._id DESC
          """
       rows <- run(query.as[AnnotationCompactInfo])

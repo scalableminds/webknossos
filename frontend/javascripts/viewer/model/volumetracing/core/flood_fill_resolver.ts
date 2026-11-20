@@ -37,7 +37,12 @@ export async function resolve(
   }
 }
 
-/** Guards against a fill escaping into the whole layer when bounds are null. */
+/**
+ * Guards against a fill escaping into the whole layer when bounds are null.
+ * Also needed with bounds: the 3D fill box can hold 8M voxels (40M when
+ * restricted to a user bounding box), and a fill of 8M voxels already takes
+ * ~2 GB of memory.
+ */
 export const DEFAULT_MAX_VISITED_VOXELS = 5_000_000;
 
 export interface FloodFillOptions {
@@ -57,6 +62,11 @@ export interface FloodFillResolution {
    * key off this.
    */
   wasBoundingBoxExceeded: boolean;
+  /**
+   * True iff the traversal stopped because it reached `maxVisitedVoxels`.
+   * The fill is then incomplete, regardless of `shape.bounds`.
+   */
+  wasVoxelLimitExceeded: boolean;
   /**
    * Tight bounding box (source-mag voxel space, max exclusive) around every
    * voxel actually written. Null when nothing was written — including the
@@ -88,9 +98,11 @@ class FloodFillTraversal {
   private readonly out: BucketWriteMapBuilder;
   private readonly maxVisited: number;
   private readonly queue: Vector3[];
+  private readonly editableBoundingBox: BoundingBox;
 
   private visited = 0;
   private wasBoundingBoxExceeded = false;
+  private wasVoxelLimitExceeded = false;
   private coveredMin: Vector3 | null = null;
   private coveredMax: Vector3 | null = null;
 
@@ -117,6 +129,7 @@ class FloodFillTraversal {
     );
     this.maxVisited = options.maxVisitedVoxels ?? DEFAULT_MAX_VISITED_VOXELS;
     this.queue = [shape.seed];
+    this.editableBoundingBox = cube.getEditableBoundingBox(ctx.sourceMagIndex);
   }
 
   async run(): Promise<FloodFillResolution> {
@@ -131,7 +144,7 @@ class FloodFillTraversal {
       return this.result();
     }
 
-    while (this.queue.length > 0) {
+    while (this.queue.length > 0 && !this.wasVoxelLimitExceeded) {
       this.signal?.throwIfAborted();
       const voxel = this.queue.pop() as Vector3;
       if (!this.shouldExplore(voxel)) continue;
@@ -163,8 +176,10 @@ class FloodFillTraversal {
       this.wasBoundingBoxExceeded = true;
       return false;
     }
-    if (!isInBoundingBox(voxel, this.ctx.editableBoundingBox)) {
+    if (!isInBoundingBox(voxel, this.editableBoundingBox)) {
       // This is the annotation-level bounding box. Don't set wasBoundingBoxExceeded.
+      // Not exploring beyond it keeps the voxel limit and coveredBoundingBox
+      // to voxels that are actually written.
       return false;
     }
     return !this.out.has(voxel); // the mask doubles as the visited set
@@ -215,13 +230,13 @@ class FloodFillTraversal {
   /** The voxel is part of the region: write it and walk on from it. */
   private accept(voxel: Vector3): void {
     this.out.mark(voxel);
-    this.visited++;
-    if (this.visited > this.maxVisited) {
-      throw new Error(
-        `Flood fill exceeded ${this.maxVisited} voxels. Restrict it with a bounding box.`,
-      );
-    }
     this.growCoveredBox(voxel);
+    this.visited++;
+    if (this.visited >= this.maxVisited) {
+      // Stops the traversal in `run`. What was filled so far is kept.
+      this.wasVoxelLimitExceeded = true;
+      return;
+    }
     this.enqueueNeighbours(voxel);
   }
 
@@ -260,6 +275,7 @@ class FloodFillTraversal {
     return {
       bucketWrites: this.out.build(),
       wasBoundingBoxExceeded: this.wasBoundingBoxExceeded,
+      wasVoxelLimitExceeded: this.wasVoxelLimitExceeded,
       coveredBoundingBox:
         coveredMin != null && coveredMax != null ? { min: coveredMin, max: coveredMax } : null,
     };

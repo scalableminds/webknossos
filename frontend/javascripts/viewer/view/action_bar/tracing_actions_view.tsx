@@ -112,7 +112,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
         <Tooltip placement="top" title={layoutMissingHelpTitle}>
           <InfoCircleOutlined
             style={{
-              color: "gray",
+              color: "var(--ant-color-text-description)",
               marginRight: 36,
             }}
             className="right-floating-icon"

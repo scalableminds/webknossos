@@ -83,6 +83,7 @@ export default function DatasetSettingsSharingTab() {
               <TeamSelectionComponent
                 mode="multiple"
                 allowNonEditableTeams={isDatasetManagerOrAdmin}
+                allowManagingTeams
               />
             </PricingEnforcedBlur>
           </Form.Item>

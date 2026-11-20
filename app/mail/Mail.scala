@@ -8,8 +8,5 @@ case class Mail(
     recipients: List[String] = List(),
     ccRecipients: List[String] = List(),
     bccRecipients: List[String] = List(),
-    contentType: Option[String] = None,
-    replyTo: List[String] = List(),
-    charset: String = "utf-8",
-    headers: Map[String, String] = Map[String, String]()
+    replyTo: List[String] = List()
 )

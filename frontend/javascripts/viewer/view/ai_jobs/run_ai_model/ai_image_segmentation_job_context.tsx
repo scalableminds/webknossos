@@ -11,7 +11,6 @@ import { computeArrayFromBoundingBox } from "libs/utils";
 import messages from "messages";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
 import { type AiModel, type APIDataLayer, APIJobCommand } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
@@ -20,7 +19,6 @@ import {
   getTaskBoundingBoxes,
   getUserBoundingBoxesFromState,
 } from "viewer/model/accessors/tracing_accessor";
-import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
@@ -32,6 +30,7 @@ import {
   type JobRequirement,
   type StepStatus,
 } from "viewer/view/ai_jobs/components/job_requirements";
+import type { StartedJob } from "viewer/view/ai_jobs/components/job_started_card";
 
 interface RunAiModelJobContextType {
   selectedModel: AiModel | null;
@@ -44,6 +43,7 @@ interface RunAiModelJobContextType {
   newDatasetName: string;
   selectedLayer: APIDataLayer | null;
   seedGeneratorDistanceThreshold: number | null;
+  absoluteAffinityThreshold: number | null;
   isEvaluationActive: boolean;
   splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
   customConfiguration: KeyValuePairs;
@@ -58,14 +58,16 @@ interface RunAiModelJobContextType {
   setNewDatasetName: (name: string) => void;
   setSelectedLayer: (layer: APIDataLayer) => void;
   setSeedGeneratorDistanceThreshold: (threshold: number | null) => void;
+  setAbsoluteAffinityThreshold: (threshold: number | null) => void;
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   setCustomConfiguration: (config: KeyValuePairs) => void;
   setSettingsFormState: (state: FormValidationState) => void;
-  handleStartAnalysis: () => void;
+  handleStartAnalysis: () => Promise<void>;
   areParametersValid: boolean;
   requirements: JobRequirement[];
   stepStatuses: { model: StepStatus; settings: StepStatus };
+  startedJob: StartedJob | null;
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
@@ -93,6 +95,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const [seedGeneratorDistanceThreshold, setSeedGeneratorDistanceThreshold] = useState<
     number | null
   >(null);
+  const [absoluteAffinityThreshold, setAbsoluteAffinityThreshold] = useState<number | null>(null);
   const [isEvaluationActive, setIsEvaluationActive] = useState(false);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
   const [splitMergerEvaluationSettings, setSplitMergerEvaluationSettings] =
@@ -102,8 +105,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       minimumMergerPathLengthInNm: 800,
     });
   const [settingsFormState, setSettingsFormState] = useState(EMPTY_FORM_VALIDATION_STATE);
-
-  const dispatch = useDispatch();
+  const [startedJob, setStartedJob] = useState<StartedJob | null>(null);
 
   const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
   const userBoundingBoxCount = useWkSelector(
@@ -122,6 +124,13 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       setNewDatasetName(`${dataset.name}_${selectedModel.name?.replace(/\s/g, "_")}`);
     }
   }, [dataset, selectedModel]);
+
+  // The affinity threshold is tuned per model, so don't carry it over to a newly selected model.
+  const selectedModelId = selectedModel?.id;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset whenever the selected model changes.
+  useEffect(() => {
+    setAbsoluteAffinityThreshold(null);
+  }, [selectedModelId]);
 
   useEffect(() => {
     if (colorLayers.length > 0) {
@@ -241,6 +250,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
                     splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
                 }
               : {}),
+            absoluteAffinityThreshold,
             customConfiguration,
           });
           break;
@@ -266,8 +276,10 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
         default:
           throw new Error(`Unsupported job type: ${selectedJobType}`);
       }
-      Toast.success("Analysis started successfully!");
-      dispatch(setAIJobDrawerStateAction("invisible"));
+      setStartedJob({
+        title: `Analysis with "${selectedModel.name}" is running.`,
+        description: `Results go to the new dataset "${newDatasetName}". You will receive an email when the job finishes.`,
+      });
     } catch (error) {
       console.error(error);
       Toast.error("Failed to start analysis.");
@@ -283,13 +295,14 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     isViewMode,
     annotationId,
     seedGeneratorDistanceThreshold,
+    absoluteAffinityThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
     customConfiguration,
     userBoundingBoxCount,
     taskBoundingBoxes,
     skeletonAnnotation,
-    dispatch,
+    setStartedJob,
   ]);
 
   const value = {
@@ -299,6 +312,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     newDatasetName,
     selectedLayer,
     seedGeneratorDistanceThreshold,
+    absoluteAffinityThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
     customConfiguration,
@@ -308,6 +322,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     setNewDatasetName,
     setSelectedLayer,
     setSeedGeneratorDistanceThreshold,
+    setAbsoluteAffinityThreshold,
     setIsEvaluationActive,
     setSplitMergerEvaluationSettings,
     setCustomConfiguration,
@@ -316,6 +331,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     areParametersValid,
     requirements,
     stepStatuses,
+    startedJob,
   };
 
   return <RunAiModelJobContext.Provider value={value}>{children}</RunAiModelJobContext.Provider>;

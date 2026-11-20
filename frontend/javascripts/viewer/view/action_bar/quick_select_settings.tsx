@@ -1,4 +1,5 @@
 import { QuestionCircleOutlined } from "@ant-design/icons";
+import { areJobsAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import { Radio, type RadioChangeEvent } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -26,9 +27,53 @@ const OPTIONS_WITH_DISABLED = [
   { label: "Light Segment", value: "light" },
 ];
 
+// Returns why the AI-based quick select is not available, or null if it is available.
+function useAISelectUnavailableReason(): string | null {
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  if (!features().segmentAnythingEnabled) {
+    return "The quick select tool with AI is only available on webknossos.org";
+  }
+  if (!areJobsAllowedByPricingPlan(activeOrganization)) {
+    return "The quick select tool with AI is not available in the Open Source plan.";
+  }
+  return null;
+}
+
+// Rendered in both the AI and the heuristic controls so that users can switch in either direction.
+function AiModeSwitch() {
+  const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
+  const dispatch = useDispatch();
+  const aiSelectUnavailableReason = useAISelectUnavailableReason();
+  const isAISelectAvailable = aiSelectUnavailableReason == null;
+  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+  const quickSelectTooltipText =
+    aiSelectUnavailableReason ??
+    (isQuickSelectHeuristic
+      ? "The quick select tool is now working without AI. Activate AI for better results."
+      : "The quick select tool is now working with AI.");
+  const toggleQuickSelectStrategy = () => {
+    dispatch(
+      updateUserSettingAction("quickSelect", {
+        ...quickSelectConfig,
+        useHeuristic: !quickSelectConfig.useHeuristic,
+      }),
+    );
+  };
+
+  return (
+    <SwitchSetting
+      value={!isQuickSelectHeuristic}
+      onChange={toggleQuickSelectStrategy}
+      disabled={!isAISelectAvailable}
+      tooltipText={quickSelectTooltipText}
+      label="AI Mode"
+    />
+  );
+}
+
 export function QuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
-  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const isAISelectAvailable = useAISelectUnavailableReason() == null;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
 
   return isQuickSelectHeuristic ? <HeuristicQuickSelectControls /> : <AiQuickSelectControls />;
@@ -69,6 +114,7 @@ function AiQuickSelectControls() {
           <QuestionCircleOutlined />
         </FastTooltip>
       </div>
+      <AiModeSwitch />
       <NumberSliderSetting
         label="Prediction Depth"
         min={1}
@@ -90,21 +136,6 @@ function HeuristicQuickSelectControls() {
   );
 
   const dispatch = useDispatch();
-  const isAISelectAvailable = features().segmentAnythingEnabled;
-  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
-  const quickSelectTooltipText = isAISelectAvailable
-    ? isQuickSelectHeuristic
-      ? "The quick select tool is now working without AI. Activate AI for better results."
-      : "The quick select tool is now working with AI."
-    : "The quick select tool with AI is only available on webknossos.org";
-  const toggleQuickSelectStrategy = () => {
-    dispatch(
-      updateUserSettingAction("quickSelect", {
-        ...quickSelectConfig,
-        useHeuristic: !quickSelectConfig.useHeuristic,
-      }),
-    );
-  };
 
   const onResetValues = () => {
     const { segmentMode, threshold, closeValue, erodeValue, dilateValue, ...rest } =
@@ -168,13 +199,7 @@ function HeuristicQuickSelectControls() {
 
   return (
     <div>
-      <SwitchSetting
-        value={!isQuickSelectHeuristic}
-        onChange={toggleQuickSelectStrategy}
-        disabled={!isAISelectAvailable}
-        tooltipText={quickSelectTooltipText}
-        label="AI Mode"
-      ></SwitchSetting>
+      <AiModeSwitch />
       <SwitchSetting
         label="Show Preview"
         value={quickSelectConfig.showPreview}

@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
+import com.scalableminds.webknossos.datastore.models.{UnfinishedUpload, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
   DataSourceId,
@@ -18,17 +18,24 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AlignmentProjectCsvReplacementInfo,
+  AlignmentProjectUploadAdditionalInfo,
+  AlignmentProjectUploadInfo,
   AttachmentUploadAdditionalInfo,
   AttachmentUploadInfo,
   DatasetUploadAdditionalInfo,
   DatasetUploadInfo,
   MagUploadAdditionalInfo,
   MagUploadInfo,
+  ReportAlignmentProjectCsvReplacementParameters,
+  ReportAlignmentProjectUploadParameters,
   ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
+  ReportDatasetUploadResult,
   ReportMagUploadParameters
 }
 import com.typesafe.scalalogging.LazyLogging
+import models.alignmentproject.{AlignmentProject, AlignmentProjectDAO, AlignmentProjectService, AlignmentProjectStatus}
 import models.dataset.*
 import models.dataset.credential.CredentialDAO
 import models.job.{JobDAO, JobService}
@@ -61,6 +68,9 @@ class WKRemoteDataStoreController @Inject() (
     uploadToPathsService: UploadToPathsService,
     jobService: JobService,
     credentialDAO: CredentialDAO,
+    alignmentProjectDAO: AlignmentProjectDAO,
+    alignmentProjectService: AlignmentProjectService,
+    pathDeletionDAO: PathDeletionDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -184,6 +194,109 @@ class WKRemoteDataStoreController @Inject() (
       }
     }
 
+  def reserveAlignmentProjectUpload(name: String, key: String, token: String): Action[AlignmentProjectUploadInfo] =
+    Action.fox(validateJson[AlignmentProjectUploadInfo]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val uploadInfo = request.body
+        for {
+          user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
+          _ <- alignmentProjectService.assertMayAccessAlignmentProjects(user)
+          _ <- Fox.fromBool(uploadInfo.organizationId == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
+          organization <- organizationDAO.findOne(uploadInfo.organizationId)(using
+            GlobalAccessContext
+          ) ?~> Msg.Organization.notFound(uploadInfo.organizationId) ~> NOT_FOUND
+          _ <- Fox.fromBool(
+            dataStore.onlyAllowedOrganization.forall(_ == organization._id)
+          ) ?~> Msg.Dataset.Upload.datastoreRestricted
+          projectName = uploadInfo.name.trim
+          voxelSize = VoxelSize(uploadInfo.voxelSizeFactor, uploadInfo.voxelSizeUnit)
+          _ <- alignmentProjectService.assertValidName(organization._id, projectName)
+          _ <- alignmentProjectService.assertValidVoxelSize(voxelSize)
+          project = AlignmentProject(
+            ObjectId.generate,
+            organization._id,
+            user._id,
+            dataStore.name,
+            projectName,
+            description = "",
+            AlignmentProjectStatus.UPLOADING,
+            invalidReason = None,
+            voxelSize,
+            csvPath = None,
+            fileCount = None,
+            totalSizeInBytes = None,
+            sectionRange = None
+          )
+          _ <- alignmentProjectDAO.insertOne(project)
+        } yield Ok(Json.toJson(AlignmentProjectUploadAdditionalInfo(project._id)))
+      }
+    }
+
+  def reportAlignmentProjectUpload(name: String, key: String): Action[ReportAlignmentProjectUploadParameters] =
+    Action.fox(validateJson[ReportAlignmentProjectUploadParameters]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val report = request.body
+        for {
+          project <- alignmentProjectDAO.findOne(report.alignmentProjectId)(using
+            GlobalAccessContext
+          ) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
+          _ <- Fox.fromBool(project._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- Fox.fromBool(project.status == AlignmentProjectStatus.UPLOADING) ?~> Msg.AlignmentProject.notUploading
+          isValid = report.sectionRange.isDefined && report.invalidReason.isEmpty
+          _ <- alignmentProjectDAO.finishUpload(
+            project._id,
+            if (isValid) AlignmentProjectStatus.READY else AlignmentProjectStatus.INVALID,
+            report.invalidReason,
+            report.csvPath,
+            report.fileCount,
+            report.totalSizeInBytes,
+            report.sectionRange.filter(_ => isValid)
+          )
+        } yield Ok
+      }
+    }
+
+  // Checks whether the user may replace the tile CSV. The datastore then validates and stores the new CSV.
+  def validateAlignmentProjectCsvReplacement(
+      name: String,
+      key: String,
+      token: String,
+      alignmentProjectId: ObjectId
+  ): Action[AnyContent] =
+    Action.fox { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        for {
+          user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
+          _ <- alignmentProjectService.assertMayAccessAlignmentProjects(user)
+          project <- alignmentProjectDAO.findOne(alignmentProjectId)(using
+            AuthorizedAccessContext(user)
+          ) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
+          _ <- Fox.fromBool(project._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- Fox.fromBool(
+            project.status != AlignmentProjectStatus.UPLOADING
+          ) ?~> Msg.AlignmentProject.uploadUnfinished
+          _ <- Fox.fromBool(!project.isInputDataDeleted) ?~> Msg.AlignmentProject.inputDataDeleted
+        } yield Ok(Json.toJson(AlignmentProjectCsvReplacementInfo(project._organization, project.csvPath)))
+      }
+    }
+
+  def updateAlignmentProjectCsv(
+      name: String,
+      key: String
+  ): Action[ReportAlignmentProjectCsvReplacementParameters] =
+    Action.fox(validateJson[ReportAlignmentProjectCsvReplacementParameters]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val report = request.body
+        for {
+          project <- alignmentProjectDAO.findOne(report.alignmentProjectId)(using
+            GlobalAccessContext
+          ) ?~> Msg.AlignmentProject.notFound ~> NOT_FOUND
+          _ <- Fox.fromBool(project._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
+          _ <- alignmentProjectDAO.replaceCsv(project._id, report.csvPath, report.sectionRange)
+        } yield Ok
+      }
+    }
+
   def getUnfinishedDatasetUploadsForUser(
       name: String,
       key: String,
@@ -255,7 +368,7 @@ class WKRemoteDataStoreController @Inject() (
           _ <- Fox.runIf(!request.body.needsConversion)(
             datasetService.writeMirrorForVirtual(updated)(using GlobalAccessContext)
           )
-          _ <- Fox.runIf(request.body.needsConversion) {
+          conversionJobOpt <- Fox.runIf(request.body.needsConversion) {
             for {
               voxelSize <- request.body.voxelSize.toFox ?~> Msg.Dataset.Upload.needsConversionMissingVoxelSize
               dataStoreClient <- datasetService.clientFor(dataset)(using GlobalAccessContext)
@@ -264,10 +377,10 @@ class WKRemoteDataStoreController @Inject() (
                 requireAllowsUpload = true,
                 requireLocal = true
               )
-              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
-            } yield ()
+              job <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
+            } yield job
           }
-        } yield Ok
+        } yield Ok(Json.toJson(ReportDatasetUploadResult(conversionJobOpt.map(_._id))))
       }
     }
 
@@ -445,6 +558,29 @@ class WKRemoteDataStoreController @Inject() (
       }
     }
 
+  def listPathsToDelete(name: String, key: String): Action[AnyContent] = Action.fox { _ =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
+      for {
+        _ <- assertMayProcessPathDeletionQueue(dataStore)
+        paths <- pathDeletionDAO.findAll
+      } yield Ok(Json.toJson(paths))
+    }
+  }
+
+  def markPathsAsDeleted(name: String, key: String): Action[Seq[String]] = Action.fox(validateJson[Seq[String]]) {
+    implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        for {
+          _ <- assertMayProcessPathDeletionQueue(dataStore)
+          _ <- Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)
+        } yield Ok
+      }
+  }
+
+  // The queue holds paths of all organizations, so datastores restricted to one organization may not access it
+  private def assertMayProcessPathDeletionQueue(dataStore: DataStore): Fox[Unit] =
+    Fox.fromBool(dataStore.onlyAllowedOrganization.isEmpty) ?~> Msg.notAllowed ~> FORBIDDEN
+
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.fox { _ =>
     dataStoreService.validateAccess(name, key) { _ =>
       for {
@@ -459,9 +595,12 @@ class WKRemoteDataStoreController @Inject() (
   }
 
   def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.fox { _ =>
-    dataStoreService.validateAccess(name, key) { _ =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
       for {
         credential <- credentialDAO.findOne(credentialId)
+        _ <- Fox.fromBool(
+          dataStore.onlyAllowedOrganization.forall(credential.organization.contains)
+        ) ?~> Msg.notAllowed ~> FORBIDDEN
       } yield Ok(Json.toJson(credential))
     }
   }

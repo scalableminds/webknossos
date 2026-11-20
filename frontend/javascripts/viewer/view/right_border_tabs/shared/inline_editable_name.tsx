@@ -1,5 +1,5 @@
 import { Input, type InputRef, Typography } from "antd";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 type Props = {
   // What is rendered while not editing (e.g. "Segment 5" for an unnamed segment).
@@ -16,7 +16,7 @@ type Props = {
   style?: React.CSSProperties;
   // Omitted for a name that is not truncated (the expanded row shows it in full).
   title?: string | undefined;
-  onClick?: (() => void) | undefined;
+  onClick?: ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
   onStartEditing: () => void;
   onCommit: (newName: string) => void;
   onFinishEditing: () => void;
@@ -51,18 +51,12 @@ export function InlineEditableName({
   // Removing a focused element does not fire a blur event, so a row that the virtualized
   // list recycles mid-rename would never report that it stopped editing, leaving the owner
   // stuck on that key (which also keeps drag & drop suspended). Report it on unmount.
-  const isEditingRef = useRef(isEditing);
-  isEditingRef.current = isEditing;
-  const onFinishEditingRef = useRef(onFinishEditing);
-  onFinishEditingRef.current = onFinishEditing;
-  useEffect(
-    () => () => {
-      if (isEditingRef.current) {
-        onFinishEditingRef.current();
-      }
-    },
-    [],
-  );
+  const finishEditingIfActive = useEffectEvent(() => {
+    if (isEditing) {
+      onFinishEditing();
+    }
+  });
+  useEffect(() => () => finishEditingIfActive(), []);
 
   // Deliberately not `autoFocus`. React applies that during the commit in which the input
   // mounts, and antd's tree reacts to a focus event from inside its list by scrolling to
@@ -90,6 +84,9 @@ export function InlineEditableName({
         // Enter commits by blurring, so that saving has exactly one code path.
         onPressEnter={() => inputRef.current?.blur()}
         onKeyDown={(event) => {
+          // The tree handles keys such as the arrow keys on its way up and would prevent their
+          // default behavior (e.g., moving the caret).
+          event.stopPropagation();
           if (event.key === "Escape") {
             event.currentTarget.value = editableValue;
             inputRef.current?.blur();

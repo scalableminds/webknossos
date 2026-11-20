@@ -21,7 +21,6 @@ case class DataStore(
     url: String,
     publicUrl: String,
     key: String,
-    isScratch: Boolean = false,
     isDeleted: Boolean = false,
     allowsUpload: Boolean = true,
     allowsUploadToPaths: Boolean = true,
@@ -76,7 +75,6 @@ class DataStoreDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
         r.url,
         r.publicurl,
         r.key,
-        r.isscratch,
         r.isdeleted,
         r.allowsupload,
         r.allowsuploadtopaths,
@@ -131,9 +129,9 @@ class DataStoreDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
     for {
       _ <- run(
         q"""INSERT INTO webknossos.dataStores
-                     (name, url, publicUrl, key, isScratch,
+                     (name, url, publicUrl, key,
                      isDeleted, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled)
-                   VALUES(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch},
+                   VALUES(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key},
                      ${d.isDeleted}, ${d.allowsUpload}, ${d.allowsUploadToPaths}, ${d.reportUsedStorageEnabled})""".asUpdate
       )
     } yield ()
@@ -149,7 +147,6 @@ class DataStoreDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
                    SET
                      url = ${d.url},
                      publicUrl = ${d.publicUrl},
-                     isScratch = ${d.isScratch},
                      allowsUpload = ${d.allowsUpload}
                    WHERE name = ${d.name}""".asUpdate)
     } yield ()

@@ -10,7 +10,7 @@ import {
   setAnnotationDescriptionAction,
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
-import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/rebase_helpers";
 import { MarkdownModal } from "../../components/markdown_modal";
 import { InlineIconButton } from "./info_tab_layout";
 

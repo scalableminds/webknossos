@@ -121,9 +121,12 @@ class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreD
       )
     } yield dataSource
 
-  def addLayer(targetDatasetId: ObjectId, request: ComposeRequestLayer)(using ctx: DBAccessContext): Fox[Unit] =
+  def addLayer(targetDatasetId: ObjectId, request: ComposeRequestLayer, user: User)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- datasetService.assertEditableBy(targetDataset, user)
       _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
       _ <- Fox.fromBool(
@@ -150,9 +153,12 @@ class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreD
       _ <- dataStoreClient.invalidateDatasetInDSCache(targetDatasetId)
     } yield ()
 
-  def addMag(targetDatasetId: ObjectId, request: ComposeAddMagRequest)(using ctx: DBAccessContext): Fox[Unit] =
+  def addMag(targetDatasetId: ObjectId, request: ComposeAddMagRequest, user: User)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- datasetService.assertEditableBy(targetDataset, user)
       _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
       targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> Msg.Dataset.Layer
@@ -184,11 +190,12 @@ class ComposeService @Inject() (datasetDAO: DatasetDAO, dataStoreDAO: DataStoreD
       _ <- dataStoreClient.invalidateDatasetInDSCache(targetDatasetId)
     } yield ()
 
-  def addAttachment(targetDatasetId: ObjectId, request: ComposeAddAttachmentRequest)(using
+  def addAttachment(targetDatasetId: ObjectId, request: ComposeAddAttachmentRequest, user: User)(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {
       targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- datasetService.assertEditableBy(targetDataset, user)
       _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
       targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> Msg.Dataset.Layer

@@ -9,7 +9,11 @@ import scala.concurrent.ExecutionContext
 
 class Zarr3ChunkReader(header: DatasetHeader, array: Zarr3Array) extends ChunkReader(header) {
 
-  override protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(implicit
+  override protected def readChunkBytesAndShape(
+      path: VaultPath,
+      range: ByteRange,
+      chunkShapeFromMetadata: Array[Int]
+  )(implicit
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Option[Array[Int]])] =

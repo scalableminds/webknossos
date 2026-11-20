@@ -14,10 +14,12 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
 
-import java.io.{File, FileOutputStream, InputStream}
+import java.io.{File, FileOutputStream}
+import java.nio.file.Path
 import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+import scala.util.Using
 
 trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with LazyLogging {
 
@@ -33,13 +35,13 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     } yield ()
 
   private def detectVolumeDataZipFormat(zipFile: File): Box[VolumeDataZipFormat] =
-    tryo(new java.util.zip.ZipFile(zipFile)).map { zip =>
+    tryo(Using.resource(new ZipFile(zipFile)) { zip =>
       val relevantFile: Option[ZipEntry] =
         ZipIO.entries(zip).find(entry => entry.getName.endsWith("zarr.json") || entry.getName.endsWith(".wkw"))
       if (relevantFile.exists(_.getName.endsWith("zarr.json"))) {
         VolumeDataZipFormat.zarr3
       } else VolumeDataZipFormat.wkw
-    }
+    })
 
   private def withBucketsFromWkwZip(
       zipFile: File
@@ -67,11 +69,14 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
       zipFile: File
   )(block: (BucketPosition, Array[Byte]) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      firstHeaderFilePath <- ZipIO
-        .entries(new ZipFile(zipFile))
-        .find(entry => entry.getName.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON))
-        .toFox
-      firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath).toFox
+      firstHeaderString <- tryo(Using.resource(new ZipFile(zipFile)) { zip =>
+        for {
+          firstHeaderEntry <- Box.fromOption(
+            ZipIO.entries(zip).find(entry => entry.getName.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON))
+          )
+          headerBytes <- ZipIO.readAt(zip, firstHeaderEntry)
+        } yield headerBytes
+      }).flatMap(identity).toFox
       firstHeader <- JsonHelper.parseAs[Zarr3ArrayHeader](firstHeaderString).toFox
       _ <- firstHeader.assertValid.toFox
       _ <- ZipIO.withUnzipedAsync(zipFile) { case (filename, inputStream) =>
@@ -143,27 +148,15 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     }
   }
 
-  protected def withZipsFromMultiZipAsync(
-      multiZip: File
-  )(block: (Int, File) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] = {
+  // Returns the inner zips in entry order
+  protected def unzipMultiZip(multiZip: File, targetDir: Path): Box[List[File]] = {
     var index: Int = 0
-    val unzipResult = ZipIO.withUnzipedAsync(multiZip) { case (_, is) =>
-      for {
-        res <- block(index, inputStreamToTempfile(is))
-        _ = index += 1
-      } yield res
+    ZipIO.withUnziped(multiZip) { case (_, inputStream) =>
+      val file = targetDir.resolve(s"$index.zip").toFile
+      index += 1
+      Using.resource(new FileOutputStream(file))(IOUtils.copy(inputStream, _))
+      file
     }
-    for {
-      _ <- unzipResult
-    } yield ()
-  }
-
-  private def inputStreamToTempfile(inputStream: InputStream): File = {
-    val tempFile = File.createTempFile("data", "zip")
-    tempFile.deleteOnExit()
-    val out = new FileOutputStream(tempFile)
-    IOUtils.copy(inputStream, out)
-    tempFile
   }
 
   private lazy val compressor = BloscCodec.fromConfiguration(BloscCodecConfiguration.defaultForWKZarrOutput).compressor

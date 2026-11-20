@@ -180,7 +180,7 @@ const deleteEdgeEntry: MouseShortcutEntry = {
       {modifierKeyToUiElement("Meta")} + <MouseLeftClick />
     </React.Fragment>,
   ],
-  action: "Delete Edge to this Node and Split Trees",
+  action: "Delete Edge to Active Node & Split Tree",
 };
 
 export function FlightNavigationMouseShortcutsTable() {
@@ -352,7 +352,7 @@ export function VolumeToolMouseShortcutsTable() {
         },
         {
           shortcuts: [<React.Fragment key="1">{modifierKeyToUiElement("Shift")}</React.Fragment>],
-          action: "Quick Switch to Segment Picker Tool",
+          action: "Quick Switch to Voxel Pipette Tool",
         },
         {
           shortcuts: [

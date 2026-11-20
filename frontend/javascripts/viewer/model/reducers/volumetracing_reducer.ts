@@ -12,7 +12,6 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import {
   getSegmentationLayerForTracing,
-  getVisibleSegments,
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -286,8 +285,11 @@ function VolumeTracingReducer(
 
     case "SET_EXPANDED_SEGMENT_GROUPS": {
       const { expandedSegmentGroups, layerName } = action;
-      const { segmentGroups } = getVisibleSegments(state);
-      const newGroups = mapGroups(segmentGroups, (group) => {
+      // Read the groups from the same layer that is written to. Reading them from
+      // the visible layer instead would wipe all groups when the layer is hidden.
+      const updateInfo = getSegmentUpdateInfo(state, layerName);
+      if (updateInfo.type !== "UPDATE_VOLUME_TRACING") return state;
+      const newGroups = mapGroups(updateInfo.segmentGroups, (group) => {
         const shouldBeExpanded = expandedSegmentGroups.has(getGroupNodeKey(group.groupId));
         if (shouldBeExpanded !== group.isExpanded) {
           return {

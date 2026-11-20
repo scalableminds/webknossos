@@ -8,6 +8,7 @@ import {
   getTaskTypes,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
+import { getOnlyItem, usePreselectFormValue } from "admin/use_preselect_form_value";
 import {
   Alert,
   App,
@@ -33,7 +34,9 @@ import type { useAppProps } from "antd/es/app/context";
 import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
+import { FormItemWithDescription } from "dashboard/dataset/helper_components";
 import { saveAs } from "file-saver";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import isEqual from "lodash-es/isEqual";
@@ -100,7 +103,9 @@ function taskToText(task: APITask) {
     projectName,
     script,
   } = task;
-  const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
+  // Tasks without a needed experience get empty experience columns, which the bulk import understands.
+  const neededExperienceAsString =
+    neededExperience != null ? `${neededExperience.domain},${neededExperience.value}` : ",";
   const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map((vector3) =>
     vector3.join(","),
   );
@@ -265,7 +270,13 @@ export function handleTaskCreationResponse(
 
 function CreateResourceButton({ text, link }: { text: string; link: string }) {
   return (
-    <Col span={4} style={{ marginBottom: "var(--ant-form-item-margin-bottom)" }}>
+    // The min width keeps the buttons of all rows equally wide; longer labels still fit.
+    // It is relative to the font size so that it keeps fitting the longest label
+    // ("Create new Task Type") when the font size changes.
+    <Col
+      flex="none"
+      style={{ minWidth: "13em", marginBottom: "var(--ant-form-item-margin-bottom)" }}
+    >
       <Button block href={link} target="_blank" rel="noreferrer">
         {text}
       </Button>
@@ -301,8 +312,18 @@ type FormValues = {
   datasetId: string;
   datasetName: string;
   projectName: string;
-  neededExperience: NewTask["neededExperience"];
+  // The form fields are empty if any member of the project's team may get the task
+  neededExperience: { domain?: string; value?: number } | undefined;
 };
+
+function isNonEmptyDomain(domain: string | null | undefined): domain is string {
+  return domain != null && domain.trim() !== "";
+}
+
+function getNeededExperience(formValues: FormValues): NewTask["neededExperience"] {
+  const { domain, value } = formValues.neededExperience ?? {};
+  return isNonEmptyDomain(domain) && value != null ? { domain, value } : undefined;
+}
 
 function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { taskId } = useParams();
@@ -310,40 +331,78 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { modal } = App.useApp();
   const { token } = theme.useToken();
   const [form] = Form.useForm<FormValues>();
+  const hasExperienceDomain = isNonEmptyDomain(Form.useWatch(["neededExperience", "domain"], form));
 
-  const [datasets, setDatasets] = useState<APIDatasetCompact[]>([]);
-  const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
-  const [projects, setProjects] = useState<APIProject[]>([]);
-  const [scripts, setScripts] = useState<APIScript[]>([]);
+  const {
+    data: datasets = [],
+    isFetching: isFetchingDatasets,
+    refetch: refetchDatasets,
+  } = useQueryWithErrorHandling({
+    queryKey: ["activeDatasetsOfMyOrganization"],
+    queryFn: getActiveDatasetsOfMyOrganization,
+    refetchOnWindowFocus: false,
+    meta: { persist: false },
+  });
+  const {
+    data: taskTypes = [],
+    isFetching: isFetchingTaskTypes,
+    dataUpdatedAt: taskTypesUpdatedAt,
+    refetch: refetchTaskTypes,
+  } = useQueryWithErrorHandling({
+    queryKey: ["taskTypes"],
+    queryFn: getTaskTypes,
+    refetchOnWindowFocus: false,
+  });
+  const {
+    data: projects = [],
+    isFetching: isFetchingProjects,
+    dataUpdatedAt: projectsUpdatedAt,
+    refetch: refetchProjects,
+  } = useQueryWithErrorHandling({
+    queryKey: ["projects"],
+    queryFn: getProjects,
+    refetchOnWindowFocus: false,
+  });
+  const {
+    data: scripts = [],
+    isFetching: isFetchingScripts,
+    refetch: refetchScripts,
+  } = useQueryWithErrorHandling({
+    queryKey: ["scripts"],
+    queryFn: getScripts,
+    refetchOnWindowFocus: false,
+  });
+  usePreselectFormValue(
+    form,
+    "taskTypeId",
+    taskId == null ? getOnlyItem(taskTypes)?.id : undefined,
+    taskTypesUpdatedAt,
+  );
+  usePreselectFormValue(
+    form,
+    "projectName",
+    taskId == null ? getOnlyItem(projects)?.name : undefined,
+    projectsUpdatedAt,
+  );
   const [specificationType, setSpecificationType] = useState<Specification>(
     SpecificationEnum.Manual,
   );
   const [isUploading, setIsUploading] = useState(false);
-  const [isFetchingData, setIsFetchingData] = useState(false);
 
+  const { data: task } = useQueryWithErrorHandling({
+    queryKey: ["taskForEditing", taskId],
+    queryFn: () => getTask(taskId as string),
+    enabled: taskId != null,
+    // Always load the task freshly when opening the form and never refetch it
+    // in the background, so that the user's edits are not overwritten.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 0,
+    meta: { persist: false },
+  });
+
+  // Populate the form once the task is loaded.
   useEffect(() => {
-    fetchData();
-    applyDefaults();
-  }, []);
-
-  async function fetchData() {
-    setIsFetchingData(true);
-    const [datasets, projects, scripts, taskTypes] = await Promise.all([
-      getActiveDatasetsOfMyOrganization(),
-      getProjects(),
-      getScripts(),
-      getTaskTypes(),
-    ]);
-    setDatasets(datasets);
-    setProjects(projects);
-    setScripts(scripts);
-    setTaskTypes(taskTypes);
-    setIsFetchingData(false);
-  }
-
-  async function applyDefaults() {
-    if (taskId) {
-      const task = await getTask(taskId);
+    if (task != null) {
       const defaultValues = Object.assign({}, task, {
         taskTypeId: task.type.id,
         boundingBox: task.boundingBox ? task.boundingBoxVec6 : null,
@@ -357,7 +416,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       const { type, ...neededFormValues } = validFormValues;
       form.setFieldsValue(neededFormValues);
     }
-  }
+  }, [task, form]);
 
   function transformBoundingBox(boundingBox: Vector6): BoundingBoxObject {
     return {
@@ -372,12 +431,14 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     const boundingBox = formValues.boundingBox
       ? transformBoundingBox(formValues.boundingBox)
       : null;
+    const neededExperience = getNeededExperience(formValues);
 
     if (taskId != null) {
       // either update an existing task
       const newTask = {
         ...omit(formValues, "nmlFiles", "baseAnnotation"),
         boundingBox,
+        neededExperience,
       };
       const confirmedTask = await updateTask(taskId, newTask);
       navigate(`/tasks/${confirmedTask.id}`);
@@ -401,6 +462,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             const newTask: NewNmlTask = {
               ...omit(formValues, "baseAnnotation"),
               boundingBox,
+              neededExperience,
             };
             const response = await createTaskFromNML(newTask, batchOfNmls);
 
@@ -419,6 +481,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             ...omit(formValues, "nmlFiles", "baseAnnotation"),
             boundingBox,
             baseAnnotation,
+            neededExperience,
           };
           const response = await createTasks([newTask]);
 
@@ -469,9 +532,10 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     return (
       <div>
         {specificationType === SpecificationEnum.BaseAnnotation ? (
-          <FormItem
+          <FormItemWithDescription
             name={["baseAnnotation", "baseId"]}
             label="Base ID"
+            description="ID of an annotation, or of a task with exactly one finished instance. Each new task starts with a copy of its content."
             hasFeedback
             rules={[
               {
@@ -526,7 +590,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             ]}
           >
             <Input style={fullWidth} disabled={isEditingMode} />
-          </FormItem>
+          </FormItemWithDescription>
         ) : null}
 
         <Row gutter={8} align="bottom" wrap={false}>
@@ -550,7 +614,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                 showSearch={{ optionFilterProp: "label" }}
                 style={fullWidth}
                 disabled={isEditingMode || specificationType === SpecificationEnum.BaseAnnotation}
-                loading={isFetchingData}
+                loading={isFetchingDatasets}
                 options={datasets.map((dataset: APIDatasetCompact) => ({
                   label: dataset.name,
                   value: dataset.id,
@@ -560,36 +624,45 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           </Col>
           <ReloadResourceButton
             tooltip="Reload to show new Datasets"
-            onReload={async () => setDatasets(await getActiveDatasetsOfMyOrganization())}
+            onReload={async () => {
+              await refetchDatasets();
+            }}
           />
           <CreateResourceButton text="Upload Dataset" link="/datasets/upload" />
         </Row>
 
-        <FormItem
-          name="editPosition"
-          label="Starting Position"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-          ]}
-        >
-          <Vector3Input style={fullWidth} disabled={isEditingMode} />
-        </FormItem>
-
-        <FormItem
-          name="editRotation"
-          label="Starting Rotation"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-          ]}
-        >
-          <Vector3Input style={fullWidth} disabled={isEditingMode} />
-        </FormItem>
+        <Row gutter={8} align="bottom">
+          <Col span={12}>
+            <FormItemWithDescription
+              name="editPosition"
+              label="Starting Position"
+              description="Where users start, in voxel coordinates."
+              hasFeedback
+              rules={[
+                {
+                  required: true,
+                },
+              ]}
+            >
+              <Vector3Input style={fullWidth} disabled={isEditingMode} />
+            </FormItemWithDescription>
+          </Col>
+          <Col span={12}>
+            <FormItemWithDescription
+              name="editRotation"
+              label="Starting Rotation"
+              description="Camera rotation around x, y, z in degrees."
+              hasFeedback
+              rules={[
+                {
+                  required: true,
+                },
+              ]}
+            >
+              <Vector3Input style={fullWidth} disabled={isEditingMode} />
+            </FormItemWithDescription>
+          </Col>
+        </Row>
       </div>
     );
   }
@@ -597,6 +670,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const isEditingMode = taskId != null;
   const titleLabel = isEditingMode ? `Update Task ${taskId || ""}` : "Create Task";
   const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
+  const instancesDescription = isEditingMode
+    ? "How many more users can still get this task. Users who already started or finished it are not counted. Each instance is assigned to a different user."
+    : "How many users annotate this task independently. Each instance is assigned to a different user.";
 
   const content = (
     <div
@@ -607,18 +683,31 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       <Spin spinning={isUploading}>
         <Form
           onFinish={onFinish}
+          onValuesChange={(changedValues: Partial<FormValues>) => {
+            // An experience value without a domain would be dropped silently, so clear it with the domain.
+            const changedExperience = changedValues.neededExperience;
+            if (
+              changedExperience != null &&
+              "domain" in changedExperience &&
+              !isNonEmptyDomain(changedExperience.domain)
+            ) {
+              form.setFieldValue(["neededExperience", "value"], undefined);
+            }
+          }}
           layout="vertical"
           form={form}
           initialValues={{
             editPosition: [0, 0, 0],
             editRotation: [0, 0, 0],
+            pendingInstances: 1,
           }}
         >
           <Row gutter={8} align="bottom" wrap={false}>
             <Col flex="auto">
-              <FormItem
+              <FormItemWithDescription
                 name="taskTypeId"
                 label="Task Type"
+                description="Defines the instructions for users, the annotation type and the allowed tools. Many tasks can share one task type."
                 hasFeedback
                 rules={[
                   {
@@ -631,65 +720,27 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                   showSearch={{ optionFilterProp: "label" }}
                   style={fullWidth}
                   disabled={isEditingMode}
-                  loading={isFetchingData}
+                  loading={isFetchingTaskTypes}
                   options={taskTypes.map((taskType: APITaskType) => ({
                     value: taskType.id,
                     label: taskType.summary,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <ReloadResourceButton
               tooltip="Reload to show new Task Types"
-              onReload={async () => setTaskTypes(await getTaskTypes())}
+              onReload={async () => {
+                await refetchTaskTypes();
+              }}
             />
             <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
           </Row>
 
-          <Row gutter={8} align="bottom" wrap={false}>
-            <Col span={10}>
-              <FormItem
-                name={["neededExperience", "domain"]}
-                label="Experience Domain"
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
-              >
-                <SelectExperienceDomain
-                  disabled={isEditingMode}
-                  placeholder="Select an Experience Domain"
-                  notFoundContent={messages["task.domain_does_not_exist"]}
-                  width={100}
-                  allowCreation
-                />
-              </FormItem>
-            </Col>
-            <Col flex="auto">
-              <FormItem
-                name={["neededExperience", "value"]}
-                label="Experience Value"
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                  {
-                    type: "number",
-                  },
-                ]}
-              >
-                <InputNumber style={fullWidth} disabled={isEditingMode} />
-              </FormItem>
-            </Col>
-            <CreateResourceButton text="Assign Experience" link="/users" />
-          </Row>
-
-          <FormItem
+          <FormItemWithDescription
             name="pendingInstances"
             label={instancesLabel}
+            description={instancesDescription}
             hasFeedback
             rules={[
               {
@@ -701,13 +752,14 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             ]}
           >
             <InputNumber style={fullWidth} min={0} />
-          </FormItem>
+          </FormItemWithDescription>
 
           <Row gutter={8} align="bottom" wrap={false}>
             <Col flex="auto">
-              <FormItem
+              <FormItemWithDescription
                 name="projectName"
                 label="Project"
+                description="Groups related tasks. The project's team decides who can get the task, and its priority decides how early the task is assigned."
                 hasFeedback
                 rules={[
                   {
@@ -720,54 +772,28 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                   placeholder="Select a Project"
                   style={fullWidth}
                   disabled={isEditingMode}
-                  loading={isFetchingData}
+                  loading={isFetchingProjects}
                   options={projects.map((project: APIProject) => ({
                     value: project.name,
                     label: project.name,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <ReloadResourceButton
               tooltip="Reload to show new Projects"
-              onReload={async () => setProjects(await getProjects())}
+              onReload={async () => {
+                await refetchProjects();
+              }}
             />
             <CreateResourceButton text="Create new Project" link="/projects/create" />
           </Row>
 
-          <Row gutter={8} align="bottom" wrap={false}>
-            <Col flex="auto">
-              <FormItem name="scriptId" label="Script" hasFeedback>
-                <Select
-                  showSearch={{ optionFilterProp: "label" }}
-                  placeholder="Select a Script"
-                  style={fullWidth}
-                  disabled={isEditingMode}
-                  loading={isFetchingData}
-                  options={scripts.map((script: APIScript) => ({
-                    value: script.id,
-                    label: script.name,
-                  }))}
-                />
-              </FormItem>
-            </Col>
-            <ReloadResourceButton
-              tooltip="Reload to show new Scripts"
-              onReload={async () => setScripts(await getScripts())}
-            />
-            <CreateResourceButton text="Create new Script" link="/scripts/create" />
-          </Row>
-
-          <FormItem
-            name="boundingBox"
-            label="Bounding Box"
-            extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+          <FormItemWithDescription
+            label="Task Specification"
+            description="Defines the dataset and starting point of the task: enter them manually, upload NML files (one task per file) or use an existing annotation as the base."
             hasFeedback
           >
-            <Vector6Input disabled={isEditingMode} />
-          </FormItem>
-
-          <FormItem label="Task Specification" hasFeedback>
             <RadioGroup
               value={specificationType}
               onChange={(evt: RadioChangeEvent) =>
@@ -786,9 +812,91 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                 Use Annotation ID as Base
               </Radio>
             </RadioGroup>
-          </FormItem>
+          </FormItemWithDescription>
 
           {renderSpecification()}
+
+          <FormItemWithDescription
+            label="Experience Requirement"
+            description="Optional. Only users with at least the given experience value in this domain get the task. Leave empty to let any member of the project's team get the task."
+            style={{ marginBottom: 0 }}
+          >
+            <Row gutter={8} wrap={false}>
+              <Col span={10}>
+                <FormItem name={["neededExperience", "domain"]} hasFeedback>
+                  <SelectExperienceDomain
+                    aria-label="Experience Domain"
+                    disabled={isEditingMode}
+                    placeholder="Any team member"
+                    notFoundContent={messages["task.domain_does_not_exist"]}
+                    width={100}
+                    allowCreation
+                    allowClear
+                  />
+                </FormItem>
+              </Col>
+              <Col flex="auto">
+                <FormItem
+                  name={["neededExperience", "value"]}
+                  hasFeedback
+                  dependencies={[["neededExperience", "domain"]]}
+                  rules={[
+                    ({ getFieldValue }) => ({
+                      required: isNonEmptyDomain(getFieldValue(["neededExperience", "domain"])),
+                      message: "Please enter an experience value for the selected domain.",
+                    }),
+                  ]}
+                >
+                  <InputNumber
+                    aria-label="Experience Value"
+                    style={fullWidth}
+                    disabled={isEditingMode || !hasExperienceDomain}
+                    placeholder={hasExperienceDomain ? "Minimum value" : "Select a domain first"}
+                  />
+                </FormItem>
+              </Col>
+              <CreateResourceButton text="Assign Experience" link="/users" />
+            </Row>
+          </FormItemWithDescription>
+
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col flex="auto">
+              <FormItemWithDescription
+                name="scriptId"
+                label="Script"
+                description="Optional. A user script that is loaded in the annotation view of everyone working on this task."
+                hasFeedback
+              >
+                <Select
+                  showSearch={{ optionFilterProp: "label" }}
+                  placeholder="Select a Script"
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  loading={isFetchingScripts}
+                  options={scripts.map((script: APIScript) => ({
+                    value: script.id,
+                    label: script.name,
+                  }))}
+                />
+              </FormItemWithDescription>
+            </Col>
+            <ReloadResourceButton
+              tooltip="Reload to show new Scripts"
+              onReload={async () => {
+                await refetchScripts();
+              }}
+            />
+            <CreateResourceButton text="Create new Script" link="/scripts/create" />
+          </Row>
+
+          <FormItemWithDescription
+            name="boundingBox"
+            label="Bounding Box"
+            description="Optional. Marks the region to annotate and is shown in the annotation view. Format: top-left x, y, z, then width, height, depth."
+            hasFeedback
+          >
+            <Vector6Input disabled={isEditingMode} />
+          </FormItemWithDescription>
 
           <FormItem>
             <Button type="primary" htmlType="submit">

@@ -14,6 +14,7 @@ import {
 } from "antd";
 import { useCallback, useEffect, useMemo } from "react";
 import type { AffineTransformation, APIDataLayer } from "types/api_types";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
   AXIS_TO_TRANSFORM_INDEX,
   EXPECTED_SETTINGS_TRANSFORMATION_LENGTH,
@@ -23,8 +24,7 @@ import {
   IDENTITY_TRANSFORM,
   type RotationAndMirroringSettings,
   settingsTransformationEqualsAffineIdentityTransform,
-} from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+} from "viewer/model/helpers/dataset_rotation_helpers";
 import { FormItemWithInfo } from "./helper_components";
 
 const { Text } = Typography;

@@ -1,0 +1,14 @@
+@(name: String, issuerName: String, annotationName: String, datasetName: String, annotationUrl: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  @{issuerName} transferred the annotation <i>@{annotationName}</i> of the dataset <i>@{datasetName}</i> to you.
+  You are now its owner and can find it in your dashboard.
+</p>
+
+@emailButton("Open Annotation", annotationUrl)
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

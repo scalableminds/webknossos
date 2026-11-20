@@ -98,6 +98,8 @@ function* splitBoundaryMeshSaga(): Saga<void> {
       "CREATE_TREE",
       "DELETE_EDGE",
       "DELETE_NODE",
+      "DELETE_NODE_AND_RECONNECT_NEIGHBORS",
+      "INSERT_NODE_ON_EDGE",
       "DELETE_TREE",
       "DELETE_TREES",
       "INITIALIZE_ANNOTATION_WITH_TRACINGS",

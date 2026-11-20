@@ -9,6 +9,7 @@ import io.lettuce.core.{
   RedisURI,
   ScanArgs,
   ScanCursor,
+  SetArgs,
   SocketOptions,
   TimeoutOptions,
   RedisClient as LettuceClient
@@ -141,7 +142,7 @@ trait RedisTemporaryStore extends LazyLogging {
   def insert(id: String, value: String, expiryOpt: Option[FiniteDuration] = None): Fox[Unit] =
     withCommands { cmd =>
       val stage = expiryOpt match {
-        case Some(expiry) => cmd.setex(id, expiry.toSeconds, value)
+        case Some(expiry) => cmd.set(id, value, SetArgs.Builder.ex(expiry.toSeconds))
         case None         => cmd.set(id, value)
       }
       Fox.fromFuture(stage.asScala.map(_ => ()))

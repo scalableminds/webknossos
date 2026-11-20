@@ -21,9 +21,16 @@ function DefaultErrorComponent() {
 
 export default function loadable<Props>(
   loader: () => Promise<{ default: React.ComponentType<Props> }>,
-  // Is rendered (with the same props) in case the component cannot be loaded,
-  // for example, because a new WEBKNOSSOS version was deployed in the meantime.
-  ErrorComponent: React.ComponentType<Props> = DefaultErrorComponent,
+  {
+    ErrorComponent = DefaultErrorComponent,
+    fallback = <div style={{ textAlign: "center" }}>Loading...</div>,
+  }: {
+    // Is rendered (with the same props) in case the component cannot be loaded,
+    // for example, because a new WEBKNOSSOS version was deployed in the meantime.
+    ErrorComponent?: React.ComponentType<Props>;
+    // Is rendered while the component is being loaded.
+    fallback?: React.ReactNode;
+  } = {},
 ) {
   const InternalComponent = lazy(() =>
     // Don't show the error toast since the rendered ErrorComponent
@@ -34,7 +41,7 @@ export default function loadable<Props>(
   ) as any;
   return function AsyncComponent(props: Props) {
     return (
-      <Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
+      <Suspense fallback={fallback}>
         <InternalComponent {...props} />
       </Suspense>
     );

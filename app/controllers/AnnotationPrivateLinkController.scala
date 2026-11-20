@@ -4,7 +4,6 @@ import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.Full
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import play.api.libs.json.*
 
@@ -53,7 +52,7 @@ class AnnotationPrivateLinkController @Inject() (
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
       _ <- Fox.fromBool(
-        annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)
+        !annotationPrivateLink.isExpired
       ) ?~> Msg.Annotation.PrivateLink.expired ~> NOT_FOUND
       annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(using GlobalAccessContext)
     } yield annotation
@@ -77,7 +76,7 @@ class AnnotationPrivateLinkController @Inject() (
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(id)
       _ <- Fox.fromBool(
-        annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)
+        !annotationPrivateLink.isExpired
       ) ?~> Msg.Annotation.PrivateLink.expired ~> NOT_FOUND
       _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> Msg.Annotation.notFound ~> NOT_FOUND
       annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(

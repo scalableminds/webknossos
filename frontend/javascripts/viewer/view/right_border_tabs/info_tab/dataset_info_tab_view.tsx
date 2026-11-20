@@ -19,6 +19,7 @@ import { KeyboardShortcutsSection } from "./keyboard_shortcuts_section";
 import { MagInfoRow } from "./mag_info_row";
 import { DatasetOwningOrganizationRow } from "./owning_organization_row";
 import { PeopleSection } from "./people_section";
+import { TaskSection } from "./task_section";
 import { VoxelSizeRow } from "./voxel_size_row";
 
 const datasetInfoTabId = "dataset-info-tab";
@@ -68,7 +69,6 @@ function DatasetInfoPanel() {
 function AnnotationInfoPanel() {
   const dataset = useWkSelector((state) => state.dataset);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const task = useWkSelector((state) => state.task);
   const annotationName = useWkSelector((state) => state.annotation.name);
   const annotationDescription = useWkSelector((state) => state.annotation.description);
   const mayEditAnnotation = useWkSelector(mayEditAnnotationProperties);
@@ -80,11 +80,7 @@ function AnnotationInfoPanel() {
         description={annotationDescription}
         mayEdit={mayEditAnnotation}
       />
-      {task != null ? (
-        <InfoTabSection label="Task">
-          <InfoTabRow label="Task ID">{task.id}</InfoTabRow>
-        </InfoTabSection>
-      ) : null}
+      <TaskSection />
       <InfoTabSection
         label="Dataset"
         action={<DatasetSettingsButton dataset={dataset} activeUser={activeUser} />}

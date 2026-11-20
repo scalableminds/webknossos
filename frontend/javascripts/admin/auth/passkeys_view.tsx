@@ -1,4 +1,5 @@
 import { DeleteOutlined } from "@ant-design/icons";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   doWebAuthnRegistration,
   listWebAuthnKeys,
@@ -6,31 +7,32 @@ import {
   type WebAuthnKeyDescriptor,
 } from "admin/api/webauthn";
 import { Button, Input, Modal, Table } from "antd";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { scrollToTop } from "libs/utils";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
+const PASSKEYS_QUERY_KEY = ["webAuthnKeys"];
 
 function PasskeysView() {
   /// Passkeys
   const [isPasskeyNameModalOpen, setIsPasskeyNameModalOpen] = useState(false);
   const [newPasskeyName, setNewPasskeyName] = useState("");
 
-  const [passkeys, setPasskeys] = useState<WebAuthnKeyDescriptor[]>([]);
-  async function fetchPasskeys(): Promise<void> {
-    const passkeys = await listWebAuthnKeys();
-    setPasskeys(passkeys);
-  }
+  const queryClient = useQueryClient();
+  const { data: passkeys = [], isLoading } = useQueryWithErrorHandling({
+    queryKey: PASSKEYS_QUERY_KEY,
+    queryFn: listWebAuthnKeys,
+    refetchOnWindowFocus: false,
+  });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: run once
-  useEffect(() => {
-    fetchPasskeys();
-  }, []);
-
-  async function webauthnRemoveKey(passkey: WebAuthnKeyDescriptor): Promise<void> {
-    await removeWebAuthnKey(passkey.id);
-    Toast.success("Passkey '" + passkey.name + "' is removed.");
-    await fetchPasskeys();
-  }
+  const removePasskeyMutation = useMutation({
+    mutationFn: (passkey: WebAuthnKeyDescriptor) => removeWebAuthnKey(passkey.id),
+    onSuccess: (_data, passkey) => {
+      Toast.success("Passkey '" + passkey.name + "' is removed.");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: PASSKEYS_QUERY_KEY }),
+  });
 
   const registerNewPasskey = async () => {
     const passkeyName = newPasskeyName.trim();
@@ -45,7 +47,7 @@ function PasskeysView() {
     await doWebAuthnRegistration(passkeyName);
     Toast.success("Passkey registered successfully.");
     setNewPasskeyName("");
-    fetchPasskeys();
+    queryClient.invalidateQueries({ queryKey: PASSKEYS_QUERY_KEY });
   };
 
   const passkeyColumns = [
@@ -64,7 +66,7 @@ function PasskeysView() {
           type="default"
           shape="circle"
           icon={<DeleteOutlined />}
-          onClick={() => webauthnRemoveKey(passkey)}
+          onClick={() => removePasskeyMutation.mutate(passkey)}
           size="small"
         />
       ),
@@ -75,6 +77,7 @@ function PasskeysView() {
     <>
       <Table
         dataSource={passkeys}
+        loading={isLoading || removePasskeyMutation.isPending}
         columns={passkeyColumns}
         rowKey="id"
         pagination={{

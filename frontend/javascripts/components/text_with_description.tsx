@@ -32,7 +32,7 @@ const TextWithDescription: React.FC<Props> = ({
     </div>
   );
   return (
-    <span style={{ wordBreak: "break-word" }}>
+    <span style={{ overflowWrap: "anywhere" }}>
       <span
         style={{
           display: "inline-block",

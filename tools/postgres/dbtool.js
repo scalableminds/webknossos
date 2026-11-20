@@ -132,6 +132,13 @@ const TEST_CSV_IMPORT_ORDER = [
   "user_experiences.csv",       // → users
   "timeSpans.csv",              // → users, annotations
   "tokens.csv",                 // no strict FK, but after users
+  "voxelytics_workflows.csv",   // → organizations
+  "voxelytics_runs.csv",        // → voxelytics_workflows, users
+  "voxelytics_tasks.csv",       // → voxelytics_runs
+  "voxelytics_chunks.csv",      // → voxelytics_tasks
+  "voxelytics_artifacts.csv",   // → voxelytics_tasks
+  "voxelytics_runHeartbeatEvents.csv", // → voxelytics_runs
+  "voxelytics_chunkProfilingEvents.csv", // → voxelytics_chunks
 ];
 
 function importTestCsvFiles() {
@@ -502,7 +509,7 @@ program
     console.log("Enabling jobs in the local database by inserting a worker.");
     console.log(
       callPsql(
-        `INSERT INTO webknossos.workers(_id, _dataStore, key, supportedJobCommands, name) VALUES('6194dc03040200b0027f28a1', 'localhost', 'secretWorkerKey', '{compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation, compute_segment_index_file, infer_mitochondria, train_neuron_model, train_instance_model, infer_instances, align_sections}', 'Dev Worker') ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands;`,
+        `INSERT INTO webknossos.workers(_id, _dataStore, key, supportedJobCommands, name) VALUES('6194dc03040200b0027f28a1', 'localhost', 'secretWorkerKey', '{compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation, compute_segment_index_file, infer_mitochondria, train_neuron_model, train_instance_model, infer_instances, align_sections, align}', 'Dev Worker') ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands;`,
       ),
     );
     console.log("✨✨ Done");
@@ -515,6 +522,46 @@ program
     console.log(callPsql(`DELETE FROM webknossos.workers WHERE _id = '6194dc03040200b0027f28a1';`));
     console.log(
       "If existing jobs prevent the delete, use yarn refresh-schema to reset the db or remove the existing jobs manually.",
+    );
+    console.log("✨✨ Done");
+  });
+
+// Fake partner for testing the co-branding in the dev setup, see webknossos.partners.
+const TEST_PARTNER_ID = "68f0c0ffee0000000000000a";
+
+program
+  .command("enable-partner")
+  .description(
+    "Assigns the sample organization to a test partner (co-branding) and inserts a partner-only AI model",
+  )
+  .action(() => {
+    console.log("Inserting a test partner and assigning the sample organization to it.");
+    console.log(
+      callPsql(
+        `INSERT INTO webknossos.partners(_id, name, logoUrl, compactLogoUrl, linkUrl) VALUES('${TEST_PARTNER_ID}', 'Test Partner', '/images/partners/test-partner-logo.svg', '/images/partners/test-partner-logo-compact.svg', 'https://example.com') ON CONFLICT (_id) DO UPDATE SET isDeleted = FALSE;`,
+      ),
+    );
+    console.log(
+      callPsql(
+        `UPDATE webknossos.organizations SET _partner = '${TEST_PARTNER_ID}' WHERE _id = 'sample_organization';`,
+      ),
+    );
+    console.log(
+      callPsql(
+        `INSERT INTO webknossos.aiModels(_id, _dataStore, name, comment, category, isPretrained, _partner, thumbnailUrl) VALUES('576500000000000000000005', 'localhost', 'Partner Neuron Segmentation', 'Placeholder text for the partner neuron model. Only organizations of the test partner can see and use this model. [Learn more](https://example.com)', 'em_neurons', TRUE, '${TEST_PARTNER_ID}', '/images/partners/test-partner-model-thumbnail.svg') ON CONFLICT (_id) DO NOTHING;`,
+      ),
+    );
+    console.log("✨✨ Done");
+  });
+
+program
+  .command("disable-partner")
+  .description("Removes the partner assignment of the sample organization")
+  .action(() => {
+    console.log(
+      callPsql(
+        `UPDATE webknossos.organizations SET _partner = NULL WHERE _id = 'sample_organization';`,
+      ),
     );
     console.log("✨✨ Done");
   });

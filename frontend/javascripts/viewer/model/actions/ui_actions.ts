@@ -1,6 +1,11 @@
 import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
+import type {
+  BorderOpenStatus,
+  SegmentStatisticsScope,
+  Theme,
+  WebknossosState,
+} from "viewer/store";
 import type { StartAiJobDrawerState } from "viewer/view/ai_jobs/constants";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
@@ -8,12 +13,13 @@ type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisi
 type SetIsRestoringVersionAction = ReturnType<typeof setIsRestoringVersionAction>;
 type SetStoredLayoutsAction = ReturnType<typeof setStoredLayoutsAction>;
 type SetBorderOpenStatusAction = ReturnType<typeof setBorderOpenStatusAction>;
+type SetSegmentStatisticsScopeAction = ReturnType<typeof setSegmentStatisticsScopeAction>;
 type SetImportingMeshStateAction = ReturnType<typeof setImportingMeshStateAction>;
 type SetIsInAnnotationViewAction = ReturnType<typeof setIsInAnnotationViewAction>;
 type SetHasOrganizationsAction = ReturnType<typeof setHasOrganizationsAction>;
 export type SetToolAction = ReturnType<typeof setToolAction>;
 export type CycleToolAction = ReturnType<typeof cycleToolAction>;
-type SetThemeAction = ReturnType<typeof setThemeAction>;
+type SetSystemThemeAction = ReturnType<typeof setSystemThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetIsWkInitializedAction = ReturnType<typeof setIsWkInitializedAction>;
@@ -54,12 +60,13 @@ export type UiAction =
   | SetIsRestoringVersionAction
   | SetImportingMeshStateAction
   | SetBorderOpenStatusAction
+  | SetSegmentStatisticsScopeAction
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
   | SetHasOrganizationsAction
   | SetToolAction
   | CycleToolAction
-  | SetThemeAction
+  | SetSystemThemeAction
   | SetDownloadModalVisibilityAction
   | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
@@ -110,6 +117,11 @@ export const setBorderOpenStatusAction = (borderOpenStatus: BorderOpenStatus) =>
     type: "SET_BORDER_OPEN_STATUS",
     borderOpenStatus,
   }) as const;
+export const setSegmentStatisticsScopeAction = (scope: SegmentStatisticsScope | null) =>
+  ({
+    type: "SET_SEGMENT_STATISTICS_SCOPE",
+    scope,
+  }) as const;
 const setImportingMeshStateAction = (isImporting: boolean) =>
   ({
     type: "SET_IMPORTING_MESH_STATE",
@@ -135,10 +147,10 @@ export const cycleToolAction = (backwards: boolean = false) =>
     type: "CYCLE_TOOL",
     backwards,
   }) as const;
-export const setThemeAction = (value: Theme) =>
+export const setSystemThemeAction = (systemTheme: Theme) =>
   ({
-    type: "SET_THEME",
-    value,
+    type: "SET_SYSTEM_THEME",
+    systemTheme,
   }) as const;
 export const setDownloadModalVisibilityAction = (visible: boolean) =>
   ({

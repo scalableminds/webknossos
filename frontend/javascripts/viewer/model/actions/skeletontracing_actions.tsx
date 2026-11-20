@@ -11,14 +11,18 @@ import {
   AllUserBoundingBoxActions,
 } from "viewer/model/actions/annotation_actions";
 import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
-import type { SkeletonTracing } from "viewer/store";
+import type { SkeletonTracing, UndoableLocalSkeletonState } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import type { ApplicableSkeletonServerUpdateAction } from "../sagas/volume/update_actions";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
 export type DeleteNodeAction = ReturnType<typeof deleteNodeAction>;
+export type DeleteNodeAndReconnectNeighborsAction = ReturnType<
+  typeof deleteNodeAndReconnectNeighborsAction
+>;
 export type DeleteEdgeAction = ReturnType<typeof deleteEdgeAction>;
+export type InsertNodeOnEdgeAction = ReturnType<typeof insertNodeOnEdgeAction>;
 type SetActiveNodeAction = ReturnType<typeof setActiveNodeAction>;
 type CenterActiveNodeAction = ReturnType<typeof centerActiveNodeAction>;
 type SetNodeRadiusAction = ReturnType<typeof setNodeRadiusAction>;
@@ -94,7 +98,9 @@ export type SkeletonTracingAction =
   | InitializeSkeletonTracingAction
   | CreateNodeAction
   | DeleteNodeAction
+  | DeleteNodeAndReconnectNeighborsAction
   | DeleteEdgeAction
+  | InsertNodeOnEdgeAction
   | SetActiveNodeAction
   | CenterActiveNodeAction
   | SetActiveTreeGroupAction
@@ -203,6 +209,8 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   // Mutations that are never allowed in concurrent collaboration mode.
   CREATE_NODE: { needsUpdatePermission: true, collab: "block" },
   DELETE_NODE: { needsUpdatePermission: true, collab: "block" },
+  DELETE_NODE_AND_RECONNECT_NEIGHBORS: { needsUpdatePermission: true, collab: "block" },
+  INSERT_NODE_ON_EDGE: { needsUpdatePermission: true, collab: "block" },
   SET_NODE_POSITION: { needsUpdatePermission: true, collab: "block" },
   CREATE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
   DELETE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
@@ -240,7 +248,9 @@ export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_ANNOTATION_WITH_TRACINGS",
   "CREATE_NODE",
   "DELETE_NODE",
+  "DELETE_NODE_AND_RECONNECT_NEIGHBORS",
   "DELETE_EDGE",
+  "INSERT_NODE_ON_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
   "SET_NODE_POSITION",
@@ -328,6 +338,15 @@ export const deleteNodeAction = (
     timestamp,
   }) as const;
 
+// Deletes a node with exactly two neighbors and connects these neighbors with a new edge,
+// so that the tree is not split.
+export const deleteNodeAndReconnectNeighborsAction = (nodeId: number, treeId: number) =>
+  ({
+    type: "DELETE_NODE_AND_RECONNECT_NEIGHBORS",
+    nodeId,
+    treeId,
+  }) as const;
+
 export const deleteEdgeAction = (
   sourceNodeId: number,
   targetNodeId: number,
@@ -340,6 +359,20 @@ export const deleteEdgeAction = (
     targetNodeId,
     timestamp,
     initiator,
+  }) as const;
+
+// Inserts a new node at the midpoint of the edge between the two given nodes,
+// so that the tree is not split. The new node becomes active.
+export const insertNodeOnEdgeAction = (
+  sourceNodeId: number,
+  targetNodeId: number,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "INSERT_NODE_ON_EDGE",
+    sourceNodeId,
+    targetNodeId,
+    timestamp,
   }) as const;
 
 export const setActiveNodeAction = (
@@ -667,10 +700,15 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number) =>
     treeId,
   }) as const;
 
-export const setSkeletonTracingAction = (tracing: SkeletonTracing) =>
+// If localSkeletonState is given, it is set in the same reducer step as the tracing.
+export const setSkeletonTracingAction = (
+  tracing: SkeletonTracing,
+  localSkeletonState?: UndoableLocalSkeletonState,
+) =>
   ({
     type: "SET_SKELETON_TRACING",
     tracing,
+    localSkeletonState,
   }) as const;
 
 export const setTreeGroupsAction = (treeGroups: Array<TreeGroup>) =>

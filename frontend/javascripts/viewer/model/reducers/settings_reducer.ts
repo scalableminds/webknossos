@@ -8,12 +8,21 @@ import {
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getMaximumBrushSize,
   hasEditableMapping,
   isMappingActivationAllowed,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2, updateKey3 } from "viewer/model/helpers/deep_update";
-import type { ActiveMappingInfo, WebknossosState } from "viewer/store";
+import type { ActiveMappingInfo, UserConfiguration, WebknossosState } from "viewer/store";
+
+// In addition to the static maximum from the user settings schema, the maximum of these
+// settings depends on the current state.
+const dynamicMaximumFnsForUserSettings: Partial<
+  Record<keyof UserConfiguration, (state: WebknossosState) => number>
+> = {
+  brushSize: getMaximumBrushSize,
+};
 
 //
 // Update helpers
@@ -104,9 +113,9 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
         // @ts-expect-error Since settingSpec.type === "number", value will be a number
         value = clamp(min, value, max);
 
-        if ("dynamicMaximumFn" in settingSpec) {
-          const dynamicMaximum = settingSpec.dynamicMaximumFn(state);
-          value = Math.min(value, dynamicMaximum);
+        const dynamicMaximumFn = dynamicMaximumFnsForUserSettings[propertyName];
+        if (dynamicMaximumFn != null) {
+          value = Math.min(value, dynamicMaximumFn(state));
         }
       }
 

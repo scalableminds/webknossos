@@ -30,7 +30,7 @@ trait DatasetHeader {
 
   lazy val bytesPerElement: Int = ArrayDataType.bytesPerElement(resolvedDataType)
 
-  lazy val bytesPerChunk: Int = chunkShape.toList.product * bytesPerElement
+  lazy val bytesPerChunk: Long = chunkShape.map(_.toLong).product * bytesPerElement
 
   lazy val fillValueNumber: Number =
     fill_value match {

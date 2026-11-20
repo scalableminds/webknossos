@@ -1,10 +1,10 @@
 import { EditOutlined } from "@ant-design/icons";
 import { Space } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
-import type React from "react";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import ButtonComponent from "viewer/view/components/button_component";
-import InputComponent from "viewer/view/components/input_component";
+import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
 import { useActiveComment } from "./hooks/use_active_comment";
 import { useCommentEditPermission } from "./hooks/use_comment_edit_permission";
@@ -46,6 +46,10 @@ export function CommentEditor({
   const inputValue = activeComment != null ? encodeLineBreaks(activeComment.content) : "";
 
   const handleSave = (content: string) => {
+    // The input commits on blur and on Enter, so skip no-op saves to keep the undo stack clean.
+    if (content === (activeComment?.content ?? "")) {
+      return;
+    }
     saveComment(content);
     if (content !== "") {
       onCommentCreated();
@@ -54,19 +58,23 @@ export function CommentEditor({
 
   return (
     <Space>
-      <InputComponent
-        value={inputValue}
-        disabled={isDisabled}
-        title={disabledReason ?? undefined}
-        onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
-          handleSave(decodeLineBreaks(evt.target.value))
-        }
-        onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
-          (evt.target as HTMLElement).blur()
-        }
-        placeholder="Add comment"
-        size="small"
-      />
+      {/* Commits on blur/Enter instead of on every keystroke, so that each edit is a single undo step. */}
+      <FastTooltip title={disabledReason ?? undefined}>
+        <InputWithUpdateOnBlur
+          value={inputValue}
+          disabled={isDisabled}
+          onChange={(newValue) => {
+            // Compare before decoding: a literal "\n" in the stored comment would otherwise
+            // be decoded into a real line break and saved although nothing was edited.
+            if (newValue === inputValue) {
+              return;
+            }
+            handleSave(decodeLineBreaks(newValue));
+          }}
+          placeholder="Add comment"
+          size="small"
+        />
+      </FastTooltip>
       <ButtonComponent
         onClick={onOpenMarkdownModal}
         disabled={isDisabled}

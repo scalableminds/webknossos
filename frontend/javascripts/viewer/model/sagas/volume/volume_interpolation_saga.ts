@@ -1,13 +1,13 @@
 import cwise from "cwise";
 import distanceTransform from "distance-transform";
-import { V2, V3 } from "libs/mjs";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import ndarray, { type NdArray } from "ndarray";
 import { call, put } from "typed-redux-saga";
 import {
-  ContourModeEnum,
   OrthoViews,
+  OverwriteModeEnum,
   type TypedArrayWithoutBigInt,
   type Vector3,
 } from "viewer/constants";
@@ -33,11 +33,12 @@ import {
 import Dimensions from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import type { VoxelBuffer2D } from "viewer/model/volumetracing/legacy/section_labeling";
+import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
+import { runMaskEdit } from "viewer/model/volumetracing/integration/mask_driver";
 import { api, Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
-import { createSectionLabeler, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+import { getBoundingBoxForViewport, getVolumeSaveMode, pushPartialBucketUpdates } from "./helpers";
 
 const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
@@ -349,29 +350,14 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   const interpolationRange = [1, interpolationDepth];
 
-  const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
-  for (
-    let targetOffsetW = interpolationRange[0];
-    targetOffsetW < interpolationRange[1];
-    targetOffsetW++
-  ) {
-    const sectionLabeler = yield* call(
-      createSectionLabeler,
-      volumeTracing,
-      activeViewport,
-      labeledMag,
-      (thirdDim) => relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
-    );
-    interpolationVoxelBuffers[targetOffsetW] = sectionLabeler.createVoxelBuffer2D(
-      V2.floor(
-        sectionLabeler.globalCoordToMag2DFloat(
-          V3.add(relevantBoxMag1.min, transpose([0, 0, targetOffsetW])),
-        ),
-      ),
-      size[firstDim],
-      size[secondDim],
-    );
-  }
+  // The slices strictly between the first and the last one, as one region in
+  // the labeled mag, so that they are labeled in a single transaction.
+  const maskOrigin: Vector3 = [...relevantBoxCurrentMag.min];
+  maskOrigin[thirdDim] += interpolationRange[0];
+  const maskSize: Vector3 = [...size];
+  maskSize[thirdDim] = interpolationRange[1] - interpolationRange[0];
+  const maskStrides: Vector3 = [1, maskSize[0], maskSize[0] * maskSize[1]];
+  const maskSelected = new Uint8Array(maskSize[0] * maskSize[1] * maskSize[2]);
 
   // These two variables will be initialized with binary masks (representing whether
   // a voxel contains the active segment id).
@@ -448,23 +434,44 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
         const weightedAverage = firstVal * (1 - k) + lastVal * k;
         const shouldDraw = weightedAverage < 0;
         if (shouldDraw) {
-          const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetW];
-          voxelBuffer2D.setValue(u, v, 1);
+          maskSelected[
+            u * maskStrides[firstDim] +
+              v * maskStrides[secondDim] +
+              (targetOffsetW - interpolationRange[0]) * maskStrides[thirdDim]
+          ] = 1;
         }
       }
     }
   }
 
-  for (const voxelBuffer of Object.values(interpolationVoxelBuffers)) {
-    yield* call(
-      labelWithVoxelBuffer2D,
-      voxelBuffer,
-      ContourModeEnum.DRAW,
-      overwriteMode,
-      labeledZoomStep,
-      activeViewport,
-    );
-  }
+  const { cube } = yield* call([Model, Model.getSegmentationTracingLayer], volumeTracing.tracingId);
+  const saveMode = yield* call(getVolumeSaveMode);
+  const { bucketDiffs } = runMaskEdit(
+    {
+      cube,
+      magIndex: labeledZoomStep,
+      segmentId: activeCellId,
+      additionalCoordinates: additionalCoordinates ?? null,
+      overwriteMode:
+        overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY
+          ? "overwrite-empty-only"
+          : "overwrite-all",
+      // As for the brush: under overwrite-empty, only background is labeled.
+      overwritableValue: 0n,
+      saveMode,
+    },
+    { kind: "mask", origin: maskOrigin, size: maskSize, selected: maskSelected },
+    "volumeInterpolation",
+  );
+  // As for the brush, in the run order in which the viewport's slices are contiguous.
+  yield* call(
+    pushPartialBucketUpdates,
+    saveMode,
+    bucketDiffs,
+    cube,
+    volumeTracing.tracingId,
+    runAxisForPlane(activeViewport),
+  );
 
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 

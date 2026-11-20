@@ -1,6 +1,6 @@
+import { showSessionExpiredToastIfApplicable } from "libs/handle_request_error_helper";
 import type { RequestOptions } from "libs/request";
 import Toast, { type Message } from "libs/toast";
-import { sleep } from "libs/utils";
 
 /**
  * Most importantly this module exposes the type ApiResult which should be returned
@@ -71,6 +71,9 @@ function defaultIsRetryable(error: RestApiError): boolean {
 // Mirrors the Toast.messages/Toast.error branching in handle_request_error_helper.tsx,
 // so the *one* toast we show (see requestResult below) looks the same as today's.
 function showErrorToastFor(error: RestApiError): void {
+  if (error.kind === "http" && showSessionExpiredToastIfApplicable(error.status)) {
+    return;
+  }
   const messages = (error.cause as { messages?: Message[] } | undefined)?.messages;
   if (error.kind === "http" && messages) {
     Toast.messages(messages);
@@ -91,9 +94,11 @@ function showErrorToastFor(error: RestApiError): void {
  * If `overallTimeoutMs` is set, each attempt is bounded to whatever's left of
  * it (via RequestOptions.timeout) and the backoff sleep is capped to the
  * remaining time as well, so this promise can't run past the deadline by a
- * full attempt-plus-backoff. Note this only makes requestResult itself stop
- * waiting — libs/request.ts has no AbortController/signal support, so a
- * timed-out attempt's underlying fetch keeps running in the browser regardless.
+ * full attempt-plus-backoff.
+ *
+ * If `options.signal` is aborted (e.g., because the calling saga was cancelled),
+ * the current attempt is aborted, no further retries happen and no error toast
+ * is shown. The result is an error with kind "abort".
  */
 export async function requestResult<T>(
   requester: (adaptedOptions: RequestOptions) => Promise<T>,
@@ -114,6 +119,9 @@ export async function requestResult<T>(
   let delay = initialDelayMs;
 
   while (true) {
+    if (options.signal?.aborted) {
+      return { ok: false, error: getAbortedError(options.signal) };
+    }
     const remainingMs = deadline != null ? deadline - Date.now() : null;
     const attemptOptions: RequestOptions = {
       ...options,
@@ -130,6 +138,9 @@ export async function requestResult<T>(
       const value = await requester(attemptOptions);
       return { ok: true, value };
     } catch (cause) {
+      if (options.signal?.aborted) {
+        return { ok: false, error: getAbortedError(options.signal) };
+      }
       const error = classifyError(cause);
       const remainingAfterFailure = deadline != null ? deadline - Date.now() : null;
       const outOfAttempts = attempt >= retries;
@@ -150,10 +161,27 @@ export async function requestResult<T>(
         error.message,
       );
       attempt++;
-      await sleep(sleepMs);
+      await sleepUnlessAborted(sleepMs, options.signal);
       delay *= backoffFactor;
     }
   }
+}
+
+function getAbortedError(signal: AbortSignal): RestApiError {
+  return { kind: "abort", message: "Aborted", cause: signal.reason };
+}
+
+// Resolves after `ms` or as soon as `signal` is aborted (whichever happens first).
+function sleepUnlessAborted(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  return new Promise((resolve) => {
+    const onDone = () => {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", onDone);
+      resolve();
+    };
+    const timeoutId = setTimeout(onDone, ms);
+    signal?.addEventListener("abort", onDone);
+  });
 }
 
 // Escape hatch for call sites that aren't ready to branch on ApiResult yet —

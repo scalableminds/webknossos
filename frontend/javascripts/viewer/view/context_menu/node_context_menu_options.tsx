@@ -2,9 +2,14 @@ import type { ItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { shallowEqual, useDispatch } from "react-redux";
-import { AltOrOptionKey, CtrlOrCmdKey } from "viewer/constants";
+import { AltOrOptionKey, CtrlOrCmdKey, TreeTypeEnum } from "viewer/constants";
 import { mayEditSkeletonTree } from "viewer/model/accessors/annotation_accessor";
-import { getTreeAndNodeOrNull } from "viewer/model/accessors/skeletontracing_accessor";
+import { DISABLED_EXPLANATION } from "viewer/model/accessors/disabled_tool_accessor";
+import {
+  areGeometriesTransformed,
+  getEdgeForReconnectingNeighbors,
+  getTreeAndNodeOrNull,
+} from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   cutAgglomerateFromNeighborsAction,
@@ -52,6 +57,7 @@ export function useNodeContextMenuOptions(
   // Whether the clicked tree may be edited. In concurrent collaboration mode, only agglomerate
   // trees (proofreading) may be mutated.
   const mayEditClickedTree = useWkSelector((state) => mayEditSkeletonTree(state, clickedTree));
+  const areSkeletonGeometriesTransformed = useWkSelector(areGeometriesTransformed);
   const isProofreadingActive = useWkSelector(
     (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
   );
@@ -83,6 +89,8 @@ export function useNodeContextMenuOptions(
       (edge) => edge.source === clickedNodeId || edge.target === clickedNodeId,
     );
   }
+
+  const canReconnectNeighbors = getEdgeForReconnectingNeighbors(clickedTree, clickedNodeId) != null;
 
   const menuItems: ItemType[] = [
     {
@@ -116,6 +124,27 @@ export function useNodeContextMenuOptions(
               </>
             ),
           },
+          clickedTree.type === TreeTypeEnum.DEFAULT
+            ? {
+                key: "insert-node-on-edge",
+                disabled: !areNodesConnected || areSkeletonGeometriesTransformed,
+                onClick: () =>
+                  activeNodeId != null
+                    ? actions.insertNodeOnEdge(activeNodeId, clickedNodeId)
+                    : null,
+                label: (
+                  <FastTooltip
+                    title={
+                      areSkeletonGeometriesTransformed
+                        ? DISABLED_EXPLANATION.SKELETON_LAYER_TRANSFORMED
+                        : undefined
+                    }
+                  >
+                    Insert Node on Edge to Active Node
+                  </FastTooltip>
+                ),
+              }
+            : null,
           isProofreadingActive
             ? {
                 key: "min-cut-node",
@@ -160,7 +189,7 @@ export function useNodeContextMenuOptions(
               activeNodeId != null ? dispatch(deleteEdgeAction(activeNodeId, clickedNodeId)) : null,
             label: (
               <>
-                Delete Edge to this Node{" "}
+                Delete Edge to Active Node & Split Tree{" "}
                 {useLegacyBindings ? shortcutBuilder(["Shift", CtrlOrCmdKey, "leftMouse"]) : null}
               </>
             ),
@@ -174,6 +203,15 @@ export function useNodeContextMenuOptions(
               </>
             ),
           },
+          clickedTree.type === TreeTypeEnum.DEFAULT
+            ? {
+                key: "delete-node-and-reconnect-neighbors",
+                disabled: !canReconnectNeighbors,
+                onClick: () =>
+                  actions.deleteNodeAndReconnectNeighbors(clickedNodeId, clickedTree.treeId),
+                label: "Delete this Node & Reconnect Neighbors",
+              }
+            : null,
           isBranchpoint
             ? {
                 key: "branchpoint-node",

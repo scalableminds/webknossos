@@ -12,18 +12,17 @@ import Toast from "libs/toast";
 import compact from "lodash-es/compact";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
 import { type APIAnnotation, type APIDataset, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
-import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox, VolumeTracing } from "viewer/store";
 import {
   type JobRequirement,
   pendingRequirement,
   type StepStatus,
 } from "../components/job_requirements";
+import type { StartedJob } from "../components/job_started_card";
 import { fetchAnnotationInfo } from "../hooks/fetch_annotation_infos";
 import { getIntersectingMagList } from "../utils";
 import type { AiTrainingTask } from "./ai_training_model_selector";
@@ -106,6 +105,7 @@ interface AiTrainingJobContextType {
   areParametersValid: boolean;
   requirements: JobRequirement[];
   stepStatuses: { task: StepStatus; trainingData: StepStatus; settings: StepStatus };
+  startedJob: StartedJob | null;
 }
 
 const AiTrainingJobContext = createContext<AiTrainingJobContextType | undefined>(undefined);
@@ -123,8 +123,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   const [comments, setComments] = useState("");
   const [instanceDiameterNm, setInstanceDiameterNm] = useState(1000.0);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
-
-  const dispatch = useDispatch();
+  const [startedJob, setStartedJob] = useState<StartedJob | null>(null);
 
   const currentAnnotation = useWkSelector((state) => state.annotation);
   const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
@@ -247,8 +246,11 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
           customConfiguration,
         });
       }
-      Toast.success("The training has successfully started.");
-      dispatch(setAIJobDrawerStateAction("invisible"));
+      setStartedJob({
+        title: `Training of "${modelName}" is running.`,
+        description:
+          "You will receive an email when the job finishes. The model is then listed under custom models in the Run Segmentation Model tab.",
+      });
     } catch (error) {
       console.error(error);
       Toast.error("Failed to start training.");
@@ -260,7 +262,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     comments,
     instanceDiameterNm,
     customConfiguration,
-    dispatch,
+    setStartedJob,
   ]);
 
   const value = {
@@ -283,6 +285,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     areParametersValid,
     requirements,
     stepStatuses,
+    startedJob,
   };
 
   return <AiTrainingJobContext.Provider value={value}>{children}</AiTrainingJobContext.Provider>;

@@ -20,7 +20,7 @@ import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ColorWKGold } from "theme";
 import { APIJobCommand } from "types/api_types";
@@ -175,7 +175,7 @@ interface CreditInformationProps {
   selectedModel: { name?: string } | null;
   selectedJobType: APIJobCommand | null;
   selectedBoundingBox: UserBoundingBox | null;
-  handleStartAnalysis: () => void;
+  handleStartAnalysis: () => Promise<void>;
   startButtonTitle: string;
   areParametersValid: boolean;
   requirements: JobRequirement[];
@@ -231,6 +231,16 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   volume,
 }) => {
   const { cssVar } = theme.useToken();
+  // Blocks a second start (and charge) while the first request is still in flight.
+  const [isStarting, setIsStarting] = useState(false);
+  const startJob = async () => {
+    setIsStarting(true);
+    try {
+      await handleStartAnalysis();
+    } finally {
+      setIsStarting(false);
+    }
+  };
   const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
       [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostInMilliCreditsPerGVx,
@@ -380,7 +390,8 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           block
           size="large"
           disabled={isSubmitDisabled}
-          onClick={handleStartAnalysis}
+          loading={isStarting}
+          onClick={startJob}
         >
           {startButtonTitle}
           {startButtonSuffix}

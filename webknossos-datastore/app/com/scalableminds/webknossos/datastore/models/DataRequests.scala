@@ -53,7 +53,8 @@ case class WebknossosAdHocMeshRequest(
     mappingType: Option[MappingType.Value] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
-    findNeighbors: Boolean = true
+    findNeighbors: Boolean = true,
+    indexed: Boolean = false // Respond with an indexed mesh instead of a triangle soup, see AdHocMesh.toBytes
 ) derives JsonAutoFormat {
   def cuboid: Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
@@ -79,7 +80,7 @@ case class AdditionalCoordinate(
     // Number of consecutive values starting at `value` to read along this axis, instead of just one.
     // Must be either absent/1 or exactly DataLayer.bucketLength.
     // Only available for datasets with depth (z) <= 1.
-    // Only available for one AdditonalCoordinate per request.
+    // Only available for one AdditionalCoordinate per request.
     length: Option[Int] = None
 ) derives JsonAutoFormat {
   override def toString: String = s"$name=$value"

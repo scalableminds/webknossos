@@ -11,12 +11,9 @@ import { filterWithSearchQueryAND, scrollToTop } from "libs/utils";
 import type React from "react";
 import { type Key, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import {
-  VoxelyticsRunState,
-  type VoxelyticsWorkflowListing,
-  type VoxelyticsWorkflowListingRun,
-} from "types/api_types";
-import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
+import { VoxelyticsRunState, type VoxelyticsWorkflowListingRun } from "types/api_types";
+import { parseWorkflowInfo } from "./parse_api_data";
+import { runStateToStatus } from "./utils";
 
 const { Search } = Input;
 
@@ -26,27 +23,6 @@ const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">
   },
   "workflowList",
 );
-
-function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun) {
-  return {
-    ...runInfo,
-    beginTime: runInfo.beginTime != null ? new Date(runInfo.beginTime) : null,
-    endTime: runInfo.endTime != null ? new Date(runInfo.endTime) : null,
-  };
-}
-
-function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsWorkflowListing {
-  return {
-    ...workflowInfo,
-    runs: workflowInfo.runs.map(parseRunInfo).sort((a, b) => {
-      if (a.beginTime != null && b.beginTime != null)
-        return a.beginTime.getTime() - b.beginTime.getTime();
-      else if (a.beginTime != null) return -1;
-      else if (b.beginTime != null) return 1;
-      else return 0;
-    }),
-  };
-}
 
 function uniqueify<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
@@ -93,7 +69,6 @@ export default function WorkflowListView() {
     },
     // We use the select to transform the data because it is run on cached and fetched data
     select: (data) => data.map(parseWorkflowInfo),
-    refetchInterval: VX_POLLING_INTERVAL ?? false,
   });
 
   const getUserDisplayName = (run: VoxelyticsWorkflowListingRun) => {

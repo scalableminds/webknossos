@@ -36,7 +36,7 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
       ? [["Guest User", "lime", "Guest users do not count against your organization’s user quota."]]
       : []),
     ...(user.isAdmin
-      ? [["Admin - Access to all Teams", "red", "Admins have access to all teams and datasets."]]
+      ? [["Admin - Access to all Teams", "error", "Admins have access to all teams and datasets."]]
       : [
           ...(user.isDatasetManager
             ? [

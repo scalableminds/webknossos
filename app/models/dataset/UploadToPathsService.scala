@@ -26,7 +26,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.{BaseDirConfig, BaseDirConfigReader, DataSourceValidation}
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import controllers.{
-  PathDeletionService,
   ReserveAttachmentUploadToPathRequest,
   ReserveDatasetUploadToPathsForPreliminaryRequest,
   ReserveDatasetUploadToPathsRequest,
@@ -120,7 +119,7 @@ class UploadToPathsService @Inject() (
   )(using ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       _ <- Fox.fromBool(
-        dataset.status == DataSourceStatus.notYetUploaded
+        dataset.status == DataSourceStatus.notYetUploaded || dataset.status == DataSourceStatus.conversionFailed
       ) ?~> s"Dataset is not in uploading status, got ${dataset.status}."
       _ <- Fox.fromBool(
         dataset._uploader.contains(requestingUser._id)

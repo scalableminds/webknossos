@@ -18,6 +18,7 @@ export type KeyboardShortcutId =
   | "TOGGLE_RIGHT_BORDER"
   | "NEXT_COMMENT"
   | "PREVIOUS_COMMENT"
+  | "REMOVE_SELECTED_SEGMENTS"
   // Flight mode
   | "MOVE_FORWARD_WITH_RECORDING"
   | "MOVE_BACKWARD_WITH_RECORDING"
@@ -202,6 +203,11 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "Select Previous Comment",
     [[["p"]]],
     "GENERAL_COMMENT_TAB",
+  ),
+  REMOVE_SELECTED_SEGMENTS: new KeyboardShortcutMetaInfo(
+    "Remove Selected Segments From List (While the Segment List Is Focused)",
+    [[["Delete"]], [["Backspace"]]],
+    "GENERAL_SEGMENTS_TAB",
   ),
 
   // ===================== GENERAL.FLIGHT =====================
@@ -478,12 +484,12 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "PLANE_TOOL_SWITCHING",
   ),
   SWITCH_TO_LASSO_TOOL: new KeyboardShortcutMetaInfo(
-    "Lasso Tool",
+    "Trace Tool",
     [[["Control", "k"], ["l"]]],
     "PLANE_TOOL_SWITCHING",
   ),
   SWITCH_TO_LASSO_ERASE_TOOL: new KeyboardShortcutMetaInfo(
-    "Lasso Erase Tool",
+    "Trace Erase Tool",
     [[["Control", "k"], ["r"]]],
     "PLANE_TOOL_SWITCHING",
   ),
@@ -493,7 +499,7 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "PLANE_TOOL_SWITCHING",
   ),
   SWITCH_TO_SEGMENT_PICKER_TOOL: new KeyboardShortcutMetaInfo(
-    "Segment Picker Tool",
+    "Voxel Pipette Tool",
     [[["Control", "k"], ["p"]]],
     "PLANE_TOOL_SWITCHING",
   ),

@@ -11,6 +11,7 @@ import { call, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 // biome-ignore lint/performance/noNamespaceImport: necessary for mocking
 import * as opCtxModule from "viewer/model/sagas/operation_context_saga";
+import { Model } from "viewer/singletons";
 import Store, { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -76,7 +77,10 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
     await context.api.tracing.save(); // start with clean queue
 
     const task = startSaga(function* () {
-      const fakeParentCtx = { id: "PROOFREADING" } as unknown as OperationContext;
+      const fakeParentCtx = {
+        id: "PROOFREADING",
+        isActive: () => true,
+      } as unknown as OperationContext;
       const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
       const spy = vi.spyOn(opCtxModule, "getOrCreateOperationContext");
 
@@ -91,6 +95,24 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
       expect(saveCall![1]).toEqual(fakeParentCtx);
     });
     await task.toPromise();
+  });
+
+  it<WebknossosTestContext>("ensureSavedState stops requesting saves for a finished operation context", async () => {
+    // Simulates an ensureSavedState loop whose operation was finished or cancelled (e.g., by a
+    // saga restart between tests) before the state was saved.
+    let finishedCtx: OperationContext | null = null;
+    const task = startSaga(function* () {
+      finishedCtx = yield* opCtxModule.createOperationContext({ id: "PROOFREADING" });
+      yield* finishedCtx.execute(function* () {});
+    });
+    await task.toPromise();
+
+    const dispatchSpy = vi.spyOn(Store, "dispatch");
+    Store.dispatch(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
+    await Model.ensureSavedState(finishedCtx!);
+
+    const saveNowActions = dispatchSpy.mock.calls.filter(([action]) => action.type === "SAVE_NOW");
+    expect(saveNowActions).toEqual([]);
   });
 
   it<WebknossosTestContext>("does not save when queue is empty, then saves after items arrive (without re-saving immediately in case of multiple saveNow actions)", async (context) => {

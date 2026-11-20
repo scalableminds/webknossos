@@ -9,8 +9,6 @@
   flex-grow: 1;
   min-height: 600px;
   width: 100%;
-  // No dark mode
-  background-color: white;
 }
 
 .flex-center {
@@ -73,21 +71,41 @@
     }
 
     // The action bar and the "compute mesh" button are hover-only, but have to stay
-    // reachable without a mouse: antd marks the row that keyboard navigation is on
-    // with -active.
+    // reachable without a mouse (see also the keyboard-focus rules below).
     &:hover .list-row__on-hover,
-    &:focus-within .list-row__on-hover,
-    &.ant-tree-treenode-active .list-row__on-hover {
+    &:focus-within .list-row__on-hover {
       visibility: visible;
     }
 
     // The item count and the row's actions share one slot, so the count makes way for
     // them while the row is hovered.
     &:hover .list-row__off-hover,
-    &:focus-within .list-row__off-hover,
-    &.ant-tree-treenode-active .list-row__off-hover {
+    &:focus-within .list-row__off-hover {
       visibility: hidden;
     }
+  }
+
+  // While the list is focused via the keyboard, antd marks the row that keyboard navigation is
+  // on with -active (the segment list keeps it on the selected row). Only then the row shows its
+  // actions. Outside of keyboard focus, the -active class must not have any effect, so that a
+  // selected row looks the same as after a click.
+  .ant-tree-list:focus-visible .ant-tree-treenode-active {
+    .list-row__on-hover {
+      visibility: visible;
+    }
+
+    .list-row__off-hover {
+      visibility: hidden;
+    }
+  }
+
+  // While the list is focused via the keyboard, antd outlines the "active" node. In lists that keep
+  // the active node on the selected one (the segment list), the selection highlight is enough.
+  &.list-tree--active-is-selected
+    .ant-tree-list:focus-visible
+    .ant-tree-treenode-active
+    .ant-tree-node-content-wrapper {
+    outline: none;
   }
 
   // antd wraps titleRender's output in a plain block element that shrink-wraps its
@@ -249,7 +267,7 @@
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  box-shadow: 0px 0px 3px #cacaca;
+  box-shadow: 0px 0px 3px var(--ant-color-border);
   vertical-align: middle;
 }
 
@@ -292,6 +310,8 @@
 .bounding-box-table {
   .ant-table {
     border-bottom: none;
+    // Blend in with the tab's background instead of rendering a white container.
+    background: transparent;
   }
 
   .ant-table-cell {
@@ -304,6 +324,23 @@
 
     .ant-table-cell {
       border-bottom: none;
+    }
+  }
+
+  // antd's default hover and selected-row colors are barely visible on the light Paper
+  // background. Selected rows use the same color as selected tree nodes (see theme.ts).
+  // Reset for dark mode in dark.less.
+  &.ant-table-wrapper .ant-table-tbody .ant-table-row {
+    > .ant-table-cell.ant-table-cell-row-hover {
+      background: var(--ant-color-fill-secondary);
+    }
+
+    &.ant-table-row-selected > .ant-table-cell {
+      background: var(--ant-blue-3);
+
+      &.ant-table-cell-row-hover {
+        background: color-mix(in srgb, var(--ant-blue-3), var(--ant-blue-4) 40%);
+      }
     }
   }
 
@@ -323,10 +360,9 @@
 }
 
 .metadata-table {
-  // These colors are redefined in dark.less
-  --compact-table-bg1: #f7f7f7;
-  --compact-table-bg2: #fefefe;
-  --compact-table-border: #e7e7e7;
+  --compact-table-bg1: color-mix(in srgb, var(--ant-color-text) 6%, var(--ant-color-bg-container));
+  --compact-table-bg2: var(--ant-color-bg-container);
+  --compact-table-border: var(--ant-color-border);
 
   width: 100%;
 

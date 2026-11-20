@@ -14,9 +14,12 @@ import {
   scaleGlobalPositionWithMagnificationFloat,
   zoomedPositionToGlobalPosition,
 } from "viewer/model/helpers/position_converter";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
-import { invertAndTranspose } from "../../accessors/dataset_layer_transformation_accessor";
+import {
+  getGlobalVoxelSizeFromState,
+  invertAndTranspose,
+} from "../../accessors/dataset_layer_transformation_accessor";
 import {
   invertTransform,
   type Transform,
@@ -190,7 +193,17 @@ class SectionLabeler {
   }
 
   getFillingVoxelBuffer2D(mode: AnnotationTool): VoxelBuffer2D {
-    if (this.isEmpty() || this.minCoord == null) {
+    if (this.isEmpty()) {
+      return VoxelBuffer2D.empty();
+    }
+    // The outline is drawn from the contour list, which can contain points that were
+    // never passed to updateArea, such as a stroke's start point (see
+    // editVolumeLayerAsync). Outside of the area, the outline would be cut off, and
+    // the filling would leak through the gap.
+    for (const point of this.getContourList(true)) {
+      this.updateArea(point);
+    }
+    if (this.minCoord == null) {
       return VoxelBuffer2D.empty();
     }
 
@@ -330,10 +343,10 @@ class SectionLabeler {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
     const radius = Math.round(brushSize / 2);
-    // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
+    // Account for the voxel size when scaling the rectangle, otherwise it'll become deformed
     const scale = this.get2DCoordinate(
       scaleGlobalPositionWithMagnificationFloat(
-        getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+        getVoxelPerPixel(getGlobalVoxelSizeFromState(state)),
         this.activeMag,
       ),
     );
@@ -409,9 +422,9 @@ class SectionLabeler {
       Math.floor(floatingCoord2d[1] - height / 2),
     ];
     const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
-    // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
+    // Account for the voxel size when scaling the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] =
-      scale ?? this.get2DCoordinate(getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale));
+      scale ?? this.get2DCoordinate(getVoxelPerPixel(getGlobalVoxelSizeFromState(state)));
 
     const setMap = (x: number, y: number) => {
       buffer2D.setValue(x, y, 1);
@@ -646,9 +659,7 @@ export class TransformedSectionLabeler {
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
-    let scale = this.adaptScaleFn(
-      getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
-    );
+    let scale = this.adaptScaleFn(getVoxelPerPixel(getGlobalVoxelSizeFromState(Store.getState())));
 
     // TODO (#8965): does this need a transformation?
     return this.base.getCircleVoxelBuffer2D(position, scale);

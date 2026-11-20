@@ -1,0 +1,26 @@
+// The composer and the message field of the help panel: an outlined frame around a borderless
+// textarea and its controls, which behaves like an antd outlined input.
+.help-panel-input-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-padding-xs);
+  padding: var(--ant-padding-xs);
+  border: var(--ant-line-width) solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  transition: border-color var(--ant-motion-duration-mid);
+
+  &:hover {
+    border-color: var(--ant-color-primary-hover);
+  }
+
+  &:focus-within {
+    border-color: var(--ant-color-primary);
+  }
+
+  // The frame shows the focus instead, so antd's own focus outline of the borderless textarea
+  // would be a second ring inside it.
+  .ant-input-borderless:focus-visible {
+    outline: none;
+  }
+}

@@ -526,15 +526,25 @@ export function animationFrame(maxTimeout?: number): Promise<undefined> {
   return Promise.race([rafPromise, timeoutPromise]);
 }
 
+// Whether any input device is a precise pointer (mouse/trackpad). Checked via "any-pointer: fine"
+// rather than touch support, since convertible devices (e.g. 2-in-1 laptops) can have both.
+export function hasFinePointer(): boolean {
+  return window.matchMedia?.("(any-pointer: fine)").matches ?? true;
+}
+
+// Whether the primary input device is a precise pointer. Use this to decide on autofocus:
+// some phones (e.g. Samsung Galaxy) report "any-pointer: fine" even though they are touch-only.
+export function isPrimaryPointerFine(): boolean {
+  return window.matchMedia?.("(pointer: fine)").matches ?? true;
+}
+
 // Waits until the user is actually attentive, i.e., they moved the mouse or pressed a key.
 // This is more reliable than the Page Visibility API, which can still report the page as visible
 // even when another OS window fully covers it.
 // Devices without a mouse/trackpad (e.g. tablets) never fire mousemove, so an animation frame is
-// used as a fallback there. This is checked via "any-pointer: fine" rather than touch support, since
-// convertible devices (e.g. 2-in-1 laptops) can have both a touchscreen and a mouse attached.
+// used as a fallback there.
 export function ensureUserIsAttentive(): Promise<void> {
-  const hasFinePointer = window.matchMedia?.("(any-pointer: fine)").matches ?? true;
-  if (!hasFinePointer) {
+  if (!hasFinePointer()) {
     return animationFrame();
   }
 
@@ -1275,10 +1285,6 @@ export function getAdaptToTypeFunctionFromList<T extends number | bigint>(
 
 export function isBigInt(x: NumberLike): x is bigint {
   return typeof x === "bigint";
-}
-
-function _assertNever(value: never): never {
-  throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
 }
 
 /**

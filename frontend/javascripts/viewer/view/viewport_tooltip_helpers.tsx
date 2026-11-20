@@ -1,15 +1,17 @@
 import { clamp } from "libs/utils";
-import type { RefObject } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import type { VoxelSize } from "types/api_types";
 import type { OrthoView, Rect, Vector2, Vector3 } from "viewer/constants";
 import { calculateInViewportPos } from "viewer/model/accessors/view_mode_accessor";
 import Dimensions from "viewer/model/dimensions";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 
 export function isPositionStillInPlane(
   positionXYZ: Vector3,
   flycamRotation: Vector3,
   flycamPosition: Vector3,
   planeId: OrthoView,
-  baseVoxelFactors: Vector3,
+  voxelSize: VoxelSize,
   zoomStep: number,
 ) {
   if (planeId === "TDView") {
@@ -19,16 +21,29 @@ export function isPositionStillInPlane(
     positionXYZ,
     flycamPosition,
     flycamRotation,
-    baseVoxelFactors,
-    zoomStep,
+    getVoxelPerPixel(voxelSize, zoomStep),
   ).toArray();
   const thirdDim = Dimensions.thirdDimensionForPlane(planeId);
   return Math.abs(posInViewport[thirdDim]) < 1;
 }
 
+/**
+ * Measures the rendered width of the tooltip after every render, because the
+ * width depends on the tooltip's content. The width is needed to position the
+ * tooltip left of the cursor.
+ */
+export function useTooltipWidth() {
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [tooltipWidth, setTooltipWidth] = useState(0);
+  useLayoutEffect(() => {
+    setTooltipWidth(tooltipRef.current?.offsetWidth ?? 0);
+  });
+  return [tooltipRef, tooltipWidth] as const;
+}
+
 export function getTooltipPosition(
   isNotPinned: boolean,
-  tooltipRef: RefObject<HTMLElement | null>,
+  tooltipWidth: number,
   viewportRect: Rect,
   tooltipPosition: Vector2,
 ) {
@@ -42,7 +57,6 @@ export function getTooltipPosition(
   // If the tooltip is pinned, there should be no offset
   const OFFSET = isNotPinned ? 8 : 0;
 
-  const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
   // Position tooltip just below and to the left of the cursor
   const left = clamp(
     viewportLeft - tooltipWidth + OFFSET, // min

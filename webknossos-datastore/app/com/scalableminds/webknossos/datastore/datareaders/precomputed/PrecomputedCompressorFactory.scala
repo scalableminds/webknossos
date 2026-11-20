@@ -36,7 +36,6 @@ object PrecomputedCompressorFactory {
       case "compressed_segmentation" =>
         new CompressedSegmentationCompressor(
           header.resolvedDataType,
-          header.chunkShape,
           header.precomputedScale.compressed_segmentation_block_size
             .getOrElse(CompressedSegmentation64.defaultBlockSize)
         )

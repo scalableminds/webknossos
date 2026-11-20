@@ -1,4 +1,5 @@
 import { Actions, type BorderNode, type Model, type TabSetNode } from "flexlayout-react";
+import { FlightViews } from "viewer/constants";
 import type { BorderOpenStatus } from "viewer/store";
 import type { ModelConfig } from "./flex_layout_types";
 
@@ -6,6 +7,29 @@ export function getMaximizedItemId(model: Model): string | null | undefined {
   const maximizedTabset = model.getMaximizedTabset();
   return maximizedTabset != null ? maximizedTabset.getId() : null;
 }
+// Determines which tabset should be toggled when the user presses the maximize shortcut.
+// If a tabset is already maximized, it is restored. Otherwise, the tabset containing
+// the hovered viewport is maximized (in flight/oblique mode this is the flight viewport).
+// If no such tabset exists, the tabset with tab focus is used as a fallback.
+export function getTabsetIdToToggleMaximize(
+  model: Model,
+  hoveredViewportId: string,
+): string | null | undefined {
+  const maximizedItemId = getMaximizedItemId(model);
+  if (maximizedItemId != null) {
+    return maximizedItemId;
+  }
+
+  for (const viewportId of [hoveredViewportId, FlightViews.flightViewport]) {
+    const parent = model.getNodeById(viewportId)?.getParent();
+    if (parent?.getType() === "tabset") {
+      return parent.getId();
+    }
+  }
+
+  return model.getActiveTabset()?.getId();
+}
+
 export function getBorderOpenStatus(model: Model): BorderOpenStatus {
   const openStatus = {
     left: false,

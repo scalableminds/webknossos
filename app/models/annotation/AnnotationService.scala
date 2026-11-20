@@ -174,12 +174,7 @@ class AnnotationService @Inject() (
           }
           .headOption
           .toFox
-        _ <- Fox.fromBool(
-          ElementClass.largestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)
-        ) ?~> Msg.Annotation.Volume.largestSegmentIdExceedsRange(
-          fallbackLayer.largestSegmentId.getOrElse(-1),
-          fallbackLayer.elementClass.toString
-        )
+        _ <- ElementClass.assertLargestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)
       } yield fallbackLayer
 
     for {

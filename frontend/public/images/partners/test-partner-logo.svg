@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30" viewBox="0 0 120 30">
+  <!-- Placeholder logo of the fake dev partner. Replace with the real partner logo. -->
+  <rect x="1" y="1" width="118" height="28" rx="6" fill="#7c3aed"/>
+  <circle cx="16" cy="15" r="7" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+  <circle cx="16" cy="15" r="2.5" fill="#ffffff"/>
+  <text x="30" y="20" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">TEST PARTNER</text>
+</svg>

@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.Msg
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper}
@@ -22,6 +23,8 @@ import play.api.http.Writeable
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ResponseHeader, Result}
 
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 
 class DataProxyController @Inject() (
@@ -137,12 +140,21 @@ class DataProxyController @Inject() (
       )
     )
 
+  private val encodedPathCharPattern = "(?i)%(2e|2f|5c)".r
+
+  // Wildcard route params are not url-decoded by Play, so validate the decoded form
   private def validatePath(path: String): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(!path.contains("..")) ?~> "path must not contain “..”"
-      _ <- Fox.fromBool(!path.startsWith("/")) ?~> "path must not start with “/”"
-      _ <- Fox.fromBool(!path.contains("%2e%2e")) ?~> "path must not contain “%2e%2e”"
-      _ <- Fox.fromBool(!path.startsWith("%2f")) ?~> "path must not start with “%2f”"
+      decoded <- tryo(
+        URLDecoder.decode(path.replace("+", "%2B"), StandardCharsets.UTF_8)
+      ).toFox ?~> "path is not validly encoded"
+      // Other escapes may be part of real object keys, but encoded “.”, “/” or “\” could form a traversal if decoded again
+      _ <- Fox.fromBool(
+        encodedPathCharPattern.findFirstIn(decoded).isEmpty
+      ) ?~> "path must not contain encoded “.”, “/” or “\\”"
+      _ <- Fox.fromBool(!decoded.contains("..")) ?~> "path must not contain “..”"
+      _ <- Fox.fromBool(!decoded.contains("\\")) ?~> "path must not contain “\\”"
+      _ <- Fox.fromBool(!decoded.startsWith("/")) ?~> "path must not start with “/”"
     } yield ()
 
   private def resultWithStatus[C](statusCode: Int, content: C)(implicit writeable: Writeable[C]): Result =

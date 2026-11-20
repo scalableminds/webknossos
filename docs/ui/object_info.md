@@ -95,9 +95,11 @@ Use the MIP icon button in the toolbar of the bounding box tab to open the **Max
 
 The `AbsTree` tab displays a 2D representation of a skeleton annotation. This can be useful for visualizing the structure of large and complex skeletons. Be aware that generating the abstract tree can be resource-intensive for very large skeletons.
 
+The tab is hidden by default. To open it, select **Show Abstract Tree** from the actions menu (☰) of the `Skeleton` tab. You can close it again with the `×` button of the tab.
+
 ## Connectome Tab
 
-The `Connectome` tab is used for visualizing and interacting with connectome data. If a connectome file is available for the segmentation layer, you can use this tab to:
+The `Connectome` tab is used for visualizing and interacting with connectome data. It is only shown if the dataset contains a connectome file. You can use this tab to:
 
 - **Explore Connections:** Analyze the connections between segments.
 - **Filter and Search:** Find specific connections or segments.

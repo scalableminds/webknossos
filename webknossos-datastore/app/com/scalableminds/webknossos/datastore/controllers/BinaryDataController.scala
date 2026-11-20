@@ -28,7 +28,6 @@ import play.api.mvc.*
 
 import scala.concurrent.duration.DurationInt
 import java.awt.image.BufferedImage
-import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 
 class BinaryDataController @Inject() (
@@ -113,7 +112,7 @@ class BinaryDataController @Inject() (
 
   def requestRawCuboidPost(datasetId: ObjectId, dataLayerName: String): Action[RawCuboidRequest] =
     Action.fox(validateJson[RawCuboidRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, List(request.body))
@@ -332,24 +331,10 @@ class BinaryDataController @Inject() (
             request.body.annotationVersion,
             request.body.findNeighbors
           )
-          // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
-          // consecutive 3D points (i.e., nine floats) form a triangle.
-          // There are no shared vertices between triangles.
-          (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-        } yield {
-          // We need four bytes for each float
-          val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
-          responseBuffer.asFloatBuffer().put(vertices)
-          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors)*)
-        }
+          mesh <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+        } yield Ok(mesh.toBytes(request.body.indexed)).withHeaders(mesh.responseHeaders(request.body.indexed)*)
       }
     }
-
-  private def getNeighborIndices(neighbors: List[Int]) =
-    List("NEIGHBORS" -> formatNeighborList(neighbors), "Access-Control-Expose-Headers" -> "NEIGHBORS")
-
-  private def formatNeighborList(neighbors: List[Int]): String =
-    "[" + neighbors.mkString(", ") + "]"
 
   def findData(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
     Action.fox { implicit request =>

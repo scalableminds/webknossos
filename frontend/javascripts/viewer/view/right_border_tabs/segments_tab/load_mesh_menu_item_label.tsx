@@ -23,7 +23,7 @@ export function LoadMeshMenuItemLabel({ currentMeshFile, volumeTracing }: Props)
         title={
           currentMeshFile != null
             ? `Load mesh for centered segment from file ${currentMeshFile.name}`
-            : "There is no mesh file."
+            : "No mesh file is active."
         }
       >
         <span>Load Mesh (precomputed)</span>

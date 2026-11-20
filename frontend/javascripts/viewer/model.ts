@@ -34,7 +34,6 @@ const WAIT_AFTER_SAVE_TRIGGER = import.meta.env.MODE === "test" ? 50 : 500;
 export class WebKnossosModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
-  maximumTextureCountForLayer: number = 0;
 
   async fetch(
     initialMaybeCompoundType: APICompoundType | null,
@@ -52,7 +51,7 @@ export class WebKnossosModel {
 
       if (initializationInformation) {
         // Only executed on initial fetch
-        const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
+        const { dataLayers } = initializationInformation;
 
         if (this.dataLayers != null) {
           Object.values(this.dataLayers).forEach((layer) => {
@@ -61,7 +60,6 @@ export class WebKnossosModel {
         }
 
         this.dataLayers = dataLayers;
-        this.maximumTextureCountForLayer = maximumTextureCountForLayer;
       }
     } catch (error) {
       try {
@@ -318,6 +316,14 @@ export class WebKnossosModel {
     }
 
     while (true) {
+      if (operationContext != null && !operationContext.isActive()) {
+        // The operation that requested saving is finished or was cancelled. Nobody waits for
+        // this anymore, so stop requesting saves on its behalf. This mainly matters in tests:
+        // there, one process typically contains multiple WK sessions which are torn down and
+        // set up again (restarting the sagas). Otherwise, this loop would keep dispatching
+        // SAVE_NOW with the finished context into the next session.
+        return;
+      }
       // If saving or rebasing is in progress, we always need to keep waiting.
       if (!isSavingOrRebasing(Store.getState())) {
         // Only when neither is in progress, we enforce the diffed state to the

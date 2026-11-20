@@ -50,6 +50,6 @@ Take advantage of the iPad and Apple Pencil for seamless and precise annotation.
 ![youtube-video](https://www.youtube.com/embed/HDt_H7W4-qc?start=47)
 
 In this example, we demonstrate the annotation workflow using the iPad and Apple Pencil. 
-Starting with the quick-select tool, we segment a cell, refining its edges with the pixel-perfect precision of the lasso tool.
-Next, we create a new segment and annotate it from scratch using the lasso tool.
+Starting with the quick-select tool, we segment a cell, refining its edges with the pixel-perfect precision of the trace tool.
+Next, we create a new segment and annotate it from scratch using the trace tool.
 Finally, we create an additional segment and use the brush tool to annotate.

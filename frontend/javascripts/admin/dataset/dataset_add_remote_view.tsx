@@ -20,7 +20,7 @@ import type {
   DataLayerWithTransformations,
   DatasourceConfiguration,
 } from "types/schemas/datasource.types";
-import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import type { RotationAndMirroringSettings } from "viewer/model/helpers/dataset_rotation_helpers";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
 
@@ -213,7 +213,7 @@ function DatasetAddRemoteView(props: Props) {
   const hideDatasetUI = maybeDataLayers == null || maybeDataLayers.length === 0;
   return (
     // Using Forms here only to validate fields and for easy layout
-    <div style={{ padding: 5 }}>
+    <div>
       {showLoadingOverlay ? <BrainSpinner /> : null}
       <CardContainer
         title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset"

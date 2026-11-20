@@ -2,10 +2,11 @@ import { DownOutlined, MenuOutlined } from "@ant-design/icons";
 import { Dropdown } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import { useWindowWidth, useWkSelector } from "libs/react_hooks";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import constants from "viewer/constants";
 import ButtonComponent from "viewer/view/components/button_component";
-import { useTracingViewMenuItems } from "./use_tracing_view_menu_items";
+import { toGroupedMenuItems } from "./menu_groups";
+import { useTracingViewMenuGroups } from "./use_tracing_view_menu_groups";
 
 type Props = {
   layoutMenu: SubMenuType | null;
@@ -25,7 +26,7 @@ function ActionsMenu({ layoutMenu }: Props) {
 
   const isWiderScreen = windowWidth >= constants.NARROW_SCREEN_WIDTH;
 
-  const menuItems = useTracingViewMenuItems(
+  const menuGroups = useTracingViewMenuGroups(
     {
       restrictions,
       task,
@@ -37,6 +38,7 @@ function ActionsMenu({ layoutMenu }: Props) {
     },
     layoutMenu,
   );
+  const menuItems = useMemo(() => toGroupedMenuItems(menuGroups), [menuGroups]);
 
   return (
     <div>

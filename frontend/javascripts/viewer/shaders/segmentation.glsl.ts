@@ -13,7 +13,7 @@ import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
-import type { ShaderModule } from "./shader_module_system";
+import { forEachLayerKind, type ShaderModule } from "./shader_module_system";
 
 function buildPermutation(sequenceLength: number, primitiveRoot: number) {
   return {
@@ -368,11 +368,24 @@ export const getProofreadingCrossHairOverlay: ShaderModule = {
 export const getSegmentId: ShaderModule = {
   requirements: [convertCellIdToRGB, attemptMappingLookUp, getMaybeFilteredColorOrFallback],
   code: `
+    // decodeTag comes from layerSegmentIdDecodeTag (see
+    // getSegmentIdDecodeTagForLayer).
+    void decodeSegmentId(uint decodeTag, vec4 lowColor, vec4 highColor, out highp uint low, out highp uint high) {
+      if (decodeTag == 0u) {
+        uint64ToUint64(lowColor, highColor, low, high);
+      } else if (decodeTag == 1u) {
+        int32ToUint64(lowColor, highColor, low, high);
+      } else {
+        uint32ToUint64(lowColor, highColor, low, high);
+      }
+    }
 
-  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
-      vec3 layerCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
-      if (isOutsideOfBoundingBox(layerCoordUVW, <%= segmentationName %>_bboxMin, <%= segmentationName %>_bboxMax)) {
+  ${forEachLayerKind(
+    "segmentationLayerKinds",
+    `
+    void getSegmentId_KIND(int layerIdx, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
+      vec3 layerCoordUVW = transDim((layerTransform[layerIdx] * vec4(transDim(worldPositionUVW), 1.0)).xyz);
+      if (isOutsideOfBoundingBox(layerCoordUVW, layerBboxMin[layerIdx], layerBboxMax[layerIdx])) {
         // Some GPUs don't null-initialize the variables.
         segment_id[0] = vec4(0.);
         segment_id[1] = vec4(0.);
@@ -381,25 +394,25 @@ export const getSegmentId: ShaderModule = {
         return;
       }
 
+      const float packingDegree = <%= kind.packingDegree %>;
       segment_id =
-        getSegmentIdOrFallback(
-          <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
+        getSegmentIdOrFallback_KIND(
+          float(layerIdx),
           POOL_TEXTURE_WIDTH,
-          <%= formatNumberAsGLSLFloat(textureLayerInfos[segmentationName].packingDegree) %>,
           layerCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),
-          !<%= segmentationName %>_has_transform
+          layerHasTransformInt[layerIdx] == 0
         );
 
       // Depending on the packing degree, the returned volume color contains extra values
       // which should be ignored (e.g., when comparing a cell id with the hovered cell
       // passed via uniforms).
 
-      <% if (textureLayerInfos[segmentationName].packingDegree === 4) { %>
+      if (packingDegree == 4.0) {
         segment_id[1] = vec4(segment_id[1].r, 0.0, 0.0, 0.0);
-      <% } else if (textureLayerInfos[segmentationName].packingDegree === 2) { %>
+      } else if (packingDegree == 2.0) {
         segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
-      <% } %>
+      }
 
       mapped_id[0] = segment_id[0]; // High
       mapped_id[1] = segment_id[1]; // Low
@@ -432,7 +445,23 @@ export const getSegmentId: ShaderModule = {
         }
       }
     }
-<% }) %>
+  `,
+  )}
+
+    // layerIdx is the segmentation layer's compiled index. Calls the
+    // getSegmentId variant of the layer's kind.
+    void getSegmentId(int layerIdx, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
+      <% each(segmentationLayerKinds, function(kind, kindIdx) {
+        if (kindIdx < segmentationLayerKinds.length - 1) { %>
+          if (layerKindId[layerIdx] == <%= kind.id %>u) {
+            getSegmentId_<%= kind.id %>(layerIdx, worldPositionUVW, segment_id, mapped_id);
+            return;
+          }
+      <% } else { %>
+          getSegmentId_<%= kind.id %>(layerIdx, worldPositionUVW, segment_id, mapped_id);
+      <% }
+      }) %>
+    }
   `,
 };
 

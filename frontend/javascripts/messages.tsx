@@ -292,8 +292,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "webgl.too_many_layers_per_pool": template(
     "Your hardware cannot load this dataset, because it supports at most <%- maxArrayTextureLayers %> layers with similar element classes (e.g. uint8 and uint32), and this dataset has more.",
   ),
+  "webgl.too_many_uniforms":
+    "Your graphics hardware cannot render the image data of this dataset, because the dataset has too many layers or magnifications. Other parts of WEBKNOSSOS, such as skeleton annotations, still work.",
   "webgl.too_many_active_layers": template(
-    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
+    "Not all color layers of this dataset can be rendered simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> color layers are enabled in the left sidebar settings.",
   ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now annotating a new task with the following description",

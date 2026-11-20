@@ -58,42 +58,6 @@ export function getBucketCapacity(
   return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
-const BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY = 4;
-// Keeps layers from getting so few buckets that they constantly reload.
-const MINIMUM_BUCKET_CAPACITY_PER_LAYER = 128;
-
-// A fixed per-layer budget would make memory grow with the layer count (e.g.
-// 22 layers can exhaust GPU memory). Instead, the budget of
-// BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY layers is the total, split evenly
-// when there are more layers than that.
-function scalePerLayerBudgetByLayerCount(
-  perLayerBudgetAtBaseline: number,
-  layerCount: number,
-): number {
-  if (layerCount <= BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY) {
-    return perLayerBudgetAtBaseline;
-  }
-  const totalBudget = perLayerBudgetAtBaseline * BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY;
-  return Math.max(MINIMUM_BUCKET_CAPACITY_PER_LAYER, Math.floor(totalBudget / layerCount));
-}
-
-// Capped at the RAM limit, because the DataCube can't free buckets that are
-// picked for rendering.
-export function getRequiredBucketCapacityPerLayer(
-  gpuMemoryFactor: number,
-  layerCount: number,
-): number {
-  return Math.min(
-    scalePerLayerBudgetByLayerCount(constants.GPU_FACTOR_MULTIPLIER * gpuMemoryFactor, layerCount),
-    getBucketCountSoftLimitPerLayer(layerCount),
-  );
-}
-
-// Same scaling for the number of buckets a DataCube keeps in RAM.
-export function getBucketCountSoftLimitPerLayer(layerCount: number): number {
-  return scalePerLayerBudgetByLayerCount(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, layerCount);
-}
-
 // Must go through getBucketsPerTexture rather than dividing the required voxels by the
 // texture's voxel area: a sub-row bucket's row padding cannot hold another bucket, so
 // area-based sizing would pick a texture too small for requiredBucketCapacity buckets.
@@ -189,7 +153,7 @@ export function getLayerPoolForElementClass(elementClass: ElementClass): LayerPo
     case "int16":
       return LayerPool.S16;
     // uint8, uint24, uint32, int32, uint64, int64, double: stored as raw RGBA
-    // bytes and decoded in the shader.
+    // bytes and decoded in the shader (see layerDtypeTag).
     default:
       return LayerPool.U8;
   }
@@ -202,11 +166,23 @@ export function getLayerPoolGpuConfig(pool: LayerPool): {
 } {
   switch (pool) {
     case LayerPool.F32:
-      return { textureType: FloatType, pixelFormat: RGBAFormat, internalFormat: undefined };
+      return {
+        textureType: FloatType,
+        pixelFormat: RGBAFormat,
+        internalFormat: undefined,
+      };
     case LayerPool.U8:
-      return { textureType: UnsignedByteType, pixelFormat: RGBAFormat, internalFormat: undefined };
+      return {
+        textureType: UnsignedByteType,
+        pixelFormat: RGBAFormat,
+        internalFormat: undefined,
+      };
     case LayerPool.S8:
-      return { textureType: ByteType, pixelFormat: RGBAFormat, internalFormat: "RGBA8_SNORM" };
+      return {
+        textureType: ByteType,
+        pixelFormat: RGBAFormat,
+        internalFormat: "RGBA8_SNORM",
+      };
     case LayerPool.U16:
       return {
         textureType: UnsignedShortType,
@@ -214,10 +190,68 @@ export function getLayerPoolGpuConfig(pool: LayerPool): {
         internalFormat: "RG16UI",
       };
     case LayerPool.S16:
-      return { textureType: ShortType, pixelFormat: RGIntegerFormat, internalFormat: "RG16I" };
+      return {
+        textureType: ShortType,
+        pixelFormat: RGIntegerFormat,
+        internalFormat: "RG16I",
+      };
     default:
       throw new Error(`Unknown layer pool: ${pool}`);
   }
+}
+
+// Factor that scales a fetched texel to the layer's native value range
+// (e.g. 0-255 for uint8, -128..127 for int8, unchanged for float). Baked into
+// the shader as layerDtypeNormalizer.
+export function getDtypeNormalizerForLayer(textureLayerInfo: {
+  isColor: boolean;
+  isSigned: boolean;
+  elementClass: ElementClass;
+}): number {
+  const { isColor, isSigned, elementClass } = textureLayerInfo;
+  if (isColor && !elementClass.endsWith("int8")) {
+    return 1;
+  } else if (isSigned && !elementClass.endsWith("int32") && !elementClass.endsWith("int64")) {
+    return 127;
+  } else {
+    return 255;
+  }
+}
+
+const BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY = 4;
+// Keeps layers from getting so few buckets that they constantly reload.
+const MINIMUM_BUCKET_CAPACITY_PER_LAYER = 128;
+
+// All layers hold buckets at the same time, so a fixed per-layer budget would
+// make memory grow with the layer count (and e.g. 22 layers exhaust GPU
+// memory). Instead, the budget of BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY
+// layers is the total, split evenly when there are more layers than that.
+function scalePerLayerBudgetByLayerCount(
+  perLayerBudgetAtBaseline: number,
+  layerCount: number,
+): number {
+  if (layerCount <= BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY) {
+    return perLayerBudgetAtBaseline;
+  }
+  const totalBudget = perLayerBudgetAtBaseline * BASELINE_LAYER_COUNT_FOR_BUCKET_CAPACITY;
+  return Math.max(MINIMUM_BUCKET_CAPACITY_PER_LAYER, Math.floor(totalBudget / layerCount));
+}
+
+// Capped at the RAM limit, because the DataCube can't free buckets that are
+// picked for rendering.
+export function getRequiredBucketCapacityPerLayer(
+  gpuMemoryFactor: number,
+  layerCount: number,
+): number {
+  return Math.min(
+    scalePerLayerBudgetByLayerCount(constants.GPU_FACTOR_MULTIPLIER * gpuMemoryFactor, layerCount),
+    getBucketCountSoftLimitPerLayer(layerCount),
+  );
+}
+
+// Same scaling for the number of buckets a DataCube keeps in RAM.
+export function getBucketCountSoftLimitPerLayer(layerCount: number): number {
+  return scalePerLayerBudgetByLayerCount(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, layerCount);
 }
 
 // Lookup-table entries store a bucket address in 21 bits; the largest value
@@ -335,6 +369,23 @@ export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>
   return { bucketCapacity, ...plan };
 }
 
+// Which of uint64ToUint64/int32ToUint64/uint32ToUint64 (segmentation.glsl.ts)
+// decodes a segmentation layer's fetched bytes. 64-bit ids are decoded the
+// same way whether they are signed or not.
+export const SEGMENT_ID_DECODE_TAG_64BIT = 0;
+export const SEGMENT_ID_DECODE_TAG_SIGNED = 1;
+export const SEGMENT_ID_DECODE_TAG_UNSIGNED = 2;
+
+export function getSegmentIdDecodeTagForLayer(
+  elementClass: ElementClass,
+  isSigned: boolean,
+): number {
+  if (elementClass.endsWith("int64")) {
+    return SEGMENT_ID_DECODE_TAG_64BIT;
+  }
+  return isSigned ? SEGMENT_ID_DECODE_TAG_SIGNED : SEGMENT_ID_DECODE_TAG_UNSIGNED;
+}
+
 export function getGpuFactorsWithLabels() {
   return [
     ["16", "Ultra"],
@@ -344,6 +395,25 @@ export function getGpuFactorsWithLabels() {
     ["2", "Low"],
     ["1", "Very Low"],
   ];
+}
+
+// Selects the byte-decoding branch in the shader's color-blending loop.
+export const DTYPE_TAG_DEFAULT = 0;
+export const DTYPE_TAG_UINT24 = 1;
+export const DTYPE_TAG_INT32 = 2;
+export const DTYPE_TAG_UINT32 = 3;
+
+export function getDtypeTagForElementClass(elementClass: ElementClass): number {
+  if (elementClass === "int32") {
+    return DTYPE_TAG_INT32;
+  }
+  if (elementClass === "uint32") {
+    return DTYPE_TAG_UINT32;
+  }
+  if (elementClass === "uint24") {
+    return DTYPE_TAG_UINT24;
+  }
+  return DTYPE_TAG_DEFAULT;
 }
 
 export function getDtypeConfigForElementClass(elementClass: ElementClass): {

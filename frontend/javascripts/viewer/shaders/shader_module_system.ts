@@ -37,3 +37,10 @@ export default function compile(...requirements: (ShaderModule | null | undefine
   const allModules = gatherAllModules(compact(requirements));
   return allModules.map((m) => m.code).join("\n\n");
 }
+
+// Emits `code` once per layer kind in the template variable `kindsVariable`
+// (see getLayerKinds in main_data_shaders.glsl.ts). In `code`, "_KIND" is
+// replaced by the kind's id, and the template variable `kind` holds the kind.
+export function forEachLayerKind(kindsVariable: string, code: string): string {
+  return `<% each(${kindsVariable}, function(kind) { %>${code.replaceAll("_KIND", "_<%= kind.id %>")}<% }) %>`;
+}

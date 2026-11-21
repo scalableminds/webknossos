@@ -4,10 +4,13 @@ import { setupWebknossosForTesting, type WebknossosTestContext } from "test/help
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { getStats } from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { discardSaveQueueAction } from "viewer/model/actions/save_actions";
+import { discardSaveQueueAction, dispatchUndoAsync } from "viewer/model/actions/save_actions";
 import {
   addTreesAndGroupsAction,
+  createNodeAction,
+  createTreeAction,
   deleteNodeAction,
+  setActiveTreeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
 import {
@@ -99,5 +102,29 @@ describe("Saga Integration Tests", () => {
     expect(skeletonSaveQueue.length).toBe(2);
     expect(skeletonSaveQueue[1].actions.length).toBeLessThan(MAXIMUM_ACTION_COUNT_PER_BATCH);
     expect(skeletonSaveQueue[1].actions[1].name).toBe("moveTreeComponent");
+  });
+
+  it("Undo should restore the active tree together with the active node", async () => {
+    const createNode = () => Store.dispatch(createNodeAction([1, 2, 3], null, [0, 0, 0], 0, 1));
+    const getActiveIds = () => ({
+      activeNodeId: enforceSkeletonTracing(Store.getState().annotation).activeNodeId,
+      activeTreeId: Store.getState().localSkeletonState.activeTreeId,
+    });
+    Store.dispatch(createTreeAction());
+    createNode();
+    const otherTreeId = getActiveIds().activeTreeId;
+    Store.dispatch(createTreeAction());
+    createNode();
+    const idsBeforeSwitch = getActiveIds();
+
+    Store.dispatch(setActiveTreeAction(otherTreeId!));
+    createNode();
+    await dispatchUndoAsync(Store.dispatch);
+    await dispatchUndoAsync(Store.dispatch);
+
+    expect(getActiveIds()).toEqual(idsBeforeSwitch);
+    // Creating a node used to crash here, because the active node was not part of the active tree.
+    createNode();
+    expect(hasRootSagaCrashed()).toBe(false);
   });
 });

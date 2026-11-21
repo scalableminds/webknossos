@@ -120,14 +120,14 @@ export function CommandPaletteViewerCommands() {
 
     const getViewModeEntries = () => {
       const commands: CommandWithoutId[] = ViewModeValues.map((mode) => ({
-        name: `Switch to ${mode} mode`,
+        name: `Switch to ${getPhraseFromCamelCaseString(mode)} Mode`,
         command: () => {
           dispatch(setViewModeAction(mode));
         },
         color: ColorWKBlue,
       }));
       commands.push({
-        name: "Reset layout",
+        name: "Reset Layout",
         command: () => layoutEmitter.emit(LayoutEvents.resetLayout),
         color: ColorWKBlue,
       });

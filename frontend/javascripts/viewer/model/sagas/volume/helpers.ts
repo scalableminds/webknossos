@@ -65,7 +65,11 @@ export function* getVolumeSaveMode(): Saga<SaveMode> {
   return yield* select(getVolumeSaveModeForState);
 }
 
-/** The update actions that save an edit's committed bucket diffs as partial bucket updates. */
+/**
+ * The update actions that save an edit's committed bucket diffs as partial bucket updates.
+ * They must be pushed to the save queue right away: each one counts as unsaved for its
+ * bucket (see DataBucket.partialUpdateState.unsavedCount) until its save is acknowledged.
+ */
 export function createPartialBucketUpdates(
   bucketDiffs: BucketDiff[],
   cube: DataCube,
@@ -79,13 +83,15 @@ export function createPartialBucketUpdates(
   // coordinates included, so it goes into createSendBucketInfo as-is.
   return bucketDiffs
     .filter((diff) => cube.isBucketWithinLayer(diff.address))
-    .map((diff) =>
-      updateBucketPartial(
+    .map((diff) => {
+      const bucket = cube.getBucket(diff.address);
+      if (bucket.type === "data") bucket.partialUpdateState.unsavedCount++;
+      return updateBucketPartial(
         createSendBucketInfo(diff.address, cube.magInfo),
         encodeBucketDiffBase64(diff, runAxis),
         tracingId,
-      ),
-    );
+      );
+    });
 }
 
 /** Sends an edit's committed bucket diffs as partial bucket updates, if it is saved that way. */

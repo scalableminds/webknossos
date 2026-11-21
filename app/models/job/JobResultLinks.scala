@@ -32,8 +32,11 @@ trait JobResultLinks {
           Some(s"/api/jobs/${this.id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections |
-            JobCommand.infer_instances =>
+            JobCommand.infer_instances | JobCommand.align =>
           returnValue.map(linkFromDatasetOrAnnotationReturnValue(_, organizationId))
+        case JobCommand.train_neuron_model | JobCommand.train_instance_model | JobCommand.train_model =>
+          // The hash prefills the search of the AI model list, so that only the trained model is shown.
+          Some(argAsStringOpt("model_id").map(modelId => s"/aiModels#$modelId").getOrElse("/aiModels"))
         case _ => None
       }
     }

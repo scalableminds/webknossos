@@ -380,8 +380,8 @@ export default function LayerSettingsHeader({
 
   const getEditMinMaxItem = (): ItemType => {
     const tooltipText = isInEditMode
-      ? "Stop editing the possible range of the histogram."
-      : "Manually set the possible range of the histogram.";
+      ? "Stop editing the range of the histogram's x-axis."
+      : "Manually set the range of the histogram's x-axis (and of the contrast slider).";
     return {
       key: "editMinMax",
       icon: (
@@ -403,12 +403,7 @@ export default function LayerSettingsHeader({
   const getMergeWithFallbackLayerItem = (): ItemType => ({
     key: "mergeWithFallbackLayerButton",
     icon: <MergeCellsOutlined />,
-    disabled: mayNotEditLayerSet,
-    label: (
-      <FastTooltip title={reasonForCantEditLayerSet}>
-        <span>Merge this volume annotation with its fallback layer</span>
-      </FastTooltip>
-    ),
+    label: "Merge this volume annotation with its fallback layer",
     onClick: () => onSetLayerToMergeWithFallback(layer),
   });
 

@@ -1,3 +1,4 @@
+import { saveAsCSV, transformToCSVRow } from "libs/csv";
 import { EigenvalueDecomposition, Matrix } from "ml-matrix";
 import type {
   SegmentCovarianceMatrix,
@@ -6,6 +7,7 @@ import type {
   VoxelSize,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import type { Segment } from "viewer/store";
 
 export type AvailableFileMetrics = {
   maxDistance: boolean;
@@ -95,3 +97,89 @@ export function covarianceMatrixToPrincipalExtents(
   const [first, second, third] = eigenvalues.sort((a, b) => b - a);
   return [first, second, third];
 }
+
+export type SegmentStatisticsRow = {
+  key: string;
+  segment: Segment;
+  additionalCoordinates: string;
+  segmentId: bigint;
+  segmentName: string;
+  groupId: number | undefined | null;
+  groupName: string;
+  // The statistics are undefined until they are loaded (or if they are not available).
+  volumeInVoxel?: number;
+  volumeInUnit3?: number;
+  surfaceAreaInUnit2?: number;
+  // Both in mag1 voxels.
+  boundingBoxTopLeft?: Vector3;
+  boundingBoxSize?: Vector3;
+  maxDistanceInUnit?: number;
+  sphericity?: number;
+  centerOfMass?: Vector3;
+  principalExtents?: Vector3;
+  covarianceMatrix?: SegmentCovarianceMatrix;
+};
+
+export type CsvValue = string | number | bigint | undefined;
+
+// A fixed label (e.g. "vx"), or a physical unit that is derived from the dataset's voxel size unit
+// raised to the given dimension (length, area or volume).
+export type StatisticUnit = string | { dimension: 1 | 2 | 3 };
+
+/*
+ * How the value of a statistic is obtained for the table. Numbers are right-aligned, sortable and
+ * get a bar that relates them to the other rows. Vectors are sorted by their first component or by
+ * the product of their components (e.g. the volume of a bounding box).
+ */
+export type StatisticValue =
+  | {
+      kind: "number";
+      unit: StatisticUnit;
+      // How many decimal places are shown. Defaults to 2.
+      fractionDigits?: number;
+      get: (row: SegmentStatisticsRow) => number | undefined;
+    }
+  | {
+      kind: "vector";
+      unit: StatisticUnit;
+      fractionDigits?: number;
+      sortBy: "first" | "product";
+      // Whether the vector is a position in the dataset (in mag1 voxels).
+      isPosition?: boolean;
+      get: (row: SegmentStatisticsRow) => Vector3 | undefined;
+    };
+
+/*
+ * Describes one statistic in both of its representations, so that the rendered table and the
+ * exported CSV cannot drift apart when columns are shown conditionally. A spec without a `title`
+ * is exported but not rendered; `csvHeaders` and the array returned by `getCsvValues` always have
+ * the same length, so missing values keep the CSV columns aligned.
+ */
+export type StatisticSpec = {
+  key: string;
+  title?: string;
+  value?: StatisticValue;
+  isLoading?: boolean;
+  isError?: boolean;
+  csvHeaders: string[];
+  getCsvValues: (row: SegmentStatisticsRow) => CsvValue[];
+};
+
+export const exportStatisticsToCSV = (
+  segmentInformation: SegmentStatisticsRow[],
+  specs: StatisticSpec[],
+  tracingIdOrDatasetName: string,
+  filenameSuffix: string | null,
+) => {
+  const csvHeader = specs.flatMap((spec) => spec.csvHeaders);
+  const segmentStatisticsAsRows = segmentInformation.map((row) =>
+    // Fill missing statistics with "" to also include incomplete statistic rows.
+    transformToCSVRow(specs.flatMap((spec) => spec.getCsvValues(row)).map((value) => value ?? "")),
+  );
+
+  const filename =
+    filenameSuffix == null
+      ? `segmentStatistics_${tracingIdOrDatasetName}.csv`
+      : `segmentStatistics_${tracingIdOrDatasetName}_${filenameSuffix}.csv`;
+  saveAsCSV(csvHeader, segmentStatisticsAsRows, filename);
+};

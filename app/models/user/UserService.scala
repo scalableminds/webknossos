@@ -12,14 +12,13 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
-import mail.{DefaultMails, Send}
+import mail.AccountEmailService
 import models.dataset.DatasetDAO
 import models.organization.OrganizationDAO
 import models.team.*
 import com.scalableminds.util.box.Box.tryo
 import models.project.ProjectDAO
 import models.task.TaskDAO
-import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.*
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.services.IdentityService
@@ -46,16 +45,12 @@ class UserService @Inject() (
     datasetDAO: DatasetDAO,
     inviteDAO: InviteDAO,
     emailVerificationService: EmailVerificationService,
-    defaultMails: DefaultMails,
-    passwordHasher: PasswordHasher,
-    actorSystem: ActorSystem
+    accountEmailService: AccountEmailService,
+    passwordHasher: PasswordHasher
 )(implicit ec: ExecutionContext)
     extends LazyLogging
     with SqlEscaping
     with IdentityService[User] {
-
-  private lazy val Mailer =
-    actorSystem.actorSelection("/user/mailActor")
 
   private val userCache: AlfuCache[(ObjectId, String), User] =
     AlfuCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
@@ -222,7 +217,7 @@ class UserService @Inject() (
 
     if (user.isDeactivated && activated) {
       logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
-      Mailer ! Send(defaultMails.activatedMail(multiUser.fullName, email))
+      accountEmailService.sendActivatedEmail(multiUser.fullName, email)
     }
     val oldEmail = multiUser.email
     for {

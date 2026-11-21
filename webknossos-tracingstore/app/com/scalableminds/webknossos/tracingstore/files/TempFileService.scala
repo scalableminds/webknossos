@@ -8,6 +8,7 @@ import com.scalableminds.util.box.Box.tryo
 import org.apache.commons.io.FileUtils
 
 import java.nio.file.{Files, Path}
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
@@ -23,7 +24,7 @@ trait TempFileService extends LazyLogging {
   private val tmpDir: Path =
     Path.of(System.getProperty("java.io.tmpdir")).toAbsolutePath.normalize.resolve(s"$moduleName-tempfiles")
 
-  private val activeTempFiles = scala.collection.mutable.Set[(Path, Instant)]()
+  private val activeTempFiles = TrieMap.empty[Path, Instant]
 
   cleanUpService.register(s"Deleting temporary files at $tmpDir", 1 hour)(cleanUpExpiredFiles())
 
@@ -43,7 +44,7 @@ trait TempFileService extends LazyLogging {
       Files.createDirectory(path)
     else
       Files.createFile(path)
-    activeTempFiles.add((path, Instant.now + lifeTime))
+    activeTempFiles.put(path, Instant.now + lifeTime)
     path
   }
 
@@ -58,7 +59,7 @@ trait TempFileService extends LazyLogging {
           tryo(FileUtils.deleteDirectory(path.toFile))
         else
           tryo(Files.delete(path))
-        activeTempFiles.remove((path, expiryTime))
+        activeTempFiles.remove(path)
       }
     }
     Fox.successful(())

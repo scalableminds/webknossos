@@ -2,7 +2,6 @@ package models.organization
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.box.Failure
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TextUtils}
@@ -10,8 +9,6 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
-import mail.{DefaultMails, Send}
-import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
@@ -34,14 +31,10 @@ class OrganizationService @Inject() (
     folderDAO: FolderDAO,
     folderService: FolderService,
     userService: UserService,
-    defaultMails: DefaultMails,
     rpc: RPC,
-    conf: WkConf,
-    actorSystem: ActorSystem
+    conf: WkConf
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
-
-  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
   def compactWrites(organization: Organization): JsObject =
     Json.obj(
@@ -190,18 +183,6 @@ class OrganizationService @Inject() (
       )
     } yield ()
 
-  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization): Fox[String] =
-    if (possiblyEmptyEmail.nonEmpty) {
-      Fox.successful(possiblyEmptyEmail)
-    } else {
-      for {
-        ownerMultiUser <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id)
-      } yield ownerMultiUser.email
-    }
-
-  def newUserMailRecipient(organization: Organization): Fox[String] =
-    fallbackOnOwnerEmail(organization.newUserMailingList, organization)
-
   def acceptTermsOfService(organizationId: String, version: Int)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> Msg.Organization.TermsOfService.notEnabled
@@ -209,38 +190,6 @@ class OrganizationService @Inject() (
       _ <- Fox.fromBool(version == requiredVersion) ?~> Msg.Organization.TermsOfService
         .versionMismatch(requiredVersion, version)
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
-    } yield ()
-
-  /** Notifies the organization owner and all of its admins that the organization was moved to a higher pricing tier,
-    * highlighting the features they gained. Does nothing if the plan change was not an upgrade. Never fails, as the
-    * plan update it belongs to has already been persisted by then. Failures are logged instead.
-    */
-  def sendPricingPlanUpgradeMails(
-      organization: Organization,
-      previousPlan: PricingPlan.PricingPlan,
-      newPlan: PricingPlan.PricingPlan
-  ): Fox[Unit] =
-    for {
-      resultBox <- Fox
-        .runOptional(PricingPlanFeatures.unlockedBy(previousPlan, newPlan))(unlockedFeatures =>
-          for {
-            recipients <- multiUserDAO.findMultiUsersOfOrganizationOwnerAndAdmins(organization._id)
-            _ = recipients.foreach(recipient =>
-              Mailer ! Send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
-            )
-            _ = logger.info(
-              s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
-            )
-          } yield ()
-        )
-        .shiftBox
-      _ = resultBox match {
-        case Failure(msg, _, _) =>
-          logger.warn(
-            s"Could not notify owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan: $msg"
-          )
-        case _ => ()
-      }
     } yield ()
 
   def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(using

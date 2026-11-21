@@ -1,3 +1,4 @@
+import { type AdHocMeshGeometry, parseAdHocMeshResponse } from "admin/api/ad_hoc_mesh_response";
 import type { ApiResult, RetryOptions } from "admin/api/api_result";
 import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
@@ -1367,7 +1368,7 @@ export async function getDatasets(
   searchQuery: string | null = null,
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
-  includeAnnotationCount: boolean = false,
+  includeAnnotationInfo: boolean = false,
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
@@ -1385,8 +1386,8 @@ export async function getDatasets(
   if (includeSubfolders != null) {
     params.set("includeSubfolders", includeSubfolders ? "true" : "false");
   }
-  if (includeAnnotationCount) {
-    params.set("includeAnnotationCount", "true");
+  if (includeAnnotationInfo) {
+    params.set("includeAnnotationInfo", "true");
   }
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
@@ -1554,9 +1555,12 @@ export function createDatasetComposition(
   );
 }
 
+export type ResumableUploadDomain = "dataset" | "alignmentProject";
+
 export function createResumableUpload(
   datastoreUrl: string,
   uploadId: string,
+  uploadDomain: ResumableUploadDomain = "dataset",
 ): Promise<ResumableUpload> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {
@@ -1579,7 +1583,7 @@ export function createResumableUpload(
 
     const resumable = new ResumableUpload({
       testChunks: true,
-      target: `${datastoreUrl}/data/datasets/upload/dataset`,
+      target: `${datastoreUrl}/data/datasets/upload/${uploadDomain}`,
       query: function () {
         return {
           token: activeToken,
@@ -2302,10 +2306,11 @@ export function computeAdHocMesh(
   options: RequestOptions = {},
   retryOptions?: RetryOptions,
 ): Promise<
-  ApiResult<{
-    buffer: ArrayBuffer;
-    neighbors: Array<number>;
-  }>
+  ApiResult<
+    AdHocMeshGeometry & {
+      neighbors: Array<number>;
+    }
+  >
 > {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
@@ -2339,15 +2344,13 @@ export function computeAdHocMesh(
               mapping: mappingName,
               voxelSizeFactorInUnit: scaleFactor,
               mag,
+              indexed: true,
               ...rest,
             },
           },
         );
         const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
-        return {
-          buffer,
-          neighbors,
-        };
+        return { ...parseAdHocMeshResponse(buffer, headers["vertex-count"]), neighbors };
       }),
     options,
     retryOptions,

@@ -10,7 +10,6 @@ import PriorityQueue from "js-priority-queue";
 import { toBigInt } from "libs/bigint_helpers";
 import { InputKeyboard, type KeyboardNoLoopHandler } from "libs/input";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
-import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
@@ -67,6 +66,7 @@ import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -89,7 +89,6 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
-  getEditableMappingForVolumeTracingId,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -173,6 +172,7 @@ import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucke
 import type DataLayer from "viewer/model/data_layer";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
+import { mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
 import {
@@ -184,12 +184,11 @@ import {
 import { flatToNestedMatrix } from "viewer/model/helpers/transformation_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
-import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInVxFromState } from "viewer/model/sagas/saga_selectors";
 import {
   createPartialBucketUpdates,
   getVolumeSaveModeForState,
 } from "viewer/model/sagas/volume/helpers";
-import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
 import { runVoxelsEdit } from "viewer/model/volumetracing/integration/mask_driver";
 import { api, Model } from "viewer/singletons";
@@ -1322,7 +1321,7 @@ class TracingApi {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const voxelSizeFactor = state.dataset.dataSource.scale.factor;
+    const voxelSizeFactor = getGlobalVoxelSizeFromState(state).factor;
     // Pre-allocate vectors
     let lengthInUnitAcc = 0;
     let lengthInVxAcc = 0;
@@ -1380,7 +1379,7 @@ class TracingApi {
       throw new Error("The nodes are not within the same tree.");
     }
 
-    const voxelSizeFactor = Store.getState().dataset.dataSource.scale.factor;
+    const voxelSizeFactor = getGlobalVoxelSizeFromState(Store.getState()).factor;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
     const distanceMap: Record<number, number> = {};
     // The distance map is also maintained in voxel space. This information is only
@@ -2024,38 +2023,19 @@ class DataApi {
       await this.getDataValue(layerName, position, zoomStep, additionalCoordinates),
     );
 
-    const activeMappingInfo = getMappingInfo(
+    const { mappingName } = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,
       layerName,
     );
-
-    if (activeMappingInfo.mapping != null) {
-      const mappedId = new NumberLikeMapWrapper(activeMappingInfo.mapping).getAsBigInt(unmappedId);
-      if (mappedId != null) {
-        return mappedId;
-      }
-    }
-
-    const mappingName = activeMappingInfo.mappingName;
     if (mappingName == null) {
       throw new Error(`No active mapping for layer ${layerName}`);
     }
 
-    const fetchedEntries = await fetchAgglomeratesForSegmentIds(
-      state.dataset,
-      state.annotation,
-      getEditableMappingForVolumeTracingId(state, layerName),
-      layerName,
-      getLayerByName(state.dataset, layerName),
-      mappingName,
-      new Set([unmappedId]),
-    );
-
-    const agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsBigInt(unmappedId);
-    if (agglomerateId == null) {
+    const mappedId = await mapIdAsync(layerName, unmappedId);
+    if (mappedId == null) {
       throw new Error(`Could not map id ${unmappedId} at position ${position}`);
     }
-    return agglomerateId;
+    return mappedId;
   }
 
   /**
@@ -2187,7 +2167,7 @@ class DataApi {
       dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
     );
-    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInUnitFromState(
+    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInVxFromState(
       state,
       viewport,
     );

@@ -12,7 +12,8 @@ import java.net.URI
 import javax.inject.Inject
 import scala.util.Try
 
-class DefaultMails @Inject() (conf: WkConf) extends Formatter {
+// The templates of all emails. Only the email services in this package use them, the rest of the application calls those services.
+private[mail] class DefaultMails @Inject() (conf: WkConf) extends Formatter {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
@@ -373,6 +374,38 @@ class DefaultMails @Inject() (conf: WkConf) extends Formatter {
     )
 
   private def annotationUrl(annotationId: ObjectId): String = s"$uri/annotations/$annotationId"
+
+  def storageWarningMail(
+      multiUser: MultiUser,
+      organization: Organization,
+      usedStorageBytes: Long,
+      includedStorageBytes: Long,
+      usagePercent: Double,
+      isExceeded: Boolean
+  ): Mail = {
+    // Floored, so that e.g. 89.9% is not announced as 90%. Only shown while not exceeded, so always finite.
+    val usagePercentFloored = usagePercent.toLong
+    Mail(
+      from = defaultSender,
+      subject =
+        if (isExceeded) s"WEBKNOSSOS | Your organization ${organization.name} has used up its storage"
+        else s"WEBKNOSSOS | Your organization ${organization.name} has used $usagePercentFloored% of its storage",
+      bodyHtml = html.mail
+        .storageWarning(
+          multiUser.fullName,
+          organization.name,
+          formatBytes(usedStorageBytes),
+          formatBytes(includedStorageBytes),
+          usagePercentFloored,
+          isExceeded,
+          s"$uri/organization/overview",
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email),
+      replyTo = List(supportEmail)
+    )
+  }
 
   def emailVerificationMail(multiUser: MultiUser, key: String): Mail = {
     val linkExpiry = conf.WebKnossos.User.EmailVerification.linkExpiry

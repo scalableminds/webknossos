@@ -15,16 +15,17 @@ import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/co
 import { OrthoViews, OrthoViewValuesWithoutTDView, TDViewPerspectiveFov } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
 import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { isSkeletonSectionClippingActive } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   getInputCatcherAspectRatio,
-  getPlaneExtentInVoxelFromStore,
+  getPlaneExtentInUnitFromStore,
 } from "viewer/model/accessors/view_mode_accessor";
 import { setTDCameraWithoutTimeTrackingAction } from "viewer/model/actions/view_mode_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { getBaseVoxelInUnit, voxelToUnit } from "viewer/model/scaleinfo";
+import { voxelToUnit } from "viewer/model/scaleinfo";
 import { OrthoCamerasBaseRotations } from "viewer/ortho_base_rotations";
 import { api } from "viewer/singletons";
 import type { CameraData } from "viewer/store";
@@ -186,18 +187,13 @@ class CameraController extends PureComponent<Props> {
   updateCamViewport(inputCatcherRects?: OrthoViewRects): void {
     const state = Store.getState();
     const { clippingDistance } = state.userConfiguration;
-    const scaleFactor = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
     // While section clipping is active, the skeleton shaders cull precisely to the
     // current section. Make sure the camera's near plane never clips on-section
     // skeleton by using at least one full perpendicular voxel as the near distance.
     const isSectionClippingActive = isSkeletonSectionClippingActive(state);
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [width, height] = getPlaneExtentInVoxelFromStore(
-        state,
-        state.flycam.zoomStep,
-        planeId,
-      ).map((x) => x * scaleFactor);
+      const [width, height] = getPlaneExtentInUnitFromStore(state, state.flycam.zoomStep, planeId);
       this.props.cameras[planeId].left = -width / 2;
       this.props.cameras[planeId].right = width / 2;
       this.props.cameras[planeId].bottom = -height / 2;
@@ -205,7 +201,7 @@ class CameraController extends PureComponent<Props> {
       const effectiveClippingDistance = isSectionClippingActive
         ? Math.max(
             clippingDistance,
-            state.dataset.dataSource.scale.factor[Dimensions.getIndices(planeId)[2]],
+            getGlobalVoxelSizeFromState(state).factor[Dimensions.getIndices(planeId)[2]],
           )
         : clippingDistance;
       // We only set the `near` value here. The effect of far=clippingDistance is
@@ -240,7 +236,7 @@ class CameraController extends PureComponent<Props> {
     const state = Store.getState();
     const globalPosition = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
-    const cameraPosition = voxelToUnit(state.dataset.dataSource.scale, globalPosition);
+    const cameraPosition = voxelToUnit(getGlobalVoxelSizeFromState(state), globalPosition);
     // Now set rotation for all cameras respecting the base rotation of each camera.
     const globalRotation = getRotationInRadian(state.flycam);
     this.flycamRotationEuler.set(globalRotation[0], globalRotation[1], globalRotation[2], "ZYX");
@@ -284,6 +280,10 @@ class CameraController extends PureComponent<Props> {
       ),
       listenToStoreProperty(
         (storeState) => storeState.flycam.zoomStep,
+        () => this.updateCamViewport(),
+      ),
+      listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState),
         () => this.updateCamViewport(),
       ),
       listenToStoreProperty(
@@ -335,7 +335,7 @@ export function rotate3DViewTo(
   const state = Store.getState();
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
-  const flycamPos = voxelToUnit(dataset.dataSource.scale, getPosition(state.flycam));
+  const flycamPos = voxelToUnit(getGlobalVoxelSizeFromState(state), getPosition(state.flycam));
   const flycamRotation = getRotationInRadian(state.flycam);
   const datasetExtent = getDatasetExtentInUnit(dataset);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene

@@ -48,8 +48,7 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import {
   changeBrushSizeIfBrushIsActiveBy,
-  getSegmentIdForPosition,
-  getUnmappedSegmentIdForPosition,
+  getSegmentIdsAtPosition,
   handleDrawStart,
   handleEndForDrawOrErase,
   handleEraseStart,
@@ -1133,10 +1132,17 @@ export class QuickSelectToolController extends VolumeToolController {
 
         quickSelectGeometry.setCoordinates(startPos, currentPos);
       },
-      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+      leftClick: (pos: Point2, _plane: OrthoView, event: MouseEvent, _isTouch: boolean) => {
+        isDragging = false;
+        if (event.shiftKey) {
+          // Shift+drag resizes the rectangle symmetrically, but a shift+click without
+          // dragging activates the clicked segment id (as in the other volume tools).
+          Store.dispatch(setQuickSelectStateAction("inactive"));
+          handlePickCell(pos);
+          return;
+        }
         const state = Store.getState();
         const clickedPos = calculateGlobalPos(state, pos).rounded;
-        isDragging = false;
 
         const quickSelectConfig = state.userConfiguration.quickSelect;
         const isAISelectAvailable =
@@ -1163,6 +1169,7 @@ export class QuickSelectToolController extends VolumeToolController {
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
+      ...(shiftKey ? { leftClick: "Activate Segment ID" } : {}),
       leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
       rightClick: "Context Menu",
     };
@@ -1424,8 +1431,8 @@ export class ProofreadToolController extends ToolController {
     const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
     const ctrlOrMetaKey = event.ctrlKey || event.metaKey;
     if (isMultiSplitActive && ctrlOrMetaKey) {
-      const unmappedSegmentId = getUnmappedSegmentIdForPosition(globalPosition);
-      const mappedSegmentId = getSegmentIdForPosition(globalPosition);
+      const { unmappedId: unmappedSegmentId, mappedId: mappedSegmentId } =
+        getSegmentIdsAtPosition(globalPosition);
       if (unmappedSegmentId === 0n || mappedSegmentId === 0n) {
         // No valid ids were found, ignore action.
         return;

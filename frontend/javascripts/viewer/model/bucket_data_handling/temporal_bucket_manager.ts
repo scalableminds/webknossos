@@ -20,16 +20,15 @@ class TemporalBucketManager {
   }
 
   getCount(): number {
-    // Counts the buckets whose saving waits for their backend data. A bucket saved
-    // via partial updates does not: its data is only needed for display.
-    let count = 0;
-    for (const bucket of this.pendingBuckets) {
-      if (!bucket.savedViaPartialUpdates) count++;
-    }
-    return count;
+    // Counts the buckets whose saving waits for their backend data. Only buckets edited
+    // as whole buckets are added (see DataBucket.startDataMutationForFullBucket).
+    return this.pendingBuckets.size;
   }
 
   addBucket(bucket: DataBucket): void {
+    // A bucket is added at the start of each of its mutations (see
+    // DataBucket.startDataMutationForFullBucket), but only waited for once.
+    if (this.pendingBuckets.has(bucket)) return;
     this.pendingBuckets.add(bucket);
     this.pullBucket(bucket);
     this.loadedPromises.push(this.makeLoadedPromise(bucket));
@@ -44,15 +43,8 @@ class TemporalBucketManager {
     const loadedPromise: Promise<void> = new Promise((resolve, _reject) => {
       const onLoadedOrMissingHandler = () => {
         this.pendingBuckets.delete(bucket);
-        if (bucket.dirty) {
-          if (bucket.savedViaPartialUpdates) {
-            // The bucket was edited while loading, so ending the mutation couldn't clear
-            // `dirty` yet: it has to stay set until the backend data is merged (see
-            // receiveData). That happened now, and nothing needs to be pushed.
-            bucket.clearDirtyIfSavedViaPartialUpdates();
-          } else {
-            this.pushQueue.insert(bucket);
-          }
+        if (bucket.fullBucketSaveState.dirty) {
+          this.pushQueue.insert(bucket);
         }
 
         this.loadedPromises = without(this.loadedPromises, loadedPromise);

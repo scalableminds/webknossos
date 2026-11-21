@@ -191,18 +191,19 @@ describe("PullQueue", () => {
     expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
   });
 
-  function prepare() {
+  // The first request fails, the second one returns data for a single bucket.
+  function mockFailingThenSucceedingRequests() {
     vi.mocked(requestWithFallback)
       .mockReset()
       .mockRejectedValueOnce(new Error("Expected promise rejection in tests. Can be ignored."))
       .mockResolvedValueOnce([{ type: "data", data: new Uint8Array(32 ** 3) }]);
   }
 
-  it<TestContext>("Request Failure: should not request twice if not bucket dirty", async ({
+  it<TestContext>("Request Failure: should not request twice if the bucket is neither dirty nor needed", async ({
     pullQueue,
     buckets,
   }) => {
-    prepare();
+    mockFailingThenSucceedingRequests();
     pullQueue.pull();
 
     await sleep(0); // sleep a bit so that the event loop can process the fetches
@@ -216,8 +217,8 @@ describe("PullQueue", () => {
     pullQueue,
     buckets,
   }) => {
-    prepare();
-    buckets[0].dirty = true;
+    mockFailingThenSucceedingRequests();
+    buckets[0].fullBucketSaveState.dirty = true;
     buckets[0].data = new Uint8Array(32 * 32 * 32);
     pullQueue.pull();
 
@@ -226,6 +227,39 @@ describe("PullQueue", () => {
     expect(requestWithFallback).toHaveBeenCalledTimes(2);
     expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
     expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
+  });
+
+  it<TestContext>("Request Failure: should reinsert needed buckets", async ({
+    pullQueue,
+    buckets,
+  }) => {
+    mockFailingThenSucceedingRequests();
+    // As the bucket picker does for the buckets of the current view.
+    buckets[0].markAsNeeded();
+    pullQueue.pull();
+
+    await sleep(50); // sleep a bit so that the event loop can process the fetches
+
+    expect(requestWithFallback).toHaveBeenCalledTimes(2);
+    expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+    expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
+  });
+
+  it<TestContext>("Request Failure: should drop reinserted needed buckets when the view changes", async ({
+    pullQueue,
+    buckets,
+  }) => {
+    mockFailingThenSucceedingRequests();
+    buckets[0].markAsNeeded();
+    pullQueue.pull();
+
+    await sleep(0); // sleep a bit so that the failure is handled before the retry
+    // As the bucket picker does when the view changes.
+    pullQueue.clear();
+    await sleep(50);
+
+    expect(requestWithFallback).toHaveBeenCalledTimes(1);
+    expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
   describe("t-batched requests (see DataCube.usesTRecycling)", () => {

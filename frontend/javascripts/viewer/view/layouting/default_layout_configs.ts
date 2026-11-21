@@ -204,7 +204,8 @@ function buildLayout(settings, borders, mainLayout): ModelConfig {
   };
 }
 
-// The left border content is not responsive and needs a fixed width.
+// The left border can't be resized by the user (see hide_first_splitter_border). Its content fills
+// this width minus the vertical scrollbar, if the OS renders a space-taking one.
 // The right border uses the same width for symmetry in the default layout.
 const sidebarWidth = 365;
 

@@ -2,7 +2,7 @@ import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import { map3, map4, mod } from "libs/utils";
 import type { BucketAddress, Vector3, Vector4 } from "viewer/constants";
-import constants from "viewer/constants";
+import constants, { FLIGHT_PLANE_WIDTH } from "viewer/constants";
 import type { EnqueueFunction } from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import {
   globalPositionToBucketPosition,
@@ -49,7 +49,7 @@ export default function determineBucketsForFlight(
   abortLimit?: number,
 ): void {
   const queryMatrix = M4x4.scale1(1, matrix);
-  const width = constants.VIEWPORT_WIDTH;
+  const width = FLIGHT_PLANE_WIDTH;
   const halfWidth = width / 2;
   const cameraVertex: Vector3 = [0, 0, -sphericalCapRadius];
   const fallbackZoomStep = logZoomStep + 1;

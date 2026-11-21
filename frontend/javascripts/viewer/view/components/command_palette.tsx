@@ -10,7 +10,6 @@ import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
-import capitalize from "lodash-es/capitalize";
 import sortBy from "lodash-es/sortBy";
 import { getAdministrationSubMenu, getAnalysisSubMenu, switchTo } from "navbar";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
@@ -62,7 +61,7 @@ enum DynamicCommands {
 }
 
 const getLabelForPath = (key: string) =>
-  getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
+  getPhraseFromCamelCaseString(key.split("/")[1] ?? "") || key;
 
 const cleanStringOfMostHTML = (dirtyString: string | undefined) => {
   if (dirtyString == null) return null;
@@ -230,7 +229,7 @@ export const CommandPalette = () => {
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
-    const analysisSubMenu = getAnalysisSubMenu(true, activeOrganization);
+    const analysisSubMenu = getAnalysisSubMenu(true, activeUser, activeOrganization);
     const analysisCommands =
       analysisSubMenu != null
         ? analysisSubMenu.children.map((entry) => {

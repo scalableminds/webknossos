@@ -18,9 +18,10 @@ import constants, {
   OrthoViewValuesWithoutTDView,
 } from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import type { Flycam, WebknossosState } from "viewer/store";
+import { getUnitPerPixel, getVoxelPerPixel } from "viewer/model/scaleinfo";
+import type { WebknossosState } from "viewer/store";
 import Dimensions from "../dimensions";
 
 export function getTDViewportSize(state: WebknossosState): [number, number] {
@@ -30,9 +31,9 @@ export function getTDViewportSize(state: WebknossosState): [number, number] {
 export function getTDViewZoom(state: WebknossosState) {
   const { width } = getInputCatcherRect(state, OrthoViews.TDView);
   const [viewplaneWidth] = getTDViewportSize(state);
-  const { factor } = state.dataset.dataSource.scale;
-  // We only need to calculate scaleX as scaleY would have the same value.
-  const scaleX = viewplaneWidth / (width * factor[0]);
+  // Like the zoom step of the other viewports, this is relative to the smallest voxel extent
+  // (see getUnitPerPixel). We only need to calculate scaleX as scaleY would have the same value.
+  const scaleX = viewplaneWidth / (width * getUnitPerPixel(getGlobalVoxelSizeFromState(state)));
   return scaleX;
 }
 export function getInputCatcherRect(state: WebknossosState, viewport: Viewport): Rect {
@@ -84,13 +85,6 @@ export function getInputCatcherAspectRatio(state: WebknossosState, viewport: Vie
 //   const scaledHeight = width / (!useWidth ? 1 : aspectRatio);
 //   return [scaledWidth, scaledHeight];
 // }
-// Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
-export function getViewportScale(state: WebknossosState, viewport: Viewport): [number, number] {
-  const { width, height } = getInputCatcherRect(state, viewport);
-  const xScale = width / constants.VIEWPORT_WIDTH;
-  const yScale = height / constants.VIEWPORT_WIDTH;
-  return [xScale, yScale];
-}
 
 export type PositionWithRounding = { rounded: Vector3; floating: Vector3 };
 
@@ -99,7 +93,7 @@ const flycamRotationEuler = new Euler();
 const flycamRotationMatrix = new Matrix4();
 const flycamPositionMatrix = new Matrix4();
 const rotatedDiff = new ThreeVector3();
-const planeRatioVector = new ThreeVector3();
+const voxelPerPixelVector = new ThreeVector3();
 
 function _calculateMaybeGlobalPos(
   state: WebknossosState,
@@ -111,19 +105,19 @@ function _calculateMaybeGlobalPos(
   const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep);
   const { width, height } = getInputCatcherRect(state, planeId);
   // Subtract clickPos from only half of the viewport extent as
   // the center of the viewport / the flycam position is used as a reference point.
-  const diffU = (width / 2 - clickPos.x) * state.flycam.zoomStep;
-  const diffV = (height / 2 - clickPos.y) * state.flycam.zoomStep;
+  const diffU = width / 2 - clickPos.x;
+  const diffV = height / 2 - clickPos.y;
   const diffUvw = [diffU, diffV, 0] as Vector3;
   const diffXyz = Dimensions.transDim(diffUvw, planeId);
   flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
   flycamPositionMatrix.makeTranslation(...curGlobalPos);
   rotatedDiff.set(...diffXyz).applyMatrix4(flycamRotationMatrix);
   const scaledRotatedPosition = rotatedDiff
-    .multiply(planeRatioVector.set(...planeRatio))
+    .multiply(voxelPerPixelVector.set(...voxelPerPixel))
     .multiplyScalar(-1);
 
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
@@ -179,8 +173,7 @@ function _calculateInViewportPos(
   globalPosition: Vector3,
   flycamPosition: Vector3,
   flycamRotationInRadian: Vector3,
-  planeRatio: Vector3,
-  zoomStep: number,
+  voxelPerPixel: Vector3,
 ): ThreeVector3 {
   // Difference in world space
   const positionDiff = new ThreeVector3(...V3.sub(globalPosition, flycamPosition));
@@ -190,11 +183,9 @@ function _calculateInViewportPos(
     .makeRotationFromEuler(new Euler(...flycamRotationInRadian, "ZYX"))
     .invert();
 
-  // Unscale from voxel ratio (undo voxel scaling)
-  const posInScreenSpaceScaling = positionDiff.divide(new ThreeVector3(...planeRatio));
-  const rotatedIntoScreenSpace = posInScreenSpaceScaling.applyMatrix4(inverseRotationMatrix);
-  const unzoomedPosition = rotatedIntoScreenSpace.multiplyScalar(1 / zoomStep);
-  return unzoomedPosition;
+  // Convert from voxels to screen pixels
+  const posInScreenSpaceScaling = positionDiff.divide(new ThreeVector3(...voxelPerPixel));
+  return posInScreenSpaceScaling.applyMatrix4(inverseRotationMatrix);
 }
 
 function _calculateMaybePlaneScreenPos(
@@ -209,14 +200,13 @@ function _calculateMaybePlaneScreenPos(
 
   const flycamPosition = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep);
 
   const positionInViewportPerspective = calculateInViewportPos(
     globalPosition,
     flycamPosition,
     flycamRotation,
-    planeRatio,
-    state.flycam.zoomStep,
+    voxelPerPixel,
   );
 
   // Get plane-aligned screen-space coordinates (u/v)
@@ -251,23 +241,21 @@ function _calculateMaybeGlobalDelta(
 ): Vector3 | null | undefined {
   let position: Vector3;
   planeId = planeId || state.viewModeData.plane.activeViewport;
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
-  const diffX = delta.x * state.flycam.zoomStep;
-  const diffY = delta.y * state.flycam.zoomStep;
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep);
 
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
-      position = [diffX * planeRatio[0], diffY * planeRatio[1], 0];
+      position = [delta.x * voxelPerPixel[0], delta.y * voxelPerPixel[1], 0];
       break;
     }
 
     case OrthoViews.PLANE_YZ: {
-      position = [0, diffY * planeRatio[1], diffX * planeRatio[2]];
+      position = [0, delta.y * voxelPerPixel[1], delta.x * voxelPerPixel[2]];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
-      position = [diffX * planeRatio[0], 0, diffY * planeRatio[2]];
+      position = [delta.x * voxelPerPixel[0], 0, delta.y * voxelPerPixel[2]];
       break;
     }
 
@@ -342,10 +330,12 @@ function _getViewportExtentInVoxelPerAxis(state: WebknossosState): Vector3 {
    * for anisotropic voxel sizes so the result is expressed in mag1 voxels, comparable to
    * bounding box/position coordinates.
    */
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
-  const extents = OrthoViewValuesWithoutTDView.map((orthoView) =>
-    getPlaneExtentInVoxelFromStore(state, state.flycam.zoomStep, orthoView),
-  );
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state));
+  // Extents in pixels at zoom step 1
+  const extents = OrthoViewValuesWithoutTDView.map((orthoView) => {
+    const { width, height } = getInputCatcherRect(state, orthoView);
+    return [width * state.flycam.zoomStep, height * state.flycam.zoomStep];
+  });
   const [xyExtent, yzExtent, xzExtent] = extents;
   const minExtent = 1;
 
@@ -353,9 +343,9 @@ function _getViewportExtentInVoxelPerAxis(state: WebknossosState): Vector3 {
     max([val1, val2].filter((v) => v >= minExtent)) || minExtent;
 
   return [
-    Math.ceil(getMaxExtent(xyExtent[0], xzExtent[0]) * planeRatio[0]),
-    Math.ceil(getMaxExtent(xyExtent[1], yzExtent[1]) * planeRatio[1]),
-    Math.ceil(getMaxExtent(xzExtent[1], yzExtent[0]) * planeRatio[2]),
+    Math.ceil(getMaxExtent(xyExtent[0], xzExtent[0]) * voxelPerPixel[0]),
+    Math.ceil(getMaxExtent(xyExtent[1], yzExtent[1]) * voxelPerPixel[1]),
+    Math.ceil(getMaxExtent(xzExtent[1], yzExtent[0]) * voxelPerPixel[2]),
   ];
 }
 
@@ -417,13 +407,14 @@ export function isPlaneMode(state: WebknossosState): boolean {
   return constants.MODES_PLANE.includes(viewMode);
 }
 
-export function getPlaneScalingFactor(
+export function getPlaneExtentInUnitFromStore(
   state: WebknossosState,
-  flycam: Flycam,
+  zoomStep: number,
   planeID: OrthoView,
 ): [number, number] {
-  const [width, height] = getPlaneExtentInVoxelFromStore(state, flycam.zoomStep, planeID);
-  return [width / constants.VIEWPORT_WIDTH, height / constants.VIEWPORT_WIDTH];
+  const { width, height } = getInputCatcherRect(state, planeID);
+  const unitPerPixel = getUnitPerPixel(getGlobalVoxelSizeFromState(state), zoomStep);
+  return [width * unitPerPixel, height * unitPerPixel];
 }
 export function getPlaneExtentInVoxelFromStore(
   state: WebknossosState,
@@ -431,5 +422,7 @@ export function getPlaneExtentInVoxelFromStore(
   planeID: OrthoView,
 ): [number, number] {
   const { width, height } = getInputCatcherRect(state, planeID);
-  return [width * zoomStep, height * zoomStep];
+  const [u, v] = Dimensions.getIndices(planeID);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), zoomStep);
+  return [width * voxelPerPixel[u], height * voxelPerPixel[v]];
 }

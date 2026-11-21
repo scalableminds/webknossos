@@ -55,6 +55,7 @@ import {
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getGlobalVoxelSizeFromState,
   getTransformedDatasetBoundingBox,
   getTransformsForLayer,
   getTransformsForLayerOrNull,
@@ -76,7 +77,7 @@ import {
   getTaskBoundingBoxes,
   type MipEnabledBBox,
 } from "viewer/model/accessors/tracing_accessor";
-import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
+import { getPlaneExtentInUnitFromStore } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
 import {
   loadMipAction,
@@ -94,7 +95,6 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
-import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
 
 // Add the extension functions
@@ -129,6 +129,7 @@ class SceneController {
   public renderer!: WebGLRenderer;
   public scene!: Scene;
   public rootGroup!: Group;
+  private planeGroup!: Group;
   public segmentMeshController: SegmentMeshController;
   private storePropertyUnsubscribers: Array<() => void>;
   private splitBoundaryMesh: Mesh | null = null;
@@ -182,10 +183,15 @@ class SceneController {
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
     // The dimension(s) with the highest resolution will not be distorted.
-    this.rootGroup.scale.copy(
-      new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
-    );
+    this.setGlobalVoxelSize(getGlobalVoxelSizeFromState(Store.getState()).factor);
     this.setupDebuggingMethods();
+  }
+
+  setGlobalVoxelSize(voxelSizeFactor: Vector3): void {
+    this.rootGroup.scale.copy(new ThreeVector3(...voxelSizeFactor));
+    // Apply the inverse voxel size to all planes to remove the scaling of the root group
+    // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
+    this.planeGroup.scale.copy(new ThreeVector3(1, 1, 1).divide(this.rootGroup.scale));
   }
 
   setupDebuggingMethods() {
@@ -300,17 +306,10 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
-    const planeGroup = new Group();
+    this.planeGroup = new Group();
     for (const plane of Object.values(this.planes)) {
-      planeGroup.add(...plane.getMeshes());
+      this.planeGroup.add(...plane.getMeshes());
     }
-    // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
-    // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
-    planeGroup.scale.copy(
-      new ThreeVector3(1, 1, 1).divide(
-        new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
-      ),
-    );
 
     this.rootNode = new Group().add(
       this.userBoundingBoxGroup,
@@ -322,7 +321,7 @@ class SceneController {
         ...this.areaMeasurementGeometry.getMeshes(),
       ),
       ...this.datasetBoundingBox.getMeshes(),
-      planeGroup,
+      this.planeGroup,
     );
 
     if (state.annotation.skeleton != null) {
@@ -532,7 +531,7 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
     const state = Store.getState();
-    const { dataset, userConfiguration, flycam } = state;
+    const { userConfiguration, flycam } = state;
     const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = userConfiguration;
 
     // Section clipping renders only the skeleton on the currently visible section.
@@ -592,7 +591,10 @@ class SceneController {
           // perpendicular voxel so that the (precise) shader-side clipping is never
           // overruled by the data plane occluding on-section nodes/edges.
           const effectiveClippingDistanceInUnit = isSectionClippingActive
-            ? Math.max(this.clippingDistanceInUnit, dataset.dataSource.scale.factor[ind[2]])
+            ? Math.max(
+                this.clippingDistanceInUnit,
+                getGlobalVoxelSizeFromState(state).factor[ind[2]],
+              )
             : this.clippingDistanceInUnit;
           const unrotatedPositionOffset = [0, 0, 0] as Vector3;
           unrotatedPositionOffset[ind[2]] =
@@ -640,7 +642,12 @@ class SceneController {
 
     if (!optFlightModePlane) {
       for (const currentPlane of Object.values(this.planes)) {
-        const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
+        // The plane geometry has a width of 1, so its scale is the viewport extent.
+        const [scaleX, scaleY] = getPlaneExtentInUnitFromStore(
+          state,
+          flycam.zoomStep,
+          currentPlane.planeID,
+        );
         const isVisible = scaleX > 0 && scaleY > 0;
 
         if (isVisible) {
@@ -711,7 +718,7 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
-  private applyTransformToGroup(transform: Transform, group: Group | CustomLOD) {
+  private applyTransformToGroup(transform: Transform, group: Group) {
     if (transform.affineMatrix) {
       const matrix = new Matrix4();
       matrix.set(...transform.affineMatrix);
@@ -1011,6 +1018,13 @@ class SceneController {
 
   bindToEvents(): void {
     this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState).factor,
+        (voxelSizeFactor) => {
+          this.setGlobalVoxelSize(voxelSizeFactor);
+          app.vent.emit("rerender");
+        },
+      ),
       listenToStoreProperty(
         (storeState) => storeState.userConfiguration.clippingDistance,
         (clippingDistance) => this.setClippingDistance(clippingDistance),

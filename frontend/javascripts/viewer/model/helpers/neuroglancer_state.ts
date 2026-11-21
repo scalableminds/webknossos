@@ -66,7 +66,11 @@ function rgbToHex(color: Vector3): string {
 }
 
 function getSource(url: string): string {
-  return `zarr3://${url}`;
+  // Neuroglancer only keeps query parameters (e.g., the sharing token) with the pipeline syntax,
+  // which also expects the path of the Zarr array to end with a slash.
+  const [path, query] = url.split("?");
+  const pathWithSlash = path.endsWith("/") ? path : `${path}/`;
+  return `${pathWithSlash}${query != null ? `?${query}` : ""}|zarr3:`;
 }
 
 function buildImageLayer(layer: NeuroglancerLayerInput): NeuroglancerLayer {

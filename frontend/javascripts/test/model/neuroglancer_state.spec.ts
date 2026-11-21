@@ -94,7 +94,7 @@ describe("Neuroglancer state", () => {
     const [first, second] = state.layers;
     expect(first).toMatchObject({
       type: "image",
-      source: "zarr3://https://datastore/data/v12/zarr3/abc/color",
+      source: "https://datastore/data/v12/zarr3/abc/color/|zarr3:",
       visible: true,
       opacity: 0.8,
       shaderControls: {
@@ -105,6 +105,7 @@ describe("Neuroglancer state", () => {
       },
     });
     expect(second).toMatchObject({
+      source: "https://datastore/data/v12/zarr3/abc/color2/?token=secret|zarr3:",
       visible: false,
       shaderControls: {
         normalized: { range: [0, 65535], window: [0, 65535] },
@@ -118,7 +119,7 @@ describe("Neuroglancer state", () => {
     expect(segmentation).toEqual({
       type: "segmentation",
       name: "Volume",
-      source: "zarr3://https://datastore/data/v12/annotations/zarr3/token/Volume",
+      source: "https://datastore/data/v12/annotations/zarr3/token/Volume/|zarr3:",
       visible: true,
       selectedAlpha: 0.2,
     });

@@ -25,6 +25,7 @@ import {
   type NeuroglancerLayerInput,
 } from "viewer/model/helpers/neuroglancer_state";
 import { getZarrBaseUrl, getZarrLayerName } from "viewer/model/helpers/zarr_links";
+import { Model } from "viewer/singletons";
 import Store, { type WebknossosState } from "viewer/store";
 
 const DEFAULT_VIEWPORT_HEIGHT = 1024;
@@ -56,13 +57,13 @@ async function getDatasetTokenQuery(state: WebknossosState): Promise<string> {
   }
   const urlToken = getSharingTokenFromUrlParameters();
   if (urlToken != null) {
-    return `?token=${urlToken}`;
+    return `?token=${encodeURIComponent(urlToken)}`;
   }
   if (activeUser == null) {
     return "";
   }
   const sharingToken = await getDatasetSharingToken(dataset.id, { doNotInvestigate: true });
-  return `?token=${sharingToken}`;
+  return `?token=${encodeURIComponent(sharingToken)}`;
 }
 
 async function getZarrUrlResolver(state: WebknossosState): Promise<ZarrUrlResolver> {
@@ -72,6 +73,14 @@ async function getZarrUrlResolver(state: WebknossosState): Promise<ZarrUrlResolv
 
   const isPersistedAnnotation = state.temporaryConfiguration.controlMode === ControlModeEnum.TRACE;
   if (isPersistedAnnotation && annotation.restrictions.allowUpdate) {
+    // The Zarr private link serves the saved annotation, so local changes need to be saved first.
+    if (state.save.isSavingDisabled) {
+      Toast.warning(
+        "Saving is disabled for this annotation. The external viewer shows the last saved version of the volume layers.",
+      );
+    } else {
+      await Model.ensureSavedState();
+    }
     const accessToken = await getOrCreatePrivateLinkToken(annotation.annotationId);
     const baseUrl = getZarrBaseUrl(dataStoreUrl, currentApiVersion, dataset.id, accessToken);
     return (layer) => `${baseUrl}/${getZarrLayerName(layer, annotation)}`;
@@ -169,10 +178,22 @@ async function openInFiji() {
     if (zarrUrl == null) {
       return;
     }
-    window.location.href = buildFijiUrl(zarrUrl);
-    Toast.info(
-      "Opening the first color layer in Fiji. This requires Fiji with the OME-Zarr update site and enabled web links (Edit > Options > Desktop).",
-    );
+    const fijiUrl = buildFijiUrl(zarrUrl);
+    const requirementsHint =
+      "This requires Fiji with the OME-Zarr update site and enabled web links (Edit > Options > Desktop).";
+    // Browsers only hand custom URL schemes to external apps shortly after a user interaction.
+    // If resolving the URL took too long, the user needs to click a link instead.
+    if (navigator.userActivation?.isActive === false) {
+      Toast.info(
+        <>
+          <a href={fijiUrl}>Click here to open the first color layer in Fiji.</a> {requirementsHint}
+        </>,
+        { sticky: true },
+      );
+      return;
+    }
+    window.location.href = fijiUrl;
+    Toast.info(`Opening the first color layer in Fiji. ${requirementsHint}`);
   } catch (error) {
     console.error(error);
     Toast.error("Could not open the dataset in Fiji.");

@@ -71,8 +71,8 @@ export type SegmentContextMenuBuilder = (node: SegmentUiNode) => MenuProps;
 export type GroupContextMenuBuilder = (node: SegmentGroupUiNode) => MenuProps;
 
 /*
- * What the segment statistics modal was opened for. A group is passed by id so that the modal
- * always reflects the group's current contents, whereas an explicit selection is passed as-is.
+ * What the segment statistics should be shown for. A group is passed by id so that the statistics
+ * always reflect the group's current contents, whereas an explicit selection is passed as-is.
  */
 export type SegmentStatisticsTarget =
   | { kind: "group"; groupId: number }
@@ -84,7 +84,7 @@ export type ContextMenuDependencies = {
   groupOperations: SegmentGroupOperations;
   meshOperations: MeshOperations;
   meshFiles: MeshFiles;
-  openStatisticsModal: (target: SegmentStatisticsTarget) => void;
+  showStatistics: (target: SegmentStatisticsTarget) => void;
   hideContextMenu: () => void;
   // Puts the row with this node key into rename mode. The rows no longer carry an edit
   // pencil, so the context menu is the discoverable way to rename (besides double-click).
@@ -104,11 +104,11 @@ function useSegmentListMenuItems({
   groupOperations,
   meshOperations,
   meshFiles,
-  openStatisticsModal,
+  showStatistics,
   hideContextMenu,
 }: Pick<
   ContextMenuDependencies,
-  "groupOperations" | "meshOperations" | "meshFiles" | "openStatisticsModal" | "hideContextMenu"
+  "groupOperations" | "meshOperations" | "meshFiles" | "showStatistics" | "hideContextMenu"
 >) {
   const dispatch = useDispatch();
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
@@ -141,7 +141,7 @@ function useSegmentListMenuItems({
             key: "segmentStatistics",
             icon: <BarChartOutlined />,
             label: "Show Segment Statistics",
-            onClick: runAndHide(() => openStatisticsModal(statisticsTarget)),
+            onClick: runAndHide(() => showStatistics(statisticsTarget)),
           }
         : null;
 
@@ -259,7 +259,7 @@ function useSegmentListMenuItems({
       meshOperations,
       meshFiles,
       areSegmentStatisticsAvailable,
-      openStatisticsModal,
+      showStatistics,
       hideContextMenu,
     ],
   );

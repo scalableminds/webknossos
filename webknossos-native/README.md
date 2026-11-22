@@ -1,8 +1,8 @@
 # Native Functions for WEBKNOSSOS (Rust)
 
 This crate builds `webknossosNative0`, the JNI library with the native functions of the datastore and
-tracingstore: scanning and rewriting volume buckets, Compresso decompression (via `compresso-rs`) and converting
-Draco meshes to STL (via `draco-core`). It replaced a C++ library, `webknossos-jni`.
+tracingstore: scanning and rewriting volume buckets, Compresso decompression (via `compresso-rs`), converting
+Draco meshes to STL (via `draco-core`) and ad-hoc meshing with marching cubes. It replaced a C++ library, `webknossos-jni`.
 
 sbt builds the crate with cargo (`sbt compile`, via sbt-jni) and packages it as a resource at
 `native/<arch>-<os>/`, from where `NativeLibrary.scala` loads it. Needs Rust 1.88+.

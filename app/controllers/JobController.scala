@@ -3,16 +3,16 @@ package controllers
 import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import models.alignmentproject.{AlignmentProjectDAO, AlignmentProjectService}
-import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
+import models.dataset.{DataStoreDAO, Dataset, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.*
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
 import models.user.{MultiUserDAO, User, UserService}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import security.{WkEnv, WkSilhouetteEnvironment}
+import security.{URLSharing, WkEnv, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
 import utils.WkConf
 
@@ -356,12 +356,17 @@ class JobController @Inject() (
       mag: Option[String],
       annotationLayerName: Option[String],
       annotationId: Option[ObjectId],
-      exportFormat: String
+      exportFormat: String,
+      sharingToken: Option[String]
   ): Action[AnyContent] =
     sil.SecuredAction.fox { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+          (dataset, sharingTokenForWorker) <- findDatasetForExport(
+            datasetId,
+            // The worker can only read dataset layers with a sharing token, not annotation layers.
+            sharingToken.filter(_ => annotationId.isEmpty)
+          ) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           datasetOrganization <- organizationDAO.findOne(dataset._organization)(using
             GlobalAccessContext
           ) ?~> Msg.Organization.notFound(dataset._organization)
@@ -412,7 +417,7 @@ class JobController @Inject() (
             "mag" -> mag,
             "annotation_layer_name" -> annotationLayerName,
             "annotation_id" -> annotationId
-          )
+          ) ++ sharingTokenForWorker.map(token => Json.obj("sharing_token" -> token)).getOrElse(Json.obj())
           job <- jobService.submitJob(
             command,
             commandArgs,
@@ -423,6 +428,21 @@ class JobController @Inject() (
         } yield Ok(js)
       }
     }
+
+  // Users may export datasets they can only see via a sharing token (e.g. of another organization).
+  // The token is only handed to the worker if the user cannot read the dataset on their own, so the
+  // worker keeps reading with the user's token whenever that suffices. Workers that predate the
+  // sharing_token argument fail on it, so it is left out of the job args when not needed.
+  private def findDatasetForExport(datasetId: ObjectId, sharingToken: Option[String])(using
+      ctx: DBAccessContext
+  ): Fox[(Dataset, Option[String])] =
+    datasetDAO
+      .findOne(datasetId)
+      .map(dataset => (dataset, Option.empty[String]))
+      .orElse(for {
+        token <- sharingToken.toFox
+        dataset <- datasetDAO.findOne(datasetId)(using URLSharing.fallbackTokenAccessContext(sharingToken))
+      } yield (dataset, Some(token)))
 
   def runMaterializeVolumeAnnotationJob(
       datasetId: ObjectId,

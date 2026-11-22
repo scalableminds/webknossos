@@ -26,7 +26,12 @@ import com.scalableminds.webknossos.datastore.helpers.{
 import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  AdHocMesh,
+  AdHocMeshRequest,
+  AdHocMeshService,
+  AdHocMeshServiceHolder
+}
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ReversionHelper, TSDatasetErrorLoggingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -441,7 +446,7 @@ class EditableMappingService @Inject() (
 
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(using
       tc: TokenContext
-  ): Fox[(Array[Float], List[Int])] = {
+  ): Fox[AdHocMesh] = {
     val adHocMeshRequest = AdHocMeshRequest(
       datasetId = None,
       dataSourceId = None,

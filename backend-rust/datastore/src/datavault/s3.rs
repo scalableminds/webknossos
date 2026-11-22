@@ -30,6 +30,7 @@ use super::{
 };
 use crate::error::DsError;
 
+mod delete;
 mod upload;
 
 pub const SCHEME_S3: &str = "s3";

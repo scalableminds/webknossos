@@ -1559,7 +1559,7 @@
   {
    "name": "paths-to-delete-wrong-key",
    "method": "GET",
-   "path": "/api/datasets/pathsToDelete",
+   "path": "/api/datastores/localhost/pathsToDelete",
    "query": {
     "key": "wrong"
    }
@@ -1567,7 +1567,7 @@
   {
    "name": "paths-to-delete",
    "method": "GET",
-   "path": "/api/datasets/pathsToDelete",
+   "path": "/api/datastores/localhost/pathsToDelete",
    "query": {
     "key": "something-secure"
    },
@@ -1578,7 +1578,7 @@
   {
    "name": "mark-as-deleted-wrong-key",
    "method": "POST",
-   "path": "/api/datasets/pathsToDelete/markAsDeleted",
+   "path": "/api/datastores/localhost/pathsToDelete/markAsDeleted",
    "query": {
     "key": "wrong"
    },
@@ -1587,7 +1587,7 @@
   {
    "name": "mark-as-deleted",
    "method": "POST",
-   "path": "/api/datasets/pathsToDelete/markAsDeleted",
+   "path": "/api/datastores/localhost/pathsToDelete/markAsDeleted",
    "query": {
     "key": "something-secure"
    },
@@ -1598,7 +1598,7 @@
   {
    "name": "mark-as-deleted-invalid",
    "method": "POST",
-   "path": "/api/datasets/pathsToDelete/markAsDeleted",
+   "path": "/api/datastores/localhost/pathsToDelete/markAsDeleted",
    "query": {
     "key": "something-secure"
    },
@@ -1616,7 +1616,7 @@
   {
    "name": "paths-to-delete-after",
    "method": "GET",
-   "path": "/api/datasets/pathsToDelete",
+   "path": "/api/datastores/localhost/pathsToDelete",
    "query": {
     "key": "something-secure"
    },

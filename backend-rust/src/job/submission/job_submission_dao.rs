@@ -34,6 +34,7 @@ pub(crate) async fn find_one_readable_dataset(
     pool: &PgPool,
     user_id: &ObjectId,
     id: &ObjectId,
+    sharing_token: Option<&str>,
 ) -> sqlx::Result<Option<Dataset>> {
     let mut q = Sql::new(
         r#"SELECT d._id AS id, d.name, d.directoryName AS directory_name, d._organization AS organization,
@@ -43,7 +44,7 @@ pub(crate) async fn find_one_readable_dataset(
           FROM webknossos.datasets_ d WHERE d._id = "#,
     );
     q.push_bind(id).push(" AND ");
-    push_read_predicate(&mut q, user_id.into(), None);
+    push_read_predicate(&mut q, user_id.into(), sharing_token);
     q.build_query_as().fetch_optional(pool).await
 }
 

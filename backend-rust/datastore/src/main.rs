@@ -38,6 +38,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Scala `UploadService`: orphan upload directories are removed once, 10 s after start.
     let orphan_clean_up = state.uploads.spawn_orphan_clean_up();
+    // Scala `ManagedS3PathDeletionService` (IntervalScheduler): deletes queued managed S3 paths.
+    let managed_s3_path_deletion =
+        webknossos_datastore::services::managed_s3_path_deletion::ManagedS3PathDeletionService::new(
+            state.wk_client.clone(),
+            state.data_vaults.clone(),
+        )
+        .spawn(&state.config.managed_s3_path_deletion);
 
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
     let mut server = tokio::spawn(async move {
@@ -51,6 +58,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut background = vec![status_ping, orphan_clean_up];
     if let Some(watcher) = source_watcher {
         background.push(watcher);
+    }
+    if let Some(deletion) = managed_s3_path_deletion {
+        background.push(deletion);
     }
     supervise_server(
         &mut server,

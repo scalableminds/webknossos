@@ -68,6 +68,7 @@ pub struct DatastoreConfig {
     pub watch_file_system: WatchFileSystemConfig,
     /// `datastore.upload.deleteTemporaryFilesAfterUpload`
     pub upload_delete_temporary_files_after_upload: bool,
+    pub managed_s3_path_deletion: ManagedS3PathDeletionConfig,
     pub cache: CacheConfig,
     pub ad_hoc_mesh: AdHocMeshConfig,
     pub redis: RedisConfig,
@@ -124,6 +125,13 @@ pub struct WatchFileSystemConfig {
     pub enabled: bool,
     pub interval: Duration,
     pub initial_delay: Duration,
+}
+
+/// `datastore.managedS3PathDeletion`
+#[derive(Clone, Debug)]
+pub struct ManagedS3PathDeletionConfig {
+    pub enabled: bool,
+    pub interval: Duration,
 }
 
 #[derive(Clone, Debug)]
@@ -290,6 +298,11 @@ impl DatastoreConfig {
             },
             upload_delete_temporary_files_after_upload: env
                 .bool("WK_DS_UPLOAD_DELETE_TEMPORARY_FILES_AFTER_UPLOAD", "false")?,
+            managed_s3_path_deletion: ManagedS3PathDeletionConfig {
+                enabled: env.bool("WK_DS_MANAGED_S3_PATH_DELETION_ENABLED", "true")?,
+                interval: env
+                    .positive_duration("WK_DS_MANAGED_S3_PATH_DELETION_INTERVAL", "10 seconds")?,
+            },
             cache: CacheConfig {
                 mapping_max_entries: env.parse("WK_DS_CACHE_MAPPING_MAX_ENTRIES", "5")?,
                 image_array_chunks_max_size_bytes: env.parse(
@@ -334,6 +347,11 @@ impl DatastoreConfig {
         }
         if config.watch_file_system.enabled && config.watch_file_system.interval < minimum {
             return Err(ConfigError("WK_DS_WATCH_FILE_SYSTEM_INTERVAL must be at least 100ms when the watcher is enabled".into()));
+        }
+        if config.managed_s3_path_deletion.enabled
+            && config.managed_s3_path_deletion.interval < minimum
+        {
+            return Err(ConfigError("WK_DS_MANAGED_S3_PATH_DELETION_INTERVAL must be at least 100ms when the deletion is enabled".into()));
         }
         Ok(config)
     }

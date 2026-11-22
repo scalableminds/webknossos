@@ -12,7 +12,9 @@ implementations; the Rust datastore does not load native libraries or Scala.
 - tiled.bin: Scala triangle ordering across three 32-cell tile planes.
 - route_cube.bin, indexed.stlraw, bfs.stlraw: compiled Scala geometry for HTTP cuboids, indexed
   meshing and two-wave129-sample/128-cell BFS. BFS raw STL is second wave then first wave.
-- adhoc.stlraw: actual FullMeshHelper, including its historical faceIndex normal indexing bug.
+- adhoc.stlraw: actual FullMeshHelper.
+- The STL normals of adhoc.stlraw, indexed.stlraw and bfs.stlraw were regenerated with each face's own
+  vertices after #10429 fixed FullMeshHelper's historical faceIndex normal indexing; vertices are unchanged.
 - areas.json / areas_play.json: compiled FullMeshHelper raw-STL area; Java float text / Play JSON.
 - mapping.json / mapping_oracle.json: actual Scala MappingParser narrowing/duplicates/numeric strings
   at four storage widths, with identity fallback handled by the service.

@@ -18,6 +18,7 @@ The binary reads process environment only: no automatic `.env`, HOCON, JVM `-D` 
 | `WK_DS_LOCAL_DIRECTORY_WHITELIST` | `datastore.localDirectoryWhitelist` | `[]`; use JSON absolute local directory strings |
 | `WK_DS_WRITE_VIRTUAL_DATASETS_MIRROR` | `datastore.writeVirtualDatasetsMirror` | `false` |
 | `WK_DS_WATCH_FILE_SYSTEM_ENABLED`, `_INTERVAL`, `_INITIAL_DELAY` | `datastore.watchFileSystem.*` | `true`, `1 minute`, `5 seconds`; enabled interval at least 100ms; disabled interval still positive |
+| `WK_DS_MANAGED_S3_PATH_DELETION_ENABLED`, `_INTERVAL` | `datastore.managedS3PathDeletion.*` | `true`, `10 seconds`; enabled interval at least 100ms; deletes only paths strictly below a global S3 access-key credential |
 | `WK_DS_UPLOAD_DELETE_TEMPORARY_FILES_AFTER_UPLOAD` | `datastore.upload.deleteTemporaryFilesAfterUpload` | `false`; does not disable startup orphan cleanup |
 | `WK_DS_CACHE_MAPPING_MAX_ENTRIES` | `datastore.cache.mapping.maxEntries` | `5` |
 | `WK_DS_CACHE_IMAGE_ARRAY_CHUNKS_MAX_SIZE_BYTES` | `datastore.cache.imageArrayChunks.maxSizeBytes` | `2000000000` |
@@ -88,7 +89,7 @@ In-memory state is per process: dataset/datasource cache (24 h TTL, 1 h idle), c
 - **R — read-only data and metadata** (safe to split by percentage): `GET /data/health`; binary data `POST …/data`, `POST|GET …/readData|data`, knossos `bucket.raw`, thumbnails, `findData`, `histogram`, `mappings`, all Zarr2/Zarr3 streaming incl. `/data/annotations/zarr*` private links, `proxy/…`, agglomerate/mesh/connectome/segment-index/statistics reads (POST bodies select data only), `adHocMesh`, `exploreRemote`, `validatePaths`, `measureUsedStorage`, `getOneBaseDirForOrgaAbsolute`, `getOrganizationBaseDirectory`, `aiModels/effectiveVoxelSize`, exports download.
 - **I — cache invalidation and reload** (must reach both backends while both serve R): `DELETE /data/datasets/:id`, `POST /data/triggers/reload/:org/:id`, `PUT /data/datasets/:id` (writes the file, then invalidates; send the write to the writer and a `DELETE /data/datasets/:id` to the other).
 - **W — writes** (exactly one owner at a time): uploads (`/data/datasets/upload/…` reserve, chunks, finish, cancel, clean-up, alignment project CSV replacement and `cancelUploadForProject`), `deleteOnDisk`, `deletePaths`, `writeMirrors`, `triggers/checkInboxBlocking`, `createOrganizationDirectory`, `scanRealPathsForVirtual`.
-- **B — background work** per process: status ping (always on), startup orphan clean-up of staging directories (always on, after 10 s), inbox watcher (`WK_DS_WATCH_FILE_SYSTEM_ENABLED`), Slack. Run the watcher on one backend only; the ping is idempotent when both report the same URI; the orphan clean-up reads the shared Redis, so both see the same uploads.
+- **B — background work** per process: status ping (always on), startup orphan clean-up of staging directories (always on, after 10 s), inbox watcher (`WK_DS_WATCH_FILE_SYSTEM_ENABLED`), managed S3 path deletion (`WK_DS_MANAGED_S3_PATH_DELETION_ENABLED`, a no-op without global S3 credentials), Slack. Run the watcher on one backend only; the ping is idempotent when both report the same URI; the orphan clean-up reads the shared Redis, so both see the same uploads.
 
 ## Acceptance gates and staged traffic
 

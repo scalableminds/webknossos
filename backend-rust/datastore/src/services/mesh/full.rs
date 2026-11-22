@@ -395,6 +395,7 @@ impl FullMeshService {
         });
         stream::iter(requests)
             .buffered(self.ad_hoc_concurrency)
+            .map_ok(|mesh| (mesh.triangle_soup(), mesh.neighbors))
             .try_collect()
             .await
     }

@@ -289,6 +289,54 @@ impl DataVaultService {
             .cloned()
     }
 
+    /// Scala `ManagedS3Service.hasGlobalS3Credentials`.
+    pub fn has_global_s3_credentials(&self) -> bool {
+        self.inner
+            .options
+            .global_credentials
+            .iter()
+            .any(|credential| matches!(credential, DataVaultCredential::S3AccessKey { .. }))
+    }
+
+    /// Scala `ManagedS3Service.deleteRecursively`: deletes the object at `path` (if it is a
+    /// file) and all objects below it (if it is a directory). Only paths strictly below the
+    /// root of a global S3 access-key credential may be deleted.
+    pub async fn delete_recursively_in_managed_s3(&self, path: &UPath) -> DsResult<()> {
+        let uri = path.to_remote_uri()?;
+        // Query and fragment would silently be dropped from the object key, so that a
+        // different path would be deleted.
+        if uri.query().is_some() || uri.as_str().contains('#') {
+            return Err(DsError::failure(format!(
+                "Refusing to delete {path}, as it contains URI query or fragment delimiters"
+            )));
+        }
+        let credential = self
+            .find_global_credential_for(path)
+            .ok_or_else(|| DsError::failure(format!("No global S3 credential found for {path}")))?;
+        let credential_root = UPath::parse(credential.name())?;
+        if !path.starts_with(&credential_root) || credential_root.starts_with(path) {
+            return Err(DsError::failure(format!(
+                "Refusing to delete {path}, as it is not strictly below the managed S3 credential root {}",
+                credential.name()
+            )));
+        }
+        let (id, secret) = credential
+            .s3_access_key()
+            .ok_or_else(|| DsError::failure(format!("No global S3 credential found for {path}")))?;
+        super::s3::host_bucket_from_upath(path)?;
+        let key = super::s3::object_key_from_upath(path)?;
+        let vault = S3DataVault::new(
+            uri,
+            Some(AwsCredentials::new(id, secret)),
+            self.inner.s3_client.clone(),
+            &S3Options {
+                read_retry: UPLOAD_RETRY,
+                ..self.inner.options.s3.clone()
+            },
+        );
+        Ok(vault.delete_recursively(&key).await?)
+    }
+
     /// Scala `ManagedS3Service.pathIsInManagedS3`.
     pub fn path_is_in_managed_s3(&self, path: &UPath) -> bool {
         path.scheme() == Some(super::s3::SCHEME_S3)

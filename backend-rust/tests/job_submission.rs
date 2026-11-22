@@ -586,3 +586,80 @@ async fn access_body_and_plan_validation_precede_submission_and_remote_calls() {
     server.abort();
     db.cleanup().await;
 }
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL database with CREATEDB"]
+async fn export_accepts_a_sharing_token_and_passes_it_to_the_worker_only_when_needed() {
+    let db = TestDb::new().await;
+    let fixture = db.fixture().await;
+    let (base, _store_requests, server) = upstream().await;
+    let id = seed(&db, &fixture, &base).await;
+    sqlx::query("UPDATE webknossos.datasets SET sharingToken='share-token' WHERE _id=$1")
+        .bind(&id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let application = app(&db, true);
+    let stranger = db
+        .seed_user(&object_id(), "another-organization", true)
+        .await;
+    let export = |token: &str| {
+        format!(
+            "/jobs/run/exportTiff/{id}?bbox=0,0,0,10,10,10&layerName=segmentation&exportFormat=ome_tiff{token}"
+        )
+    };
+    for suffix in ["", "&sharingToken=wrong"] {
+        assert_eq!(
+            request(&application, &export(suffix), Some(&stranger.token), None)
+                .await
+                .0,
+            404,
+            "{suffix}"
+        );
+    }
+    // Annotation layers are read with the user's own access, so the token does not help.
+    let annotation = format!("&sharingToken=share-token&annotationId={}", object_id());
+    assert_eq!(
+        request(
+            &application,
+            &export(&annotation),
+            Some(&stranger.token),
+            None
+        )
+        .await
+        .0,
+        404
+    );
+    let response = request(
+        &application,
+        &export("&sharingToken=share-token"),
+        Some(&stranger.token),
+        None,
+    )
+    .await;
+    assert_eq!(response.0, 200, "{response:?}");
+    assert!(response.1["args"].get("sharing_token").is_none());
+    let stored: Value = sqlx::query_scalar("SELECT commandArgs FROM webknossos.jobs WHERE _id=$1")
+        .bind(response.1["id"].as_str().unwrap())
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(stored["sharing_token"], "share-token");
+    // The user's own access suffices, so the worker keeps reading with the user's token.
+    let response = request(
+        &application,
+        &export("&sharingToken=share-token"),
+        Some(&fixture.token),
+        None,
+    )
+    .await;
+    assert_eq!(response.0, 200, "{response:?}");
+    let stored: Value = sqlx::query_scalar("SELECT commandArgs FROM webknossos.jobs WHERE _id=$1")
+        .bind(response.1["id"].as_str().unwrap())
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert!(stored.get("sharing_token").is_none());
+    server.abort();
+    db.cleanup().await;
+}

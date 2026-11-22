@@ -26,6 +26,7 @@ pub mod dataset_report;
 pub mod dataset_upload;
 pub mod lookup;
 pub mod mag_upload;
+pub mod paths_to_delete;
 pub(crate) mod remote_datastore_dao;
 
 use std::collections::{BTreeMap, HashMap};

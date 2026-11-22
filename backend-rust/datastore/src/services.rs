@@ -6,6 +6,7 @@ pub mod connectome;
 pub mod dataset;
 pub mod explore;
 pub mod find_data;
+pub mod managed_s3_path_deletion;
 pub mod mesh;
 pub mod segment;
 pub mod thumbnail;

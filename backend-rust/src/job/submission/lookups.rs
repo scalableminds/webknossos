@@ -32,7 +32,30 @@ pub(crate) async fn find_readable_dataset(
     user: &AuthUser,
     id: &ObjectId,
 ) -> RunResult<Option<Dataset>> {
-    Ok(job_submission_dao::find_one_readable_dataset(&state.pool, &user.id, id).await?)
+    Ok(job_submission_dao::find_one_readable_dataset(&state.pool, &user.id, id, None).await?)
+}
+
+/// JobController.findDatasetForExport: the dataset with the user's own access,
+/// else with `sharing_token` (URLSharing.fallbackTokenAccessContext). The token
+/// is returned (for the worker) only when it was needed, because workers that
+/// predate the `sharing_token` argument fail on it.
+pub(super) async fn find_dataset_for_export(
+    state: &AppState,
+    user: &AuthUser,
+    id: &ObjectId,
+    sharing_token: Option<String>,
+) -> RunResult<(Dataset, Option<String>)> {
+    if let Some(dataset) = find_readable_dataset(state, user, id).await? {
+        return Ok((dataset, None));
+    }
+    if let Some(token) = sharing_token
+        && let Some(dataset) =
+            job_submission_dao::find_one_readable_dataset(&state.pool, &user.id, id, Some(&token))
+                .await?
+    {
+        return Ok((dataset, Some(token)));
+    }
+    Err(Failure::with_status(crate::msg::dataset::not_found(id), StatusCode::NOT_FOUND).into())
 }
 
 /// DatasetDAO.findOne with the user's access `?~> Msg.Dataset.notFound(id) ~> NOT_FOUND`.

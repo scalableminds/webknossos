@@ -11,7 +11,7 @@ use crate::{
         agglomerate::mapping::{MappingService, integer_width, narrow_id},
         agglomerate::{AgglomerateDataMapper, AgglomerateService},
         binary_data::AgglomerateMapper,
-        mesh::marching_cubes::marching_cubes,
+        mesh::marching_cubes::{AdHocMesh, marching_cubes_indexed},
     },
 };
 use std::{sync::Arc, time::Duration};
@@ -74,7 +74,7 @@ impl AdHocMeshService {
         &self,
         request: AdHocMeshRequest,
         token: Option<&str>,
-    ) -> DsResult<(Vec<f32>, Vec<i32>)> {
+    ) -> DsResult<AdHocMesh> {
         tokio::time::timeout(self.timeout, self.generate_inner(request, token))
             .await
             .map_err(|_| DsError::failure("Ad-hoc mesh request timed out."))?
@@ -83,7 +83,7 @@ impl AdHocMeshService {
         &self,
         request: AdHocMeshRequest,
         token: Option<&str>,
-    ) -> DsResult<(Vec<f32>, Vec<i32>)> {
+    ) -> DsResult<AdHocMesh> {
         let permit = Arc::clone(&self.pool)
             .acquire_owned()
             .await
@@ -180,7 +180,7 @@ impl AdHocMeshService {
                         == segment,
                 );
             }
-            marching_cubes(
+            marching_cubes_indexed(
                 &membership,
                 dimensions,
                 [position.x as f32, position.y as f32, position.z as f32],

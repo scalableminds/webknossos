@@ -218,7 +218,6 @@ def rust_env(database: str, features: dict, build: dict) -> dict:
         "WK_OIDC_CLIENT_SECRET": "diff-secret",
         "WK_OIDC_SCOPE": "openid profile email",
         "WK_UPLOAD_TO_PATHS_PREFIXES": f"{WORK}/rust-data/binaryData",
-        "WK_EXTERNAL_PATH_DELETION_KEY": STORE_KEY,  # Play: externalPathDeletionService.key (same dev default)
         "WK_DATASTORE_NAME": "localhost",
         "WK_DATASTORE_KEY": STORE_KEY,
         "WK_TRACINGSTORE_NAME": "localhost",

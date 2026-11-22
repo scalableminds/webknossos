@@ -183,7 +183,7 @@ pub fn default_features() -> Map<String, Value> {
         "registerToDefaultOrgaEnabled": true,
         "segmentAnythingEnabled": false,
         "passkeysEnabled": false,
-        "supportAiAgentUrl": "https://docs.webknossos.org/webhooks/webknossos-combined/ask"
+        "supportAiAgentUrl": "https://chat.webknossos.org/chat"
     });
     match value {
         Value::Object(map) => map,

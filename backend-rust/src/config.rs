@@ -419,14 +419,6 @@ fn dataset_route_config(
     env: Env<'_>,
     segment_anything_enabled: bool,
 ) -> Result<crate::dataset::options::DatasetRouteConfig, ConfigError> {
-    let external_path_deletion_key = match env.get("WK_EXTERNAL_PATH_DELETION_KEY") {
-        Some(key) if key.is_empty() || key.chars().any(char::is_whitespace) => {
-            return Err(ConfigError(
-                "WK_EXTERNAL_PATH_DELETION_KEY must be nonempty and contain no whitespace".into(),
-            ));
-        }
-        key => key.map(str::to_owned),
-    };
     let mut upload_to_paths = crate::dataset::options::UploadToPathsConfig::default();
     if let Some(prefixes) = env.get("WK_UPLOAD_TO_PATHS_PREFIXES") {
         for prefix in prefixes.split(',').map(str::trim).filter(|p| !p.is_empty()) {
@@ -446,7 +438,6 @@ fn dataset_route_config(
     }
     Ok(crate::dataset::options::DatasetRouteConfig {
         upload_to_paths,
-        external_path_deletion_key,
         segment_anything_enabled,
         segment_anything: crate::dataset::options::SegmentAnythingConfig {
             uri: env.text("WK_SEGMENT_ANYTHING_URI", ""),

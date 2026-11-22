@@ -17,7 +17,6 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    dataset::options::DatasetRouteConfig,
     stores::client::{ServiceClientConfig, ServiceClients},
 };
 
@@ -195,67 +194,68 @@ async fn member(db: &TestDb, fixture: &Fixture, dataset: &str) -> String {
 
 #[tokio::test]
 #[ignore = "requires isolated PostgreSQL database with CREATEDB"]
-async fn path_deletion_service_routes_require_the_configured_key() {
+async fn datastores_process_the_path_deletion_queue() {
     let db = TestDb::new().await;
     for (path, offset) in [("s3://managed/b", 1), ("s3://managed/a", 2)] {
         sqlx::query("INSERT INTO webknossos.remote_paths_to_delete (path,created) VALUES ($1,NOW() - make_interval(mins => $2))")
             .bind(path).bind(offset).execute(&db.pool).await.unwrap();
     }
-    let unconfigured =
-        webknossos_backend::dataset::paths::router().with_state(AppState::new(db.pool.clone()));
-    let configured = webknossos_backend::dataset::paths::router().with_state(
-        AppState::builder(db.pool.clone())
-            .datasets(DatasetRouteConfig {
-                external_path_deletion_key: Some("deletion-key".into()),
-                ..Default::default()
-            })
-            .build(),
+    seed_store(&db, "global", "http://global.invalid", false).await;
+    seed_store(&db, "restricted", "http://restricted.invalid", false).await;
+    let fixture = db.fixture().await;
+    sqlx::query(
+        "UPDATE webknossos.dataStores SET onlyAllowedOrganization=$1 WHERE name='restricted'",
+    )
+    .bind(&fixture.organization_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    let app = webknossos_backend::remote::datastore::paths_to_delete::router()
+        .with_state(AppState::new(db.pool.clone()));
+    let list = "/datastores/global/pathsToDelete";
+    let mark = "/datastores/global/pathsToDelete/markAsDeleted";
+    assert_eq!(
+        call(&app, "GET", list, None, None).await.0,
+        StatusCode::BAD_REQUEST
     );
+    assert_eq!(
+        call(&app, "GET", &format!("{list}?key=wrong"), None, None)
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    // Datastores restricted to one organization may not see other organizations' paths.
     let (status, body) = call(
-        &unconfigured,
+        &app,
         "GET",
-        "/datasets/pathsToDelete?key=",
+        "/datastores/restricted/pathsToDelete?key=k",
         None,
         None,
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(
         body["messages"][0]["error"],
-        "Wrong key for external path deletion service."
-    );
-    assert_eq!(
-        call(&configured, "GET", "/datasets/pathsToDelete", None, None)
-            .await
-            .0,
-        StatusCode::BAD_REQUEST
+        "You are not authorized to view or edit this resource."
     );
     assert_eq!(
         call(
-            &configured,
-            "GET",
-            "/datasets/pathsToDelete?key=wrong",
+            &app,
+            "POST",
+            "/datastores/restricted/pathsToDelete/markAsDeleted?key=k",
             None,
-            None
+            Some(json!(["s3://managed/a"]))
         )
         .await
         .0,
-        StatusCode::BAD_REQUEST
+        StatusCode::FORBIDDEN
     );
-    let (status, body) = call(
-        &configured,
-        "GET",
-        "/datasets/pathsToDelete?key=deletion-key",
-        None,
-        None,
-    )
-    .await;
+    let (status, body) = call(&app, "GET", &format!("{list}?key=k"), None, None).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, json!(["s3://managed/a", "s3://managed/b"]));
-    let mark = "/datasets/pathsToDelete/markAsDeleted";
     assert_eq!(
         call(
-            &configured,
+            &app,
             "POST",
             &format!("{mark}?key=wrong"),
             None,
@@ -263,13 +263,13 @@ async fn path_deletion_service_routes_require_the_configured_key() {
         )
         .await
         .0,
-        StatusCode::BAD_REQUEST
+        StatusCode::FORBIDDEN
     );
     assert_eq!(
         call(
-            &configured,
+            &app,
             "POST",
-            &format!("{mark}?key=deletion-key"),
+            &format!("{mark}?key=k"),
             None,
             Some(json!({"no":"array"}))
         )
@@ -278,22 +278,15 @@ async fn path_deletion_service_routes_require_the_configured_key() {
         StatusCode::BAD_REQUEST
     );
     let (status, _) = call(
-        &configured,
+        &app,
         "POST",
-        &format!("{mark}?key=deletion-key"),
+        &format!("{mark}?key=k"),
         None,
         Some(json!(["s3://managed/a", "unknown"])),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    let (_, body) = call(
-        &configured,
-        "GET",
-        "/datasets/pathsToDelete?key=deletion-key",
-        None,
-        None,
-    )
-    .await;
+    let (_, body) = call(&app, "GET", &format!("{list}?key=k"), None, None).await;
     assert_eq!(body, json!(["s3://managed/b"]));
     db.cleanup().await;
 }

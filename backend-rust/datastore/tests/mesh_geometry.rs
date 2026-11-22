@@ -168,3 +168,44 @@ fn typed_json_mapping_matches_actual_scala_parser_including_narrowed_duplicates(
     }
     assert!(parse_mapping(&input, 3).is_err());
 }
+#[test]
+fn indexed_mesh_bytes_switch_to_u32_indices_above_65535_vertices() {
+    use webknossos_datastore::services::mesh::marching_cubes::{
+        AdHocMesh, MAX_VERTEX_COUNT_FOR_SHORT_INDICES,
+    };
+    let small = AdHocMesh {
+        vertices: vec![0., 1., 2., 3., 4., 5., 6., 7., 8.],
+        indices: vec![0, 1, 2, 2, 1, 0],
+        neighbors: vec![],
+    };
+    let bytes = small.to_bytes(true);
+    assert_eq!(bytes.len(), 9 * 4 + 6 * 2);
+    assert_eq!(&bytes[36..40], &[0, 0, 1, 0]);
+    assert_eq!(
+        small.to_bytes(false),
+        [
+            0f32, 1., 2., 3., 4., 5., 6., 7., 8., 6., 7., 8., 3., 4., 5., 0., 1., 2.
+        ]
+        .iter()
+        .flat_map(|f| f.to_le_bytes())
+        .collect::<Vec<u8>>()
+    );
+    let count = MAX_VERTEX_COUNT_FOR_SHORT_INDICES + 1;
+    let large = AdHocMesh {
+        vertices: vec![0.; 3 * count],
+        indices: vec![0, 1, (count - 1) as u32],
+        neighbors: vec![],
+    };
+    let bytes = large.to_bytes(true);
+    assert_eq!(bytes.len(), 12 * count + 3 * 4);
+    assert_eq!(&bytes[12 * count + 8..], &(count as u32 - 1).to_le_bytes());
+    let at_limit = AdHocMesh {
+        vertices: vec![0.; 3 * MAX_VERTEX_COUNT_FOR_SHORT_INDICES],
+        indices: vec![0, 1, 2],
+        neighbors: vec![],
+    };
+    assert_eq!(
+        at_limit.to_bytes(true).len(),
+        12 * MAX_VERTEX_COUNT_FOR_SHORT_INDICES + 3 * 2
+    );
+}

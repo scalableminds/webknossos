@@ -124,7 +124,7 @@ pub fn combine_stl(chunks: &[Vec<u8>]) -> DsResult<Vec<u8>> {
     }
     Ok(bytes)
 }
-/// Preserve FullMeshHelper's historical normal indexing (face index, rather than 9*face).
+/// FullMeshHelper.adHocMeshToStl: each face's own normal, then its three vertices.
 pub fn ad_hoc_to_stl(vertices: &[f32]) -> DsResult<Vec<u8>> {
     if !vertices.len().is_multiple_of(9) {
         return Err(DsError::failure("Invalid mesh vertex count."));
@@ -137,8 +137,8 @@ pub fn ad_hoc_to_stl(vertices: &[f32]) -> DsResult<Vec<u8>> {
     output
         .try_reserve_exact(size)
         .map_err(DsError::from_exception)?;
-    for (face, positions) in vertices.as_chunks::<9>().0.iter().enumerate() {
-        let points = std::array::from_fn(|v| std::array::from_fn(|d| vertices[face + 3 * v + d]));
+    for positions in vertices.as_chunks::<9>().0 {
+        let points = std::array::from_fn(|v| std::array::from_fn(|d| positions[3 * v + d]));
         let normal = cross(points);
         let reciprocal = 1.
             / (f64::from(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2])

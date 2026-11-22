@@ -27,7 +27,6 @@ pub fn router() -> Router<AppState> {
         .merge(configuration::router())
         .merge(remote::router())
         .merge(thumbnails::router())
-        .merge(paths::router())
         .merge(compose::router())
         .merge(sam::router())
         .merge(explore::router())

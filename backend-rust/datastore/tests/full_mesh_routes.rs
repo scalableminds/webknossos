@@ -266,6 +266,53 @@ async fn ad_hoc_reads_every_integer_storage_width_and_maps_data_and_segment() {
     }
 }
 #[tokio::test]
+async fn indexed_ad_hoc_mesh_shares_vertices_and_resolves_to_the_triangle_soup() {
+    let (_wk, app, _, _) = start().await;
+    let soup = std::fs::read(fixtures().join("draco/route_cube.bin")).unwrap();
+    let mut r = request();
+    r["indexed"] = json!(true);
+    let (status, headers, bytes) = call(&app, "uint32", "adHocMesh", r, "t").await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "{}",
+        String::from_utf8_lossy(&bytes)
+    );
+    assert_eq!(headers["neighbors"], "[0, 1, 2]");
+    assert_eq!(
+        headers["access-control-expose-headers"],
+        "NEIGHBORS, Vertex-Count"
+    );
+    let vertex_count: usize = headers["vertex-count"].to_str().unwrap().parse().unwrap();
+    let (vertex_bytes, index_bytes) = bytes.split_at(vertex_count * 12);
+    let indices: Vec<usize> = index_bytes
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|&b| u16::from_le_bytes(b) as usize)
+        .collect();
+    assert_eq!(indices.len() * 12, soup.len());
+    assert!(vertex_count <= indices.len());
+    let resolved: Vec<u8> = indices
+        .iter()
+        .flat_map(|&i| vertex_bytes[12 * i..12 * i + 12].iter().copied())
+        .collect();
+    assert_eq!(resolved, soup);
+    // Vertices are stored in the order of their first use.
+    let mut first_uses = Vec::new();
+    for &i in &indices {
+        if !first_uses.contains(&i) {
+            first_uses.push(i);
+        }
+    }
+    assert_eq!(first_uses, (0..vertex_count).collect::<Vec<_>>());
+    let mut r = request();
+    r["indexed"] = json!(false);
+    let (_, headers, bytes) = call(&app, "uint32", "adHocMesh", r, "t").await;
+    assert_eq!(bytes, soup);
+    assert!(!headers.contains_key("vertex-count"));
+}
+#[tokio::test]
 async fn explicit_hdf5_agglomerate_mapping_applies_even_above_mag16() {
     let (_wk, app, _, _) = start().await;
     for kind in ["AGGLOMERATE", "HDF5"] {

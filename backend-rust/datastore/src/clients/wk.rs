@@ -656,6 +656,23 @@ impl WkClient {
         Ok(())
     }
 
+    /// Scala `getPathsToDelete` (silent): `GET …/pathsToDelete?key=`, the queued managed-S3
+    /// paths of all organizations.
+    pub async fn get_paths_to_delete(&self) -> DsResult<Vec<String>> {
+        self.datastore_rpc("pathsToDelete")
+            .silent()
+            .get_json()
+            .await
+    }
+
+    /// Scala `markPathsAsDeleted`: `POST …/pathsToDelete/markAsDeleted?key=`.
+    pub async fn mark_paths_as_deleted(&self, paths: &[String]) -> DsResult<()> {
+        self.datastore_rpc("pathsToDelete/markAsDeleted")
+            .post_json(paths)
+            .await?;
+        Ok(())
+    }
+
     /// Scala `getJobExportProperties`: `GET …/jobExportProperties?jobId=&key=`.
     pub async fn get_job_export_properties(&self, job_id: &str) -> DsResult<JobExportProperties> {
         self.inner

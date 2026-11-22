@@ -135,8 +135,6 @@ Raw data: `/tmp/wk-mem-run1` (`bench.md`, `summary.json`) in the session temp di
 | POST | `/datasets/addVirtualDataset/:name` | [src/dataset/explore.rs](src/dataset/explore.rs) |
 | GET | `/datasets/disambiguate/:datasetName/toNew` | [src/dataset/routes.rs](src/dataset/routes.rs) |
 | GET | `/datasets/disambiguate/:organizationId/:datasetName/toId` | [src/dataset/routes.rs](src/dataset/routes.rs) |
-| GET | `/datasets/pathsToDelete` | [src/dataset/paths.rs](src/dataset/paths.rs) |
-| POST | `/datasets/pathsToDelete/markAsDeleted` | [src/dataset/paths.rs](src/dataset/paths.rs) |
 | GET | `/datasets/findByImportURL` | [src/dataset/routes.rs](src/dataset/routes.rs) |
 | GET | `/datasets/:datasetId/health` | [src/dataset/remote.rs](src/dataset/remote.rs) |
 | PATCH | `/datasets/:datasetId` | [src/dataset/routes.rs](src/dataset/routes.rs) |
@@ -198,6 +196,8 @@ Raw data: `/tmp/wk-mem-run1` (`bench.md`, `summary.json`) in the session temp di
 | GET | `/datastores/:name/findDatasetLocalRootPath` | [src/remote/datastore/lookup.rs](src/remote/datastore/lookup.rs) |
 | GET | `/datastores/:name/jobExportProperties` | [src/remote/datastore/lookup.rs](src/remote/datastore/lookup.rs) |
 | GET | `/datastores/:name/findCredential` | [src/remote/datastore/credentials.rs](src/remote/datastore/credentials.rs) |
+| GET | `/datastores/:name/pathsToDelete` | [src/remote/datastore/paths_to_delete.rs](src/remote/datastore/paths_to_delete.rs) |
+| POST | `/datastores/:name/pathsToDelete/markAsDeleted` | [src/remote/datastore/paths_to_delete.rs](src/remote/datastore/paths_to_delete.rs) |
 | POST | `/datastores/:name/validateUserAccess` | [src/remote/user_access.rs](src/remote/user_access.rs) |
 | POST | `/datastores` | [src/stores/data.rs](src/stores/data.rs) |
 | DELETE | `/datastores/:name` | [src/stores/data.rs](src/stores/data.rs) |

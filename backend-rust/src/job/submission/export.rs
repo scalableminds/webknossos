@@ -4,7 +4,8 @@ use chrono::Local;
 use serde_json::{Value, json};
 
 use super::lookups::{
-    find_dataset, find_organization, organization_base_directory, own_organization,
+    find_dataset, find_dataset_for_export, find_organization, organization_base_directory,
+    own_organization,
 };
 use super::params::{
     Params, assert_bounding_box_limits, authenticate, dataset_id, format_date_for_filename,
@@ -74,8 +75,13 @@ pub(super) async fn export_tiff(
     let annotation_layer_name = params.optional("annotationLayerName");
     let annotation_id = params.optional_object_id("annotationId")?;
     let export_format = params.required("exportFormat")?;
+    // The worker can only read dataset layers with a sharing token, not annotation layers.
+    let sharing_token = params
+        .optional("sharingToken")
+        .filter(|_| annotation_id.is_none());
     let user = authenticate(&parts, &state).await?;
-    let dataset = find_dataset(&state, &user, &dataset_id).await?;
+    let (dataset, sharing_token_for_worker) =
+        find_dataset_for_export(&state, &user, &dataset_id, sharing_token).await?;
     let dataset_organization = find_organization(&state, &dataset.organization).await?;
     if let Some(layer_name) = &layer_name {
         validate_layer_name_lax(layer_name)?;
@@ -139,7 +145,7 @@ pub(super) async fn export_tiff(
         format_date_for_filename(Local::now()),
         dataset.name
     );
-    let args = json!({
+    let mut args = json!({
         "dataset_id": dataset.id,
         "dataset_directory_name": dataset.directory_name,
         "organization_id": dataset_organization,
@@ -153,6 +159,9 @@ pub(super) async fn export_tiff(
         "annotation_layer_name": annotation_layer_name,
         "annotation_id": annotation_id,
     });
+    if let (Some(token), Some(args)) = (sharing_token_for_worker, args.as_object_mut()) {
+        args.insert("sharing_token".into(), Value::String(token));
+    }
     let submission = Submission {
         command: "export_tiff",
         args,

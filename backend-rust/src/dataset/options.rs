@@ -1,11 +1,8 @@
-//! Dataset-route settings (WkConf externalPathDeletionService / segmentAnything).
+//! Dataset-route settings (WkConf segmentAnything / uploadToPaths).
 use std::fmt;
 
 #[derive(Clone, Default)]
 pub struct DatasetRouteConfig {
-    /// `externalPathDeletionService.key`. Unset denies every request instead of
-    /// accepting Play's well-known sample key.
-    pub external_path_deletion_key: Option<String>,
     /// `features.segmentAnythingEnabled`.
     pub segment_anything_enabled: bool,
     pub segment_anything: SegmentAnythingConfig,
@@ -42,13 +39,6 @@ pub struct SegmentAnythingConfig {
 impl fmt::Debug for DatasetRouteConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DatasetRouteConfig")
-            .field(
-                "external_path_deletion_key",
-                &self
-                    .external_path_deletion_key
-                    .as_ref()
-                    .map(|_| "[redacted]"),
-            )
             .field("segment_anything_enabled", &self.segment_anything_enabled)
             .field("segment_anything", &self.segment_anything)
             .field("upload_to_paths", &self.upload_to_paths)

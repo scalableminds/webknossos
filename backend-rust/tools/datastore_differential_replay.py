@@ -15,7 +15,7 @@ from pathlib import Path
 HEADERS = ('content-type', 'content-encoding', 'content-disposition',
            'cache-control', 'content-range', 'location',
            'empty-bucket-indices', 'failure-bucket-indices', 'missing-buckets',
-           'access-control-allow-origin', 'access-control-expose-headers')
+           'access-control-allow-origin', 'access-control-expose-headers', 'vertex-count')
 SECRET = re.compile(r'token|authorization|cookie|password|secret|key', re.I)
 READ = re.compile(r'/data/(?:v\d+/)?(?:health|datasets/[^/]+/(?:layers/[^/]+/(?:data|readData|findData|histogram|mappings(?:/[^/]+)?|layerThumbnail|mag[^/]+/x[^/]+/y[^/]+/z[^/]+/bucket\.raw|agglomerates(?:/[^/]+/(?:tree|skeleton|agglomerateGraph)/[^/]+|/[^/]+/(?:largestAgglomerateId|positionForSegment|agglomeratesForSegments))?|meshes(?:/chunks(?:/data|/forSegments)?|/fullMesh\.stl)?|hasSegmentIndex|segmentStatisticsFile|segmentIndex(?:/[^/]+)?|segmentStatistics/(?:volume|boundingBox|surfaceArea|covarianceMatrix|maxDistance|centerOfMass|sphericity)|connectomes(?:/synapses(?:/(?:positions|types|src|dst))?)?|adHocMesh)|datasetThumbnail|proxy/(?:datasource-properties\.json|layers/[^/]+/(?:mags/(?:info|[^/]+/[^?]+)|attachments/[^/]+/[^/]+/[^?]+)))|(?:annotations/)?(?:zarr[23]?|zarr3_experimental)/[^?]+)\Z')
 

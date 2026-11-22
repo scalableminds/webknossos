@@ -240,11 +240,12 @@ pub(crate) struct JobCompactInfo {
 }
 
 impl JobCompactInfo {
-    /// JobCompactInfo.enrich: strip worker tokens from the arguments and add the result link.
+    /// JobCompactInfo.enrich: strip worker and sharing tokens from the arguments and add the result link.
     pub(crate) fn enrich(mut self) -> Self {
         if let Some(args) = self.args.as_object_mut() {
             args.remove("webknossos_token");
             args.remove("user_auth_token");
+            args.remove("sharing_token");
         }
         self.result_link = result_link(
             &self.command,

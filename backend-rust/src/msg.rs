@@ -392,8 +392,6 @@ pub mod dataset {
         "duplicateToOrga is only possible for virtual datasets";
     /// Play: `DatasetController` (not in `Msg`).
     pub const ALREADY_USABLE: &str = "Dataset is already marked as usable.";
-    /// Play: `PathDeletionController` (not in `Msg`).
-    pub const PATH_DELETION_WRONG_KEY: &str = "Wrong key for external path deletion service.";
     pub const LOADING_DATA_FAILED: &str = "Could not load data for the requested dataset.";
 
     pub mod delete {

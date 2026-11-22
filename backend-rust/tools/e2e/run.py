@@ -116,7 +116,6 @@ def rust_env(args, data_dir: Path) -> dict:
         "WK_EMAIL_VERIFICATION_REQUIRED": "false",
         "WK_SAMPLE_ORGANIZATION_ENABLED": "false",  # End2EndSpec: -DwebKnossos.sampleOrganization.enabled=false
         "WK_UPLOAD_TO_PATHS_PREFIXES": str(data_dir),
-        "WK_EXTERNAL_PATH_DELETION_KEY": STORE_KEY,
         "WK_DATASTORE_NAME": STORE_NAME,
         "WK_DATASTORE_KEY": STORE_KEY,
         "WK_TRACINGSTORE_NAME": STORE_NAME,

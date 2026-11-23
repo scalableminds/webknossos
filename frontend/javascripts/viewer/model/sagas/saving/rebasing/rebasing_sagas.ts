@@ -16,18 +16,14 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { Store } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
-import {
-  type ApplyingUpdateResults,
-  getFailedIncorporateActionsReturnValue,
-  type RebasingFailure,
-  SuccessEmptyIncorporateActionsReturnValue,
-} from "./applying_update_artifacts";
 import { tryToIncorporateActions } from "./incorporate_update_actions_sagas";
-import { resolveApplyingUpdateArtifacts } from "./mesh_artifact_resolution_sagas";
+import { MeshRefreshCollector } from "./mesh_refresh_collector";
+import { applyMeshRefreshes } from "./mesh_refresh_sagas";
 import {
   saveQueueEntriesToServerUpdateActionBatches,
   updatePendingProofreadingOperationInfo,
 } from "./rebasing_helpers_sagas";
+import type { ApplyingUpdatesResult, RebasingFailure } from "./rebasing_types";
 import { rewriteSaveQueueEntriesForReapplying } from "./rewrite_for_reapplying_sagas";
 
 /*
@@ -102,40 +98,30 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   }
 
   try {
-    const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
+    const meshRefreshes = new MeshRefreshCollector();
+    const applyingResult = yield* call(
+      applyNewestMissingUpdateActions,
+      missingUpdateActions,
+      meshRefreshes,
+    );
     if (!applyingResult.success) {
       return {
         successful: false,
-        failure: withPhase(
-          applyingResult.failure ?? { reason: "Applying the missing update actions failed" },
-          "applyMissingUpdateActions",
-        ),
+        failure: withPhase(applyingResult.failure, "applyMissingUpdateActions"),
       };
     }
-    yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
+    yield* call(applyMeshRefreshes, meshRefreshes);
     if (hasLocalUnsavedChanges) {
       // Only if a rewinding rebase was necessary, the pending update actions in the save queue must be reapplied.
-      // Note that we do not need to call resolveApplyingUpdateArtifacts(_artifactInfos) here
-      // because we are merely re-applying our own (rebased) update actions. The original
-      // emitter of these updates (e.g., the proofreading saga) is responsible for handling
-      // such updates.
-      // TODO #9711: Refactor this?
-      const {
-        success,
-        artifactInfos: _artifactInfos,
-        failure,
-      } = yield* call(
+      const reapplyingResult = yield* call(
         reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := false (in happy case)
         missingUpdateActions,
         annotationBeforeRebase,
       );
-      if (!success) {
+      if (!reapplyingResult.success) {
         return {
           successful: false,
-          failure: withPhase(
-            failure ?? { reason: "Re-applying the save queue failed" },
-            "reapplySaveQueue",
-          ),
+          failure: withPhase(reapplyingResult.failure, "reapplySaveQueue"),
         };
       }
     }
@@ -210,22 +196,23 @@ function* fetchNewestMissingUpdateActions(): Saga<ApiResult<APIUpdateActionBatch
 
 function* applyNewestMissingUpdateActions(
   actions: APIUpdateActionBatch[],
-): Saga<ApplyingUpdateResults> {
+  meshRefreshes: MeshRefreshCollector,
+): Saga<ApplyingUpdatesResult> {
   if (actions.length === 0) {
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
-    return SuccessEmptyIncorporateActionsReturnValue;
+    return { success: true };
   }
   const mayEdit = yield* select((state) => mayEditAnnotation(state));
   // Note: any exception thrown here is intentionally not caught. It propagates to
   // performRebasingIfNecessary's outer try/catch, which terminates polling -- the same
   // way a hard error in reapplyUpdateActionsFromSaveQueue is already handled, since that
   // function has no local try/catch either.
-  const { success, artifactInfos, failure } = yield* tryToIncorporateActions(actions, false);
+  const result = yield* tryToIncorporateActions(actions, false, meshRefreshes);
   // Updates the annotation state used for future rebase operation to the current state with the missingUpdateActions applied.
   yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
-  if (success) {
+  if (result.success) {
     yield* call(updatePendingProofreadingOperationInfo);
-    return { success: true, artifactInfos };
+    return result;
   }
 
   const hasPendingUpdates = (yield* select((state) => state.save.queue)).length > 0;
@@ -245,9 +232,7 @@ function* applyNewestMissingUpdateActions(
     sticky: true,
     key: SAVING_CONFLICT_TOAST_KEY,
   });
-  return getFailedIncorporateActionsReturnValue(
-    failure ?? { reason: "Applying the missing update actions failed" },
-  );
+  return result;
 }
 
 function* reapplyUpdateActionsFromSaveQueue(
@@ -256,11 +241,11 @@ function* reapplyUpdateActionsFromSaveQueue(
   // save queue entries to the rebase.
   appliedBackendUpdateActions: APIUpdateActionBatch[],
   annotationBeforeRebase: StoreAnnotation,
-): Saga<ApplyingUpdateResults> {
+): Saga<ApplyingUpdatesResult> {
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const currentVersion = yield* select((state) => state.annotation.version);
   if (saveQueueEntries.length === 0) {
-    return SuccessEmptyIncorporateActionsReturnValue;
+    return { success: true };
   }
   // Potentially update save queue entries to state after applying missing backend actions.
   // Properties like unmapped segment ids of proofreading actions might have changed and are updated here.
@@ -275,19 +260,12 @@ function* reapplyUpdateActionsFromSaveQueue(
       updatedSaveQueue,
       currentVersion,
     );
-    const {
-      success: successfullyAppliedSaveQueueUpdates,
-      artifactInfos,
-      failure,
-    } = yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
-    if (successfullyAppliedSaveQueueUpdates) {
-      return { success: true, artifactInfos };
-    }
-    return getFailedIncorporateActionsReturnValue(
-      failure ?? { reason: "Re-applying the save queue failed" },
-    );
+    // No mesh refreshes are collected because these are the user's own actions. The saga that
+    // created them (e.g., the proofreading saga) reloads the affected meshes itself.
+    return yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true, null);
   }
-  return getFailedIncorporateActionsReturnValue({
-    reason: "Rewriting the save queue for re-applying failed",
-  });
+  return {
+    success: false,
+    failure: { reason: "Rewriting the save queue for re-applying failed" },
+  };
 }

@@ -75,6 +75,7 @@ describe("Volume Tracing with remote updates", () => {
           },
         ],
         false,
+        null,
       );
 
       expect(yield call(() => api.data.getDataValue(volumeTracingLayerName, position))).toBe(

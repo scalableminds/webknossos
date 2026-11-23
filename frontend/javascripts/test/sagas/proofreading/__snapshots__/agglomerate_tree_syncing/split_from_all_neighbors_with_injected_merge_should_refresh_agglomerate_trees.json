@@ -1,6 +1,36 @@
 [
   [
     {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          7,
+          8,
+        ],
+        "sourceId": 4,
+        "targetId": 3,
+      },
+    },
+    {
+      "name": "deleteTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "id": 4,
+      },
+    },
+    {
+      "name": "createEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 4,
+        "target": 7,
+        "treeId": 3,
+      },
+    },
+  ],
+  [
+    {
       "name": "splitAgglomerate",
       "value": {
         "actionTracingId": "volumeTracingId",
@@ -30,46 +60,6 @@
           2,
         ],
         "id": 1n,
-      },
-    },
-  ],
-  [
-    {
-      "name": "createSegment",
-      "value": {
-        "actionTracingId": "volumeTracingId",
-        "additionalCoordinates": undefined,
-        "anchorPosition": [
-          1,
-          1,
-          1,
-        ],
-        "color": null,
-        "creationTime": 1494695001688,
-        "groupId": null,
-        "id": 1339n,
-        "metadata": [],
-        "name": null,
-      },
-    },
-  ],
-  [
-    {
-      "name": "createSegment",
-      "value": {
-        "actionTracingId": "volumeTracingId",
-        "additionalCoordinates": undefined,
-        "anchorPosition": [
-          3,
-          3,
-          3,
-        ],
-        "color": null,
-        "creationTime": 1494695001688,
-        "groupId": null,
-        "id": 1340n,
-        "metadata": [],
-        "name": null,
       },
     },
   ],
@@ -166,6 +156,44 @@
         "source": 5,
         "target": 6,
         "treeId": 3,
+      },
+    },
+  ],
+  [
+    {
+      "name": "createSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
+        "anchorPosition": [
+          1,
+          1,
+          1,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1339n,
+        "metadata": [],
+        "name": null,
+      },
+    },
+    {
+      "name": "createSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
+        "anchorPosition": [
+          3,
+          3,
+          3,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1340n,
+        "metadata": [],
+        "name": null,
       },
     },
   ],

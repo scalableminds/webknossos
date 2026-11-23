@@ -1,4 +1,4 @@
-import { unwrapOrThrow } from "admin/api/api_result";
+import { type ApiResult, unwrapOrThrow } from "admin/api/api_result";
 import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import {
   getAnnotationBookmarks,
@@ -27,6 +27,7 @@ import merge from "lodash-es/merge";
 import messages from "messages";
 import type {
   APIAnnotation,
+  APIAnnotationBookmark,
   APIAnnotationUserState,
   APICompoundType,
   APIDataLayer,
@@ -139,6 +140,8 @@ export async function initialize(
   let annotation: APIAnnotation | null | undefined;
   let annotationProto: APITracingStoreAnnotation | null | undefined;
   let userState: APIAnnotationUserState | null | undefined;
+  // Only awaited together with the dataset and tracing requests below, so that it does not delay them.
+  let bookmarksPromise: Promise<ApiResult<APIAnnotationBookmark[]>> | null = null;
   let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
@@ -179,15 +182,11 @@ export async function initialize(
       );
       // The bookmarks are fetched at the version of the proto. Otherwise, another user could save
       // bookmark changes in between, which would then be missing or be applied twice.
-      const bookmarksResult = await getAnnotationBookmarks(
+      bookmarksPromise = getAnnotationBookmarks(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,
         annotationProto.version,
       );
-      if (!bookmarksResult.ok) {
-        throw bookmarksResult.error.cause;
-      }
-      const bookmarks = bookmarksResult.value;
       userState =
         annotationProto != null
           ? getUserStateForTracing(annotationProto, Store.getState().activeUser, annotation?.owner)
@@ -211,7 +210,6 @@ export async function initialize(
         ...unversionedAnnotation,
         description: annotationProto.description,
         annotationLayers: layersWithStats,
-        bookmarks,
         largestBookmarkId: annotationProto.largestBookmarkId,
       };
       annotation = completeAnnotation;
@@ -238,8 +236,16 @@ export async function initialize(
     datasetId = initialCommandType.datasetId;
   }
 
-  const [apiDataset, initialUserSettings, serverTracings, keyboardShortcutsConfig] =
-    await fetchParallel(annotation, datasetId, version);
+  const [
+    [apiDataset, initialUserSettings, serverTracings, keyboardShortcutsConfig],
+    bookmarksResult,
+  ] = await Promise.all([fetchParallel(annotation, datasetId, version), bookmarksPromise]);
+  if (bookmarksResult != null && annotation != null) {
+    if (!bookmarksResult.ok) {
+      throw bookmarksResult.error.cause;
+    }
+    annotation = { ...annotation, bookmarks: bookmarksResult.value };
+  }
   assertUsableDataset(apiDataset as StoreDataset, initialCommandType);
   // assertUsableDataset already guaranteed (and threw a HANDLED_ERROR otherwise) that
   // the dataset actually has data layers, i.e., that it was imported successfully.

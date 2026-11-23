@@ -53,8 +53,9 @@ export function* diffBookmarks(
     if (prevBookmark.state !== bookmark.state) {
       yield updateBookmarkState(bookmark.id, bookmark.state);
     }
-    // A missing thumbnail (e.g. if capturing it failed) does not replace the previous one.
-    if (bookmark.thumbnailId != null && bookmark.thumbnailId !== prevBookmark.thumbnailId) {
+    // Also clears the thumbnail on the server if it was removed (e.g. by an undo to a state without
+    // one). A failed capture keeps the previous thumbnail in the store and is therefore no change.
+    if (bookmark.thumbnailId !== prevBookmark.thumbnailId) {
       yield updateBookmarkThumbnail(bookmark);
     }
   }

@@ -122,8 +122,19 @@ describe("Bookmark diffing", () => {
     expect(diff([captured], [{ ...captured, largeThumbnailDataBase64: "other" }])).toEqual([]);
   });
 
-  it("keeps the previous thumbnail if capturing a new one failed", () => {
+  it("clears a removed thumbnail (e.g. after undo to a state without one)", () => {
     const withoutThumbnail = { ...savedBookmark, thumbnailVersion: null, thumbnailId: null };
-    expect(diff([savedBookmark], [withoutThumbnail])).toEqual([]);
+    expect(diff([savedBookmark], [withoutThumbnail])).toEqual([
+      {
+        name: "updateBookmarkThumbnail",
+        value: {
+          id: 1,
+          largeThumbnailDataBase64: null,
+          smallThumbnailDataBase64: null,
+          thumbnailVersion: null,
+          thumbnailViewport: null,
+        },
+      },
+    ]);
   });
 });

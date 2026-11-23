@@ -17,15 +17,42 @@ case class SurfaceChunk(topLeft: Vec3Int, size: Vec3Int, interiorStart: Vec3Int,
 
 object SurfaceChunk {
 
-  /** The chunk whose interior is the bucket at bucketPosition (in buckets of the mag). Its cuboid extends the bucket by
-    * one voxel on each side, except below 0, where the dataset has no voxels.
+  // Buckets per axis of a group of buckets that may be measured as one chunk, see forSegmentBuckets.
+  private val groupLength = 2
+
+  // A group is measured as one chunk if it has at least this many buckets of the segment, see forSegmentBuckets.
+  private val minSegmentBucketsPerGroup = 4
+
+  /** The chunks to measure a segment in, given the buckets (in buckets of the mag) that contain it (from the segment
+    * index). A chunk loads every bucket its cuboid touches, including the neighbors for its one-voxel border: 27 for
+    * the chunk of one bucket, 64 for the chunk of a group of 2×2×2 buckets. A group with at least
+    * minSegmentBucketsPerGroup buckets of the segment (at most 16 loads per bucket, for 1.8 times the voxels to scan)
+    * is one chunk, which saves loads in the bulky parts of a segment. Every other bucket of the segment is its own
+    * chunk, so that thin parts like axons and spines, which fill few buckets of a group, cost the same as with one
+    * chunk per bucket. The interiors of the chunks never overlap, and every voxel of the segment lies in one, as
+    * NativeSegmentSurface requires.
     */
-  def forBucket(bucketPosition: Vec3Int): SurfaceChunk = {
-    val bucketTopLeft = bucketPosition * DataLayer.bucketLength
-    val topLeft =
-      Vec3Int(Math.max(bucketTopLeft.x - 1, 0), Math.max(bucketTopLeft.y - 1, 0), Math.max(bucketTopLeft.z - 1, 0))
-    val interiorStart = bucketTopLeft - topLeft
-    val interiorEnd = interiorStart + Vec3Int.full(DataLayer.bucketLength)
+  def forSegmentBuckets(segmentBuckets: Seq[Vec3Int]): Seq[SurfaceChunk] =
+    segmentBuckets.groupBy(_ / Vec3Int.full(groupLength)).toSeq.flatMap { case (group, buckets) =>
+      if (buckets.length >= minSegmentBucketsPerGroup) Seq(forBuckets(group * groupLength, groupLength))
+      else buckets.map(forBucket)
+    }
+
+  /** The chunk whose interior is the bucket at bucketPosition (in buckets of the mag). */
+  def forBucket(bucketPosition: Vec3Int): SurfaceChunk = forBuckets(bucketPosition, 1)
+
+  /** The chunk whose interior is the cube of bucketsPerAxis³ buckets starting at firstBucket (in buckets of the mag).
+    * Its cuboid extends the interior by one voxel on each side, except below 0, where the dataset has no voxels.
+    */
+  private def forBuckets(firstBucket: Vec3Int, bucketsPerAxis: Int): SurfaceChunk = {
+    val interiorTopLeft = firstBucket * DataLayer.bucketLength
+    val topLeft = Vec3Int(
+      Math.max(interiorTopLeft.x - 1, 0),
+      Math.max(interiorTopLeft.y - 1, 0),
+      Math.max(interiorTopLeft.z - 1, 0)
+    )
+    val interiorStart = interiorTopLeft - topLeft
+    val interiorEnd = interiorStart + Vec3Int.full(DataLayer.bucketLength * bucketsPerAxis)
     SurfaceChunk(topLeft, interiorEnd + Vec3Int.ones, interiorStart, interiorEnd)
   }
 }
@@ -38,6 +65,10 @@ trait FullMeshHelper extends LazyLogging {
 
   // Upper bound for ad-hoc meshing requests per full mesh, so that huge segments cannot occupy the meshing workers indefinitely
   protected lazy val maxAdHocFullMeshChunks: Int = 25000
+
+  // Upper bound for the buckets to mesh a segment in (see bucketsToMesh), given at most maxAdHocFullMeshChunks buckets
+  // of the segment. Compact segments add few buckets, sparse ones up to seven per bucket, which this bounds.
+  protected lazy val maxAdHocFullMeshChunksWithNeighbors: Int = 2 * maxAdHocFullMeshChunks
 
   /** The buckets (in buckets of the mag) to mesh a segment in, given the buckets that contain it (from the segment
     * index): those and the buckets below them in x, y and z, also diagonally. A bucket's cuboid spans the bucket plus

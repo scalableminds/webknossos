@@ -69,8 +69,8 @@ class DSFullMeshService @Inject() (
   }
 
   /** Measures the surface area and voxel count of a segment in the mag of the request, see [[NativeSegmentSurface]].
-    * Each bucket of the segment index is one chunk, measured on the actor pool like an ad-hoc mesh. Needs a segment
-    * index.
+    * The chunks are the buckets of the segment index, some grouped (see [[SurfaceChunk.forSegmentBuckets]]), measured
+    * on the actor pool like ad-hoc meshes. Needs a segment index.
     */
   def measureSurface(
       datasetId: ObjectId,
@@ -88,31 +88,30 @@ class DSFullMeshService @Inject() (
         segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       ) ?~> Msg.Mesh.segmentIndexNeededForSurface
       bucketPositions <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
-      surfaces <- Fox.batchCombined(bucketPositions.toIndexedSeq, config.Datastore.AdHocMesh.actorPoolSize) {
-        bucketPosition =>
-          val chunk = SurfaceChunk.forBucket(bucketPosition)
-          val meshRequest = AdHocMeshRequest(
-            Some(datasetId),
-            Some(dataSource.id),
-            segmentationLayer,
-            Cuboid(
-              VoxelPosition(chunk.topLeft.x * mag.x, chunk.topLeft.y * mag.y, chunk.topLeft.z * mag.z, mag),
-              chunk.size.x,
-              chunk.size.y,
-              chunk.size.z
-            ),
-            fullMeshRequest.segmentId.toLong,
-            dataSource.scale.factor,
-            tc,
-            fullMeshRequest.mappingName,
-            fullMeshRequest.mappingType,
-            fullMeshRequest.additionalCoordinates,
-            fullMeshRequest.annotationVersion,
-            findNeighbors = false
-          )
-          adHocMeshService.requestSurfaceViaActor(
-            SegmentSurfaceRequest(meshRequest, chunk.interiorStart, chunk.interiorEnd)
-          )
+      chunks = SurfaceChunk.forSegmentBuckets(bucketPositions.toIndexedSeq)
+      surfaces <- Fox.batchCombined(chunks, config.Datastore.AdHocMesh.actorPoolSize) { chunk =>
+        val meshRequest = AdHocMeshRequest(
+          Some(datasetId),
+          Some(dataSource.id),
+          segmentationLayer,
+          Cuboid(
+            VoxelPosition(chunk.topLeft.x * mag.x, chunk.topLeft.y * mag.y, chunk.topLeft.z * mag.z, mag),
+            chunk.size.x,
+            chunk.size.y,
+            chunk.size.z
+          ),
+          fullMeshRequest.segmentId.toLong,
+          dataSource.scale.factor,
+          tc,
+          fullMeshRequest.mappingName,
+          fullMeshRequest.mappingType,
+          fullMeshRequest.additionalCoordinates,
+          fullMeshRequest.annotationVersion,
+          findNeighbors = false
+        )
+        adHocMeshService.requestSurfaceViaActor(
+          SegmentSurfaceRequest(meshRequest, chunk.interiorStart, chunk.interiorEnd)
+        )
       }
     } yield surfaces.foldLeft(SegmentSurface.empty)(_ + _)
 
@@ -197,6 +196,8 @@ class DSFullMeshService @Inject() (
     for {
       segmentBuckets <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
       targetMagPositions = bucketsToMesh(segmentBuckets.toSeq)
+      _ <- Fox.fromBool(targetMagPositions.length <= maxAdHocFullMeshChunksWithNeighbors) ?~> Msg.Mesh
+        .tooManyAdHocMeshRequests(maxAdHocFullMeshChunksWithNeighbors)
       // Dispatch chunks to the actor pool keeping actorPoolSize requests in flight at a time.
       meshChunks: List[AdHocMesh] <- Fox.batchCombined(
         targetMagPositions.toIndexedSeq,

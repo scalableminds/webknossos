@@ -63,9 +63,9 @@ class TSFullMeshService @Inject() (
   private lazy val segmentSurfaceCache: AlfuCache[(String, Long, FullMeshRequest), SegmentSurface] =
     AlfuCache(maxCapacity = 1000)
 
-  /** Measures the surface area and voxel count of a segment in the mag of the request, see NativeSegmentSurface. Each
-    * bucket of the segment index is one chunk. Needs a segment index. The buckets are read at the version of the given
-    * tracing.
+  /** Measures the surface area and voxel count of a segment in the mag of the request, see NativeSegmentSurface. The
+    * chunks are the buckets of the segment index, some grouped (see SurfaceChunk.forSegmentBuckets). Needs a segment
+    * index. The buckets are read at the version of the given tracing.
     */
   def measureSurface(
       annotationId: ObjectId,
@@ -104,9 +104,9 @@ class TSFullMeshService @Inject() (
         annotationId
       ) ?~> Msg.Dataset.voxelSizeFailedToFetch
       bucketPositions <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
+      chunks = SurfaceChunk.forSegmentBuckets(bucketPositions)
       // Keeping several chunks in flight, as each one waits for its buckets to load.
-      surfaces <- Fox.batchCombined(bucketPositions, adHocMeshingBatchSize) { bucketPosition =>
-        val chunk = SurfaceChunk.forBucket(bucketPosition)
+      surfaces <- Fox.batchCombined(chunks, adHocMeshingBatchSize) { chunk =>
         val adHocMeshRequest = WebknossosAdHocMeshRequest(
           position = chunk.topLeft * mag,
           mag = mag,
@@ -205,7 +205,10 @@ class TSFullMeshService @Inject() (
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
       segmentBuckets <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
-      bucketPositions = bucketsToMesh(segmentBuckets).toList
+      bucketsWithNeighbors = bucketsToMesh(segmentBuckets)
+      _ <- Fox.fromBool(bucketsWithNeighbors.length <= maxAdHocFullMeshChunksWithNeighbors) ?~> Msg.Mesh
+        .tooManyAdHocMeshRequests(maxAdHocFullMeshChunksWithNeighbors)
+      bucketPositions = bucketsWithNeighbors.toList
         .map(_ * mag * DataLayer.bucketLength)
         .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, fullMeshRequest.additionalCoordinates))
       // Keeping several chunks in flight, as each one waits for its buckets to load.

@@ -8,8 +8,9 @@
 //! unlike the area of f32 mesh vertices far from the origin.
 //!
 //! A segment is measured chunk by chunk, and the results of the chunks are summed. A chunk owns the voxels of its
-//! *interior*, and the interiors of all chunks partition the dataset (the chunks are the buckets of the segment
-//! index, which lists every bucket with a voxel of the segment). The cuboid of a chunk contains its interior plus
+//! *interior*. The interiors never overlap, and every voxel of the segment lies in one (the interiors are buckets
+//! or groups of buckets of the segment index, which lists every bucket with a voxel of the segment, see
+//! `SurfaceChunk.forSegmentBuckets`). The cuboid of a chunk contains its interior plus
 //! one voxel on each side, where the dataset has one; voxels outside of the cuboid count as not belonging to the
 //! segment.
 //!

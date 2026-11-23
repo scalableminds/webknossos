@@ -20,7 +20,9 @@
 //! straddle the border of two chunks, no matter which of them contain the segment.
 
 use jni::EnvUnowned;
-use jni::objects::{JByteArray, JDoubleArray, JIntArray, JObject, JPrimitiveArray, TypeArray};
+use std::cell::Cell;
+
+use jni::objects::{JByteArray, JDoubleArray, JIntArray, JObject};
 use jni::sys::{jint, jlong};
 
 use crate::ad_hoc_mesh::triangle_table::{EDGE_MIDPOINTS, TRIANGLES};
@@ -229,16 +231,22 @@ pub fn measure_surface(mask: &PaddedMask, interior: Interior, areas: &[f64; 256]
     Surface { area, voxel_count }
 }
 
-fn read_vec3<T: TypeArray + Default + Copy>(
-    env: &jni::Env,
-    array: &JPrimitiveArray<T>,
-    name: &str,
-) -> NativeResult<[T; 3]> {
-    let values = jni_util::read_array(env, array)?;
-    match values[..] {
-        [x, y, z] => Ok([x, y, z]),
-        _ => invalid_argument(format!("{name} must have three elements")),
-    }
+thread_local! {
+    /// The [case_areas] of the last voxel size measured on this thread. All chunks of a segment, and usually all
+    /// segments of a dataset, share the voxel size, so the table is rarely rebuilt.
+    static CACHED_CASE_AREAS: Cell<Option<([f64; 3], [f64; 256])>> = const { Cell::new(None) };
+}
+
+/// [case_areas], reused from the last call on this thread if the voxel size is the same.
+fn cached_case_areas(scale: [f64; 3]) -> [f64; 256] {
+    CACHED_CASE_AREAS.with(|cache| match cache.get() {
+        Some((cached_scale, areas)) if cached_scale == scale => areas,
+        _ => {
+            let areas = case_areas(scale);
+            cache.set(Some((scale, areas)));
+            areas
+        }
+    })
 }
 
 #[unsafe(no_mangle)]
@@ -260,7 +268,7 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
         let dimensions = jni_util::read_array(env, &dimensions)?;
         let interior_start = jni_util::read_array(env, &interior_start)?;
         let interior_end = jni_util::read_array(env, &interior_end)?;
-        let scale = read_vec3(env, &scale, "scale")?;
+        let scale = jni_util::read_vec3(env, &scale, "scale")?;
         if scale.iter().any(|s| !s.is_finite() || *s <= 0.0) {
             return invalid_argument("scale must be positive");
         }
@@ -277,7 +285,7 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
             };
             mask.fill(&cuboid, segment_id)
         })?;
-        let surface = measure_surface(&mask, interior, &case_areas(scale));
+        let surface = measure_surface(&mask, interior, &cached_case_areas(scale));
         // The voxel count is at most the cuboid's (below i32::MAX voxels), so it is exact as f64.
         jni_util::new_double_array(env, &[surface.area, surface.voxel_count as f64])
     })

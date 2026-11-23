@@ -64,19 +64,19 @@ class TSFullMeshService @Inject() (
     AlfuCache(maxCapacity = 1000)
 
   /** Measures the surface area and voxel count of a segment in the mag of the request, see NativeSegmentSurface. Each
-    * bucket of the segment index is one chunk. Needs a segment index.
+    * bucket of the segment index is one chunk. Needs a segment index. The buckets are read at the version of the given
+    * tracing.
     */
   def measureSurface(
       annotationId: ObjectId,
       tracingId: String,
-      fullMeshRequest: FullMeshRequest,
-      version: Option[Long]
+      tracing: VolumeTracing,
+      fullMeshRequest: FullMeshRequest
   )(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[SegmentSurface] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Msg.Annotation.notFound
       // Temporary tracings are not versioned, so their surfaces cannot be cached.
       isTemporaryTracing <- volumeTracingService.temporaryTracingService.isTemporaryTracing(tracingId)
       surface <-
@@ -100,7 +100,6 @@ class TSFullMeshService @Inject() (
       _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume
         .wrongMag(tracingId, mag.toMagLiteral(allowScalar = true))
       _ <- Fox.fromBool(tracing.hasSegmentIndex.getOrElse(false)) ?~> Msg.Mesh.segmentIndexNeededForSurface
-      before = Instant.now
       voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(
         annotationId
       ) ?~> Msg.Dataset.voxelSizeFailedToFetch
@@ -117,7 +116,8 @@ class TSFullMeshService @Inject() (
           fullMeshRequest.mappingName,
           fullMeshRequest.mappingType,
           fullMeshRequest.additionalCoordinates,
-          fullMeshRequest.annotationVersion,
+          // The version of the segment index, which the result is cached under.
+          Some(tracing.version),
           findNeighbors = false
         )
         if (tracing.getHasEditableMapping) {
@@ -138,7 +138,6 @@ class TSFullMeshService @Inject() (
             chunk.interiorEnd
           )
       }
-      _ = Instant.logSince(before, s"Measured the surface of a segment in ${bucketPositions.length} buckets,", logger)
     } yield surfaces.foldLeft(SegmentSurface.empty)(_ + _)
 
   private def loadFullMeshFromMeshFile(

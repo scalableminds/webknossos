@@ -130,6 +130,19 @@ pub fn read_array<T: TypeArray + Default>(
     Ok(values)
 }
 
+/// Copies a Java primitive array of exactly three elements, such as a vector, into an array. `name` names the
+/// argument in the error.
+pub fn read_vec3<T: TypeArray + Default + Copy>(
+    env: &Env,
+    array: &JPrimitiveArray<T>,
+    name: &str,
+) -> NativeResult<[T; 3]> {
+    match read_array(env, array)?[..] {
+        [x, y, z] => Ok([x, y, z]),
+        _ => invalid_argument(format!("{name} must have three elements")),
+    }
+}
+
 /// Creates a new Java `byte[]` with the given contents.
 pub fn new_byte_array<'local>(
     env: &mut Env<'local>,

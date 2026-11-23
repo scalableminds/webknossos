@@ -441,7 +441,7 @@ class VolumeTracingController @Inject() (
       annotationVersion: Option[Long]
   )(using tc: TokenContext): Fox[List[SegmentSurface]] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId)
+      tracing <- annotationService.findVolume(annotationId, tracingId, annotationVersion) ?~> Msg.Annotation.notFound
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       surfaces <- Fox.serialCombined(segmentIds) { segmentId =>
         val fullMeshRequest = FullMeshRequest(
@@ -457,7 +457,7 @@ class VolumeTracingController @Inject() (
           seedPosition = None,
           additionalCoordinates = additionalCoordinates
         )
-        fullMeshService.measureSurface(annotationId, tracingId, fullMeshRequest, annotationVersion) ?~>
+        fullMeshService.measureSurface(annotationId, tracingId, tracing, fullMeshRequest) ?~>
           Msg.Mesh.measureSurfaceFailed
       }
     } yield surfaces

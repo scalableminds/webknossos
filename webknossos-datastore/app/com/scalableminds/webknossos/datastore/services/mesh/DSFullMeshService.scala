@@ -87,7 +87,6 @@ class DSFullMeshService @Inject() (
       _ <- Fox.fromBool(
         segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       ) ?~> Msg.Mesh.segmentIndexNeededForSurface
-      before = Instant.now
       bucketPositions <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
       surfaces <- Fox.batchCombined(bucketPositions.toIndexedSeq, config.Datastore.AdHocMesh.actorPoolSize) {
         bucketPosition =>
@@ -115,9 +114,7 @@ class DSFullMeshService @Inject() (
             SegmentSurfaceRequest(meshRequest, chunk.interiorStart, chunk.interiorEnd)
           )
       }
-      surface = surfaces.foldLeft(SegmentSurface.empty)(_ + _)
-      _ = Instant.logSince(before, s"Measured the surface of a segment in ${bucketPositions.length} buckets,", logger)
-    } yield surface
+    } yield surfaces.foldLeft(SegmentSurface.empty)(_ + _)
 
   /** The surface area of the segment's mesh in the mesh file of the request. */
   def surfaceAreaFromMeshFile(

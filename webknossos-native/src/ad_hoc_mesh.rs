@@ -470,14 +470,6 @@ pub(crate) fn mesh_cuboid(
     mesh_segment(&SegmentMask::new(cuboid, segment_id), offset, scale)
 }
 
-fn read_vec3_f32(env: &jni::Env, array: &JFloatArray, name: &str) -> NativeResult<[f32; 3]> {
-    let values = jni_util::read_array(env, array)?;
-    match values[..] {
-        [x, y, z] => Ok([x, y, z]),
-        _ => invalid_argument(format!("{name} must have three elements")),
-    }
-}
-
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh_NativeAdHocMesher_adHocMesh<
     'local,
@@ -495,8 +487,8 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
 ) -> JFloatArray<'local> {
     jni_util::run(env, "AdHocMesher adHocMesh", |env| {
         let dimensions = jni_util::read_array(env, &dimensions)?;
-        let offset = read_vec3_f32(env, &offset, "offset")?;
-        let scale = read_vec3_f32(env, &scale, "scale")?;
+        let offset = jni_util::read_vec3(env, &offset, "offset")?;
+        let scale = jni_util::read_vec3(env, &scale, "scale")?;
         if neighbors_out.len(env)? != 1 {
             return invalid_argument("neighborsOut must have one element");
         }

@@ -1195,17 +1195,9 @@ export function getSegmentSphericities(
   annotationVersion: number | undefined,
   fromStatisticsFile: boolean,
 ): Promise<number[]> {
-  if (fromStatisticsFile) {
-    return fetchSegmentStatistic<number>(
-      layerSourceInfo,
-      "sphericity",
-      mag,
-      segmentIds,
-      additionalCoordinates,
-      mappingName,
-    );
-  }
-  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
+  const requestUrl = getDataOrTracingStoreUrl(
+    fromStatisticsFile ? { ...layerSourceInfo, useDataStore: true } : layerSourceInfo,
+  );
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/sphericity?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },

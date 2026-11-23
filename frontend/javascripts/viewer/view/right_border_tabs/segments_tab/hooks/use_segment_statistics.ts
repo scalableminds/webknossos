@@ -19,6 +19,7 @@ import type { BoundingBoxObject } from "types/bounding_box";
 import type { Vector3 } from "viewer/constants";
 import {
   getMagInfo,
+  getMappingInfo,
   getMaybeSegmentIndexAvailability,
 } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMappingName } from "viewer/model/accessors/volumetracing_accessor";
@@ -115,6 +116,15 @@ export function useSegmentStatistics({
   const currentMeshFileName = currentMeshFile?.name;
   const isSegmentIndexAvailable =
     useWkSelector((state) => getMaybeSegmentIndexAvailability(state.dataset, layer?.name)) === true;
+  // The datastore measures ad-hoc surfaces only with agglomerate mappings, it cannot apply a JSON
+  // mapping.
+  const isJsonMappingActive = useWkSelector(
+    (state) =>
+      getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layer?.name).mappingType ===
+      "JSON",
+  );
+  const canMeasureAdHocSurface =
+    isSegmentIndexAvailable && !(isJsonMappingActive && layer?.tracingId == null);
 
   const { fileInfo, isLoading: isLoadingFileInfo } = useSegmentStatisticsFile(layer);
   const availableFileMetrics = useMemo(
@@ -140,8 +150,8 @@ export function useSegmentStatistics({
   const canMeshFileServeSurfaceArea =
     currentMeshFile != null && (currentMeshFile.mappingName || null) === (mappingName || null);
   const isSurfaceAreaAvailable =
-    availableFileMetrics.surfaceArea || canMeshFileServeSurfaceArea || isSegmentIndexAvailable;
-  const isSphericityAvailable = availableFileMetrics.sphericity || isSegmentIndexAvailable;
+    availableFileMetrics.surfaceArea || canMeshFileServeSurfaceArea || canMeasureAdHocSurface;
+  const isSphericityAvailable = availableFileMetrics.sphericity || canMeasureAdHocSurface;
 
   const layerSourceInfo: LayerSourceInfo | null = useMemo(
     () =>

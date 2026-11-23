@@ -163,6 +163,13 @@ export const BorderTabs: Record<string, BorderTabType> = {
     // Not part of the default layout. It is opened on demand from the skeleton tab and can be closed again.
     enableClose: true,
   },
+  SegmentStatisticsTab: {
+    id: "SegmentStatisticsTab",
+    name: "Statistics",
+    description: "Segment Statistics - Inspect and export statistics of segments",
+    // Not part of the default layout. It is opened on demand from the segments tab and can be closed again.
+    enableClose: true,
+  },
   ControlsAndRenderingSettingsTab: {
     id: "ControlsAndRenderingSettingsTab",
     name: "Settings",

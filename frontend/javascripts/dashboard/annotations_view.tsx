@@ -998,7 +998,7 @@ class AnnotationsView extends PureComponent<Props, State> {
               textAlign: "right",
             }}
           >
-            {!this.getCurrentModeState().loadedAllAnnotations ? (
+            {!this.state.isLoading && !this.getCurrentModeState().loadedAllAnnotations ? (
               <Link
                 to="#"
                 onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}

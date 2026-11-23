@@ -45,6 +45,7 @@ import {
 } from "./hierarchy";
 import { useJumpToSegment } from "./hooks/use_jump_to_segment";
 import { useSegmentListKeyboardShortcuts } from "./hooks/use_segment_list_keyboard_shortcuts";
+import { useTreeCursorOnSelection } from "./hooks/use_tree_cursor_on_selection";
 import { withMeshFileCompatibilityCheck } from "./mesh_file_compatibility_modal";
 import { GroupNodeTitle } from "./node_titles";
 import { SegmentDetailsPanel } from "./segment_details_panel";
@@ -252,6 +253,8 @@ export function SegmentTreeView(props: Props) {
       }
     }, SCROLL_DELAY_MS);
   }, [selectedSegmentIds, selectedGroupId, focusToken]);
+
+  const treeCursor = useTreeCursorOnSelection(selection.selectedKeys.at(-1) ?? null);
 
   const onExpand: TreeProps<SegmentsUiNode>["onExpand"] = (expandedKeys) => {
     groupOperations.setExpandedGroups(new Set(expandedKeys as string[]));
@@ -509,9 +512,8 @@ export function SegmentTreeView(props: Props) {
                     )
                   }
                   switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
-                  // antd's keyboard cursor ("active" node) is kept on the selected node so that
-                  // there is only one kind of selection (the one that a click creates).
-                  activeKey={selection.selectedKeys.at(-1) ?? null}
+                  activeKey={treeCursor.activeKey}
+                  onActiveChange={treeCursor.onActiveChange}
                   onSelect={onSelect}
                   onDrop={onDrop}
                   allowDrop={allowDrop}

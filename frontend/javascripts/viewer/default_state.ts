@@ -299,6 +299,7 @@ const defaultState: WebknossosState = {
       right: false,
       left: false,
     },
+    segmentStatisticsScope: null,
     systemTheme: getSystemColorTheme(),
     isWkInitialized: false,
     isUiReady: false,

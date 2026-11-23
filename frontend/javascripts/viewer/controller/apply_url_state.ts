@@ -12,6 +12,7 @@ import {
   getSegmentationLayerByName,
   isSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { hasDatasetTransforms } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   updateCurrentMeshFileAction,
@@ -82,10 +83,10 @@ export function applyState(
   }
 
   if ("nativelyRenderedLayerName" in state) {
-    const isNativelyRenderedNamePresent =
+    const isValidName =
       state.nativelyRenderedLayerName === null ||
-      getIsNativelyRenderedNamePresent(dataset, state.nativelyRenderedLayerName);
-    if (isNativelyRenderedNamePresent) {
+      isValidNativelyRenderedLayerName(dataset, state.nativelyRenderedLayerName);
+    if (isValidName) {
       Store.dispatch(
         updateDatasetSettingAction(
           "nativelyRenderedLayerName",
@@ -245,17 +246,22 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
   }
 }
 
-export const getIsNativelyRenderedNamePresent = (
+// Whether the given layer can be rendered natively. Without any transforms in the dataset, there
+// is nothing to render natively, and the toggle for it isn't shown either. A leftover setting
+// (e.g., after the transforms were removed) would still block editing the layer's transforms.
+export const isValidNativelyRenderedLayerName = (
   dataset: APIDataset | null | undefined,
   nativelyRenderedLayerName: string | null | undefined,
   maybeAnnotation?: APIAnnotation | null,
 ) => {
-  if (dataset == null) return false;
+  if (dataset == null || !hasDatasetTransforms(dataset)) return false;
   return (
     dataset.dataSource.dataLayers.some(
       (layer) =>
         layer.name === nativelyRenderedLayerName ||
         (layer.category === "segmentation" && layer.fallbackLayer === nativelyRenderedLayerName),
-    ) || maybeAnnotation?.annotationLayers.some((layer) => layer.name === nativelyRenderedLayerName)
+    ) ||
+    (maybeAnnotation?.annotationLayers.some((layer) => layer.name === nativelyRenderedLayerName) ??
+      false)
   );
 };

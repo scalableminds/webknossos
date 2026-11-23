@@ -41,7 +41,7 @@ import type {
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { Mutable } from "types/type_utils";
 import constants, { ControlModeEnum, normalizeMappingType, type Vector3 } from "viewer/constants";
-import { applyState, getIsNativelyRenderedNamePresent } from "viewer/controller/apply_url_state";
+import { applyState, isValidNativelyRenderedLayerName } from "viewer/controller/apply_url_state";
 import type { PartialUrlManagerState } from "viewer/controller/url_manager";
 import UrlManager, {
   getDatasetNameFromLocation,
@@ -880,29 +880,31 @@ function applyAnnotationSpecificViewConfiguration(
    * information per layer which should override the isDisabled information in DatasetConfiguration.
    * Moreover, due to another annotation nativelyRenderedLayerName might be set to a layer which does
    * not exist in this view / annotation. In this case, the nativelyRenderedLayerName should be set to null.
+   * The same applies if the dataset has no transforms (anymore), also when viewing a dataset.
    */
 
   const initialDatasetSettings: Mutable<DatasetConfiguration> = cloneDeep(originalDatasetSettings);
-  if (!annotation) {
-    return initialDatasetSettings;
-  }
-
-  if (annotation.viewConfiguration) {
+  if (annotation?.viewConfiguration) {
     // The annotation already contains a user specific viewConfiguration. Merge that into the
     // dataset settings.
     merge(initialDatasetSettings, annotation.viewConfiguration);
   }
 
-  // Ensure configured nativelyRenderedLayerName is actually present in the dataset.
-  if (initialDatasetSettings.nativelyRenderedLayerName) {
-    const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
+  // Ensure configured nativelyRenderedLayerName is actually present in the dataset and that
+  // the dataset has transforms at all.
+  if (
+    initialDatasetSettings.nativelyRenderedLayerName &&
+    !isValidNativelyRenderedLayerName(
       dataset,
       initialDatasetSettings.nativelyRenderedLayerName,
       annotation,
-    );
-    if (!isNativelyRenderedNamePresent) {
-      initialDatasetSettings.nativelyRenderedLayerName = null;
-    }
+    )
+  ) {
+    initialDatasetSettings.nativelyRenderedLayerName = null;
+  }
+
+  if (!annotation) {
+    return initialDatasetSettings;
   }
 
   if (annotation.viewConfiguration) {

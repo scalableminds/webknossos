@@ -8,7 +8,7 @@ import {
   type Vector3,
   voxelIndexOf,
 } from "./volume_annotation_types";
-import type { MaskShape, RasterizableShape } from "./volume_edit_intents";
+import type { AffineMap, MaskShape, RasterizableShape } from "./volume_edit_intents";
 import type { BucketWriter, VolumeTransaction } from "./volume_transaction";
 
 /**
@@ -48,6 +48,24 @@ function rasterizeBrush(
       ? [[shape.path[0], shape.path[0]]]
       : shape.path.slice(0, -1).map((from, i) => [from, shape.path[i + 1]]);
 
+  const { voxelToShapeSpace } = shape;
+  if (voxelToShapeSpace != null) {
+    const shapeToVoxel = invertAffineMap(voxelToShapeSpace);
+    for (const [from, to] of segments) {
+      rasterizeTransformedCapsule(
+        from,
+        to,
+        shape.radius,
+        shape.planeAxis,
+        voxelToShapeSpace,
+        shapeToVoxel,
+        ctx,
+        tx,
+      );
+    }
+    return;
+  }
+
   for (const [from, to] of segments) {
     rasterizeCapsule(from, to, shape.radius, shape.planeAxis, ctx, tx);
   }
@@ -81,6 +99,125 @@ function rasterizeCapsule(
       isInsideCapsule([x + 0.5, rowY + 0.5, rowZ + 0.5], from, to, radius, planeAxis),
     );
   });
+}
+
+/**
+ * Like rasterizeCapsule, but `from`, `to`, `radius` and `planeAxis` are given in
+ * the space that `voxelToShapeSpace` maps the source-mag voxels into.
+ *
+ * Each voxel center is mapped into that space and tested against the capsule
+ * there. For a 2D brush, the painted slice is the plane through `from`
+ * perpendicular to `planeAxis`, and a voxel is painted if it intersects that
+ * plane: the distance of its center to the plane is at most half the voxel's
+ * extent along the plane normal. Without a rotation, this is exactly one slice
+ * of voxels, as in rasterizeCapsule. With an oblique rotation, the voxels the
+ * plane cuts through form a staircase that can be more than one voxel thick.
+ */
+function rasterizeTransformedCapsule(
+  from: Vector3,
+  to: Vector3,
+  radius: Vector3,
+  planeAxis: 0 | 1 | 2 | null,
+  voxelToShapeSpace: AffineMap,
+  shapeToVoxel: AffineMap,
+  ctx: EditContext,
+  tx: VolumeTransaction,
+): void {
+  const { linear } = voxelToShapeSpace;
+  const halfThickness =
+    planeAxis == null
+      ? 0
+      : 0.5 *
+        (Math.abs(linear[planeAxis * 3]) +
+          Math.abs(linear[planeAxis * 3 + 1]) +
+          Math.abs(linear[planeAxis * 3 + 2]));
+
+  // Bounding box in shape space, mapped to voxel space via its eight corners.
+  const shapeMin: Vector3 = [0, 0, 0];
+  const shapeMax: Vector3 = [0, 0, 0];
+  for (let axis = 0; axis < 3; axis++) {
+    if (axis === planeAxis) {
+      shapeMin[axis] = from[axis] - halfThickness;
+      shapeMax[axis] = from[axis] + halfThickness;
+    } else {
+      shapeMin[axis] = Math.min(from[axis], to[axis]) - radius[axis];
+      shapeMax[axis] = Math.max(from[axis], to[axis]) + radius[axis];
+    }
+  }
+  const min: Vector3 = [Infinity, Infinity, Infinity];
+  const max: Vector3 = [-Infinity, -Infinity, -Infinity];
+  for (let corner = 0; corner < 8; corner++) {
+    const voxel = applyAffineMap(shapeToVoxel, [
+      corner & 1 ? shapeMax[0] : shapeMin[0],
+      corner & 2 ? shapeMax[1] : shapeMin[1],
+      corner & 4 ? shapeMax[2] : shapeMin[2],
+    ]);
+    for (let axis = 0; axis < 3; axis++) {
+      min[axis] = Math.min(min[axis], Math.floor(voxel[axis]));
+      max[axis] = Math.max(max[axis], Math.ceil(voxel[axis]) + 1);
+    }
+  }
+  const box = clipBox({ min, max }, tx.getEditableBoundingBox(ctx.sourceMagIndex));
+  if (box == null) return;
+
+  // Stepping one voxel along x moves the mapped point by the first column.
+  const step: Vector3 = [linear[0], linear[3], linear[6]];
+  const point: Vector3 = [0, 0, 0];
+  forEachBucketRow(box, ctx, tx, (writer, address, rowY, rowZ, xStart, xEnd) => {
+    const rowBase = rowBaseIndex(address, rowY, rowZ);
+    const rowStart = applyAffineMap(voxelToShapeSpace, [0.5, rowY + 0.5, rowZ + 0.5]);
+    emitSpansAlongRow(writer, rowBase, address, xStart, xEnd, ctx, (x) => {
+      point[0] = rowStart[0] + x * step[0];
+      point[1] = rowStart[1] + x * step[1];
+      point[2] = rowStart[2] + x * step[2];
+      if (planeAxis != null) {
+        // Half-open, so that a voxel that only touches the plane with a face
+        // is painted on one side of it only. The epsilon keeps that decision
+        // stable against rounding errors of the transform.
+        const distanceToPlane = point[planeAxis] - from[planeAxis];
+        if (
+          distanceToPlane <= -halfThickness + PLANE_EPSILON ||
+          distanceToPlane > halfThickness + PLANE_EPSILON
+        ) {
+          return false;
+        }
+      }
+      return isInsideCapsule(point, from, to, radius, planeAxis);
+    });
+  });
+}
+
+const PLANE_EPSILON = 1e-6;
+
+function applyAffineMap(map: AffineMap, point: Vector3): Vector3 {
+  const { linear, offset } = map;
+  return [
+    linear[0] * point[0] + linear[1] * point[1] + linear[2] * point[2] + offset[0],
+    linear[3] * point[0] + linear[4] * point[1] + linear[5] * point[2] + offset[1],
+    linear[6] * point[0] + linear[7] * point[1] + linear[8] * point[2] + offset[2],
+  ];
+}
+
+function invertAffineMap(map: AffineMap): AffineMap {
+  const [a, b, c, d, e, f, g, h, i] = map.linear;
+  const determinant = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  if (determinant === 0) {
+    throw new Error("The brush transform is not invertible.");
+  }
+  const linear = [
+    (e * i - f * h) / determinant,
+    (c * h - b * i) / determinant,
+    (b * f - c * e) / determinant,
+    (f * g - d * i) / determinant,
+    (a * i - c * g) / determinant,
+    (c * d - a * f) / determinant,
+    (d * h - e * g) / determinant,
+    (b * g - a * h) / determinant,
+    (a * e - b * d) / determinant,
+  ] as const;
+  const inverseWithoutOffset: AffineMap = { linear, offset: [0, 0, 0] };
+  const [x, y, z] = applyAffineMap(inverseWithoutOffset, map.offset);
+  return { linear, offset: [-x, -y, -z] };
 }
 
 function rasterizeBox(min: Vector3, max: Vector3, ctx: EditContext, tx: VolumeTransaction): void {

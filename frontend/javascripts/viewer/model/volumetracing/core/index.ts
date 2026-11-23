@@ -59,6 +59,7 @@ export {
   voxelOffsetOf,
 } from "./volume_annotation_types";
 export type {
+  AffineMap,
   AnalyticShape,
   DataDependentShape,
   EditIntent,

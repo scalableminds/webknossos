@@ -908,6 +908,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
             metadata: [{ key: "k", stringValue: "v" }],
             smallThumbnailDataBase64: null,
             largeThumbnailDataBase64: null,
+            thumbnailId: null,
           }),
         ],
         1,
@@ -927,6 +928,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           metadata: [{ key: "k", stringValue: "v" }],
           smallThumbnailDataBase64: null,
           largeThumbnailDataBase64: null,
+          thumbnailId: null,
         },
       ]);
       expect(Store.getState().save.queue).toEqual([]);
@@ -958,6 +960,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
         ],
         smallThumbnailDataBase64: null,
         largeThumbnailDataBase64: null,
+        thumbnailId: null,
       };
 
       Store.dispatch(startForwardingUpdateActionsAction());
@@ -1007,6 +1010,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
         metadata: [],
         smallThumbnailDataBase64: null,
         largeThumbnailDataBase64: null,
+        thumbnailId: null,
       };
 
       Store.dispatch(startForwardingUpdateActionsAction());

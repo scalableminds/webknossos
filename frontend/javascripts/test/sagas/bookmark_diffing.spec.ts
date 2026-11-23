@@ -23,6 +23,7 @@ const savedBookmark: APIAnnotationBookmark = {
   metadata: [],
   smallThumbnailDataBase64: null,
   largeThumbnailDataBase64: null,
+  thumbnailId: "saved-thumbnail",
 };
 
 const unsavedThumbnail = {
@@ -30,6 +31,7 @@ const unsavedThumbnail = {
   largeThumbnailDataBase64: "large",
   thumbnailVersion: null,
   thumbnailViewport: null,
+  thumbnailId: "captured-thumbnail",
 };
 
 const diff = (prev: APIAnnotationBookmark[], next: APIAnnotationBookmark[]) =>
@@ -111,8 +113,17 @@ describe("Bookmark diffing", () => {
     expect(diff([unsaved], [{ ...unsaved, thumbnailVersion: 4 }])).toEqual([]);
   });
 
+  it("identifies thumbnails by their id, not by their image data", () => {
+    const captured = { ...savedBookmark, ...unsavedThumbnail };
+    const recapturedWithSameImage = { ...captured, thumbnailId: "recaptured-thumbnail" };
+    expect(diff([captured], [recapturedWithSameImage]).map((action) => action.name)).toEqual([
+      "updateBookmarkThumbnail",
+    ]);
+    expect(diff([captured], [{ ...captured, largeThumbnailDataBase64: "other" }])).toEqual([]);
+  });
+
   it("keeps the previous thumbnail if capturing a new one failed", () => {
-    const withoutThumbnail = { ...savedBookmark, thumbnailVersion: null };
+    const withoutThumbnail = { ...savedBookmark, thumbnailVersion: null, thumbnailId: null };
     expect(diff([savedBookmark], [withoutThumbnail])).toEqual([]);
   });
 });

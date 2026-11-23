@@ -272,7 +272,11 @@ export const deleteBookmarkAction = (bookmarkId: number) =>
 
 export type BookmarkThumbnail = Pick<
   APIAnnotationBookmark,
-  "smallThumbnailDataBase64" | "largeThumbnailDataBase64" | "thumbnailVersion" | "thumbnailViewport"
+  | "smallThumbnailDataBase64"
+  | "largeThumbnailDataBase64"
+  | "thumbnailVersion"
+  | "thumbnailViewport"
+  | "thumbnailId"
 >;
 
 // A newly captured thumbnail has no thumbnailVersion until it was saved.

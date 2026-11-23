@@ -9,6 +9,7 @@ import SkeletonTracingProto from "SkeletonTracing.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'VolumeTracing.proto' or its co... Remove this comment to see the full error message
 import VolumeTracingProto from "VolumeTracing.proto";
 import { toBigInt } from "libs/bigint_helpers";
+import { getUid } from "libs/uid_generator";
 import { point3ToVector3 } from "libs/utils";
 import Long from "long";
 import { configure, Root, util } from "protobufjs/light";
@@ -211,5 +212,6 @@ export function parseProtoAnnotationBookmarks(
     // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.
     smallThumbnailDataBase64: null,
     largeThumbnailDataBase64: null,
+    thumbnailId: bookmark.thumbnailVersion != null ? getUid() : null,
   }));
 }

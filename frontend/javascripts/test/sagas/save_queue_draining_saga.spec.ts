@@ -426,6 +426,7 @@ describe("Save Saga", () => {
       metadata: [],
       smallThumbnailDataBase64: null,
       largeThumbnailDataBase64: null,
+      thumbnailId: null,
     };
     const saveQueue = createSaveQueueFromUpdateActions(
       [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId), addBookmark(bookmark)]],
@@ -458,6 +459,7 @@ describe("Save Saga", () => {
       metadata: [],
       smallThumbnailDataBase64: "c21hbGw=",
       largeThumbnailDataBase64: "bGFyZ2U=",
+      thumbnailId: "captured-thumbnail",
     };
     const saveQueue = createSaveQueueFromUpdateActions(
       [

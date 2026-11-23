@@ -10,15 +10,6 @@ import {
   updateMetadataOfBookmark,
 } from "viewer/model/sagas/volume/update_actions";
 
-// Identifies the thumbnail of a bookmark. The local image data (if any) is kept when the
-// thumbnail is saved, so that setting the thumbnailVersion afterwards is not a change.
-function getThumbnailIdentity(bookmark: APIAnnotationBookmark): string | null {
-  return (
-    bookmark.largeThumbnailDataBase64 ??
-    (bookmark.thumbnailVersion != null ? `v${bookmark.thumbnailVersion}` : null)
-  );
-}
-
 export function* diffBookmarks(
   prevBookmarks: APIAnnotationBookmark[],
   bookmarks: APIAnnotationBookmark[],
@@ -62,9 +53,8 @@ export function* diffBookmarks(
     if (prevBookmark.state !== bookmark.state) {
       yield updateBookmarkState(bookmark.id, bookmark.state);
     }
-    const thumbnailIdentity = getThumbnailIdentity(bookmark);
     // A missing thumbnail (e.g. if capturing it failed) does not replace the previous one.
-    if (thumbnailIdentity != null && thumbnailIdentity !== getThumbnailIdentity(prevBookmark)) {
+    if (bookmark.thumbnailId != null && bookmark.thumbnailId !== prevBookmark.thumbnailId) {
       yield updateBookmarkThumbnail(bookmark);
     }
   }

@@ -726,9 +726,13 @@ export type APIAnnotationBookmark = {
   thumbnailViewport: APIViewport | null;
   metadata: MetadataEntryProto[];
   // Only set for thumbnails captured in this session. Otherwise, the thumbnail is loaded from
-  // the server. They are kept after saving, as they identify the thumbnail when diffing.
+  // the server. They are kept after saving, so that the saved thumbnail can be recognized when
+  // its thumbnailVersion is set (see applyBookmarkVersionAction).
   smallThumbnailDataBase64: string | null;
   largeThumbnailDataBase64: string | null;
+  // Frontend-only. A new random id for every thumbnail that is captured, loaded or incorporated,
+  // which the diffing uses to detect a changed thumbnail. null if there is none.
+  thumbnailId: string | null;
 };
 
 export type APITracingStoreAnnotation = {

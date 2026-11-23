@@ -1,5 +1,6 @@
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
+import { getUid } from "libs/uid_generator";
 import type { Dispatch } from "redux";
 import type { APIAnnotationBookmark } from "types/api_types";
 import { urlStateToBookmarkState } from "viewer/controller/bookmark_state";
@@ -21,6 +22,7 @@ export const toUnsavedBookmarkThumbnail = (thumbnails: BookmarkThumbnails): Book
   largeThumbnailDataBase64: thumbnails.largeDataBase64,
   thumbnailVersion: null,
   thumbnailViewport: thumbnails.viewport,
+  thumbnailId: getUid(),
 });
 
 export async function captureThumbnailsSafely(): Promise<BookmarkThumbnails | null> {
@@ -60,6 +62,7 @@ export async function addBookmarkForCurrentView(dispatch: Dispatch): Promise<num
           largeThumbnailDataBase64: null,
           thumbnailVersion: null,
           thumbnailViewport: null,
+          thumbnailId: null,
         }),
   };
   // The bookmark diffing (see bookmark_diffing.ts) adds it to the save queue.

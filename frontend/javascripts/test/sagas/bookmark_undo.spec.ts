@@ -35,6 +35,7 @@ const bookmark: APIAnnotationBookmark = {
   metadata: [],
   smallThumbnailDataBase64: "small",
   largeThumbnailDataBase64: "large",
+  thumbnailId: "captured-thumbnail",
 };
 
 const getBookmarkUpdateActions = (context: WebknossosTestContext) =>

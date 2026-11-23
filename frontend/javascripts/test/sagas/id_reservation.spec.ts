@@ -47,6 +47,7 @@ function createBookmark(id: number): APIAnnotationBookmark {
     },
     smallThumbnailDataBase64: null,
     largeThumbnailDataBase64: null,
+    thumbnailId: null,
   };
 }
 

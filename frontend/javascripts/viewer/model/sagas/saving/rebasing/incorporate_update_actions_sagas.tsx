@@ -1,5 +1,6 @@
 import { Button } from "antd";
 import Toast from "libs/toast";
+import { getUid } from "libs/uid_generator";
 import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch, APIViewport } from "types/api_types";
@@ -83,11 +84,15 @@ function getIncorporatedBookmarkThumbnail(value: {
   thumbnailVersion?: number | null;
   thumbnailViewport?: APIViewport | null;
 }): BookmarkThumbnail {
+  const largeThumbnailDataBase64 = value.largeThumbnailDataBase64 ?? null;
+  const thumbnailVersion = value.thumbnailVersion ?? null;
   return {
     smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
-    largeThumbnailDataBase64: value.largeThumbnailDataBase64 ?? null,
-    thumbnailVersion: value.thumbnailVersion ?? null,
+    largeThumbnailDataBase64,
+    thumbnailVersion,
     thumbnailViewport: value.thumbnailViewport ?? null,
+    // The diffing baseline is reset after incorporating, so a new id does not cause a change.
+    thumbnailId: largeThumbnailDataBase64 != null || thumbnailVersion != null ? getUid() : null,
   };
 }
 

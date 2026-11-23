@@ -11,8 +11,8 @@ import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import type { WebknossosState } from "viewer/store";
 import { getOrCreateOperationContext } from "../operation_context_saga";
 import { waitFor } from "../saga_helpers";
-import type { RebasingFailure } from "./rebasing/applying_update_artifacts";
 import { performRebasingIfNecessary } from "./rebasing/rebasing_sagas";
+import type { RebasingFailure } from "./rebasing/rebasing_types";
 
 /*
  * This module polls the server for newer versions of the current annotation and triggers a rebase

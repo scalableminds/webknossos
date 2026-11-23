@@ -72,8 +72,9 @@ import { useTreeContextMenu } from "../shared/use_tree_context_menu";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   addBookmarkForCurrentView,
-  captureThumbnailsSafely,
+  captureThumbnailsOrNotify,
   getCurrentBookmarkState,
+  NO_BOOKMARK_THUMBNAIL,
   toUnsavedBookmarkThumbnail,
 } from "./add_bookmark";
 import { DEFAULT_BOOKMARK_NAME, getThumbnailViewportName } from "./bookmark_names";
@@ -531,13 +532,15 @@ export default function BookmarksTab() {
   const handleUpdateBookmarkToCurrentView = useCallback(
     async (bookmarkId: number) => {
       const state = getCurrentBookmarkState();
-      const thumbnails = await captureThumbnailsSafely();
+      const thumbnails = await captureThumbnailsOrNotify("Could not update the bookmark.");
+      if (thumbnails === undefined) return;
       await waitUntilRebaseFinished();
       dispatch(
         setBookmarkStateAction(
           bookmarkId,
           state,
-          thumbnails != null ? toUnsavedBookmarkThumbnail(thumbnails) : null,
+          // Without a rendered viewport, the old thumbnail is removed, as it shows the old view.
+          thumbnails != null ? toUnsavedBookmarkThumbnail(thumbnails) : NO_BOOKMARK_THUMBNAIL,
         ),
       );
       // The bookmark matches the current view now.

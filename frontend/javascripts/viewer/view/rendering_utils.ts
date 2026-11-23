@@ -249,19 +249,27 @@ const SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE = 96;
 // Set explicitly, as the default differs between browsers.
 const BOOKMARK_THUMBNAIL_QUALITY = 0.9;
 
-async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob | null> {
+async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob> {
   const bitmap = await createImageBitmap(blob);
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(bitmap.width * scale));
   canvas.height = Math.max(1, Math.round(bitmap.height * scale));
   const context = canvas.getContext("2d");
-  if (context == null) return null;
+  if (context == null) {
+    bitmap.close();
+    throw new Error("Could not create a 2D canvas context.");
+  }
   context.imageSmoothingQuality = "high";
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  return new Promise((resolve) =>
-    canvas.toBlob(resolve, BOOKMARK_THUMBNAIL_MIME_TYPE, BOOKMARK_THUMBNAIL_QUALITY),
+  return new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (smallBlob) =>
+        smallBlob != null ? resolve(smallBlob) : reject(new Error("Could not encode the image.")),
+      BOOKMARK_THUMBNAIL_MIME_TYPE,
+      BOOKMARK_THUMBNAIL_QUALITY,
+    ),
   );
 }
 
@@ -294,6 +302,7 @@ export function getRenderedBookmarkThumbnailViewports(): Viewport[] {
 
 // Renders the first visible viewport (by priority) as base64-encoded JPEG images, once in
 // full size and once downsampled. Returns null if no viewport is visible in the current layout.
+// Throws if capturing fails.
 export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | null> {
   const viewport = getRenderedBookmarkThumbnailViewports()[0];
   if (viewport == null) return null;
@@ -302,7 +311,7 @@ export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | 
 
 export async function captureBookmarkThumbnailsOfViewport(
   viewport: Viewport,
-): Promise<BookmarkThumbnails | null> {
+): Promise<BookmarkThumbnails> {
   const { width, height } = getInputCatcherRect(Store.getState(), viewport);
   // A clear color of 0xffffff is mapped to black or white depending on the theme (see getBackgroundColor).
   const buffer = renderToTexture(viewport, undefined, undefined, false, 0xffffff, true);
@@ -316,9 +325,8 @@ export async function captureBookmarkThumbnailsOfViewport(
     BOOKMARK_THUMBNAIL_MIME_TYPE,
     BOOKMARK_THUMBNAIL_QUALITY,
   );
-  if (blob == null) return null;
+  if (blob == null) throw new Error("Could not encode the bookmark thumbnail.");
   const smallBlob = await downsampleImage(blob, SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE);
-  if (smallBlob == null) return null;
   return {
     largeDataBase64: await blobToBase64(blob),
     smallDataBase64: await blobToBase64(smallBlob),

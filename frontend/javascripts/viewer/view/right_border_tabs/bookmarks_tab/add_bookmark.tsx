@@ -1,4 +1,4 @@
-import { handleGenericError } from "libs/error_handling";
+import ErrorHandling, { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { getUid } from "libs/uid_generator";
 import type { Dispatch } from "redux";
@@ -25,12 +25,27 @@ export const toUnsavedBookmarkThumbnail = (thumbnails: BookmarkThumbnails): Book
   thumbnailId: getUid(),
 });
 
-export async function captureThumbnailsSafely(): Promise<BookmarkThumbnails | null> {
+// Capturing is not expected to fail, so a failure aborts the operation instead of leaving
+// the bookmark without a (current) thumbnail. Returns undefined in that case and null if no
+// viewport is rendered (the bookmark has no thumbnail then).
+// For when no viewport is rendered.
+export const NO_BOOKMARK_THUMBNAIL: BookmarkThumbnail = {
+  smallThumbnailDataBase64: null,
+  largeThumbnailDataBase64: null,
+  thumbnailSavedAtVersion: null,
+  thumbnailViewport: null,
+  thumbnailId: null,
+};
+
+export async function captureThumbnailsOrNotify(
+  failureMessage: string,
+): Promise<BookmarkThumbnails | null | undefined> {
   try {
     return await captureBookmarkThumbnails();
   } catch (error) {
-    console.error("Could not capture bookmark thumbnails.", error);
-    return null;
+    ErrorHandling.notify(error as Error);
+    handleGenericError(error as Error, `${failureMessage} Please reload the page and try again.`);
+    return undefined;
   }
 }
 
@@ -38,7 +53,8 @@ export async function captureThumbnailsSafely(): Promise<BookmarkThumbnails | nu
 // Returns the id of the new bookmark, or null if it could not be created.
 export async function addBookmarkForCurrentView(dispatch: Dispatch): Promise<number | null> {
   const state = getCurrentBookmarkState();
-  const thumbnails = await captureThumbnailsSafely();
+  const thumbnails = await captureThumbnailsOrNotify("Could not create the bookmark.");
+  if (thumbnails === undefined) return null;
   let id: number;
   try {
     id = await dispatchGetNewIdAsync(dispatch, ANNOTATION_SCOPED_TRACING_ID, "Bookmark");
@@ -58,15 +74,7 @@ export async function addBookmarkForCurrentView(dispatch: Dispatch): Promise<num
     state,
     createdAtVersion: null,
     metadata: [],
-    ...(thumbnails != null
-      ? toUnsavedBookmarkThumbnail(thumbnails)
-      : {
-          smallThumbnailDataBase64: null,
-          largeThumbnailDataBase64: null,
-          thumbnailSavedAtVersion: null,
-          thumbnailViewport: null,
-          thumbnailId: null,
-        }),
+    ...(thumbnails != null ? toUnsavedBookmarkThumbnail(thumbnails) : NO_BOOKMARK_THUMBNAIL),
   };
   // The bookmark diffing (see bookmark_diffing.ts) adds it to the save queue.
   dispatch(addBookmarkAction(bookmark));

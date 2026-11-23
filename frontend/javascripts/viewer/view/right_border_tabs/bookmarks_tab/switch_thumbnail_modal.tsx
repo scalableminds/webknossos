@@ -1,4 +1,5 @@
-import { Card, Empty, Flex, Modal, Spin } from "antd";
+import { Alert, Card, Empty, Flex, Modal, Spin } from "antd";
+import ErrorHandling from "libs/error_handling";
 import { useEffect, useState } from "react";
 import {
   BOOKMARK_THUMBNAIL_MIME_TYPE,
@@ -27,8 +28,7 @@ function getViewportName(viewport: Viewport): string {
 async function captureAllViewports(): Promise<ViewportThumbnails[]> {
   const result: ViewportThumbnails[] = [];
   for (const viewport of getRenderedBookmarkThumbnailViewports()) {
-    const thumbnails = await captureBookmarkThumbnailsOfViewport(viewport);
-    if (thumbnails != null) result.push({ viewport, thumbnails });
+    result.push({ viewport, thumbnails: await captureBookmarkThumbnailsOfViewport(viewport) });
   }
   return result;
 }
@@ -45,6 +45,7 @@ export function SwitchThumbnailModal({
   onClose: () => void;
 }) {
   const [options, setOptions] = useState<ViewportThumbnails[] | null>(null);
+  const [hasFailed, setHasFailed] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -53,8 +54,9 @@ export function SwitchThumbnailModal({
         if (!isCancelled) setOptions(captured);
       })
       .catch((error) => {
+        ErrorHandling.notify(error as Error);
         console.error("Could not capture bookmark thumbnails.", error);
-        if (!isCancelled) setOptions([]);
+        if (!isCancelled) setHasFailed(true);
       });
     return () => {
       isCancelled = true;
@@ -71,7 +73,13 @@ export function SwitchThumbnailModal({
       width="fit-content"
       style={{ maxWidth: "calc(100vw - 32px)" }}
     >
-      {options == null ? (
+      {hasFailed ? (
+        <Alert
+          type="error"
+          showIcon
+          title="Could not capture the thumbnails. Please reload the page and try again."
+        />
+      ) : options == null ? (
         <Flex justify="center">
           <Spin />
         </Flex>

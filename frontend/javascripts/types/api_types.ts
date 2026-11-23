@@ -709,8 +709,8 @@ export type APIAnnotationBookmarkState = {
   showSkeletons?: boolean | null;
   layers: APIAnnotationBookmarkLayerState[];
 };
-// The viewport a bookmark thumbnail shows (ThumbnailViewportProto on the server).
-export type APIBookmarkThumbnailViewport = "XY" | "YZ" | "XZ" | "TD" | "FLIGHT";
+// A viewport of the viewer, e.g. the one a bookmark thumbnail shows (ThumbnailViewportProto on the server).
+export type APIViewport = "XY" | "YZ" | "XZ" | "TD" | "FLIGHT";
 export type APIAnnotationBookmark = {
   id: number;
   created: number;
@@ -723,7 +723,7 @@ export type APIAnnotationBookmark = {
   // The annotation version that stored the current thumbnails. null until they were saved.
   thumbnailVersion: number | null;
   // The viewport the current thumbnails show. null if there are none or it is unknown.
-  thumbnailViewport: APIBookmarkThumbnailViewport | null;
+  thumbnailViewport: APIViewport | null;
   metadata: MetadataEntryProto[];
   // Only set for thumbnails captured in this session. Otherwise, the thumbnail is loaded from
   // the server. They are kept after saving, as they identify the thumbnail when diffing.

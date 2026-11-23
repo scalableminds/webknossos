@@ -238,8 +238,8 @@ const _getDefaultLayouts = () => {
     [
       borderTabs.DatasetInfoTabView,
       borderTabs.BoundingBoxTab,
-      borderTabs.BookmarksTab,
       borderTabs.SegmentsView,
+      borderTabs.BookmarksTab,
       borderTabs.ConnectomeView,
     ],
     rightBorderWidth,

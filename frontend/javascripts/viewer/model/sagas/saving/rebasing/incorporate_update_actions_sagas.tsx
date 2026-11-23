@@ -2,7 +2,7 @@ import { Button } from "antd";
 import Toast from "libs/toast";
 import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
-import type { APIBookmarkThumbnailViewport, APIUpdateActionBatch } from "types/api_types";
+import type { APIUpdateActionBatch, APIViewport } from "types/api_types";
 import type { LayerNameAsKey } from "types/type_utils";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -74,6 +74,23 @@ function* lockAnnotationAndShowReloadToast(toastKey: string, message: string) {
   });
 }
 
+// Stored update actions don't carry thumbnail data, only their thumbnailVersion (unset if the
+// bookmark has no thumbnails). Unsaved actions of the user still carry the local thumbnails
+// (or reference saved ones).
+function getIncorporatedBookmarkThumbnail(value: {
+  smallThumbnailDataBase64?: string | null;
+  largeThumbnailDataBase64?: string | null;
+  thumbnailVersion?: number | null;
+  thumbnailViewport?: APIViewport | null;
+}): BookmarkThumbnail {
+  return {
+    smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
+    largeThumbnailDataBase64: value.largeThumbnailDataBase64 ?? null,
+    thumbnailVersion: value.thumbnailVersion ?? null,
+    thumbnailViewport: value.thumbnailViewport ?? null,
+  };
+}
+
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
   areUnsavedChangesOfUser: boolean,
@@ -114,28 +131,6 @@ export function* tryToIncorporateActions(
   }
 
   for (const actionBatch of newerActions) {
-    // Stored update actions don't carry thumbnail data, only their thumbnailVersion (unset if the
-    // bookmark has no thumbnails). Unsaved actions of the user still carry the local thumbnails
-    // (or reference saved ones).
-    const getIncorporatedBookmarkThumbnail = (value: {
-      smallThumbnailDataBase64?: string | null;
-      largeThumbnailDataBase64?: string | null;
-      thumbnailVersion?: number | null;
-      thumbnailViewport?: APIBookmarkThumbnailViewport | null;
-    }): BookmarkThumbnail =>
-      areUnsavedChangesOfUser
-        ? {
-            smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
-            largeThumbnailDataBase64: value.largeThumbnailDataBase64 ?? null,
-            thumbnailVersion: value.thumbnailVersion ?? null,
-            thumbnailViewport: value.thumbnailViewport ?? null,
-          }
-        : {
-            smallThumbnailDataBase64: null,
-            largeThumbnailDataBase64: null,
-            thumbnailVersion: value.thumbnailVersion ?? null,
-            thumbnailViewport: value.thumbnailViewport ?? null,
-          };
     // Per layer: maps each split segment id (segmentId1/segmentId2 of splitAgglomerate actions)
     // to the agglomerate id it belonged to before the split.
     const splitSegmentIdToOldAgglomeratePerLayer: Map<string, Map<bigint, bigint>> = new Map();

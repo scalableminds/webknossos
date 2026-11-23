@@ -10,7 +10,7 @@ import {
   type WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
-import type { APIBookmarkThumbnailViewport } from "types/api_types";
+import type { APIViewport } from "types/api_types";
 import constants, {
   BOOKMARK_THUMBNAIL_MIME_TYPE,
   FLIGHT_CAM_DISTANCE,
@@ -20,6 +20,7 @@ import constants, {
   OrthoViews,
   OrthoViewValues,
   TDViewPerspectiveCameraName,
+  type Viewport,
 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
@@ -226,6 +227,7 @@ export async function captureScreenshots(
   return results;
 }
 
+// In plane mode, the thumbnail shows the first of these viewports that is visible in the layout.
 const BOOKMARK_THUMBNAIL_PRIORITY: OrthoView[] = [
   OrthoViews.PLANE_XY,
   OrthoViews.PLANE_YZ,
@@ -266,15 +268,10 @@ async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob | null
 export type BookmarkThumbnails = {
   largeDataBase64: string;
   smallDataBase64: string;
-  viewport: APIBookmarkThumbnailViewport;
+  viewport: APIViewport;
 };
 
-export type BookmarkThumbnailViewport = OrthoView | typeof FlightViewport;
-
-const API_BOOKMARK_THUMBNAIL_VIEWPORTS: Record<
-  BookmarkThumbnailViewport,
-  APIBookmarkThumbnailViewport
-> = {
+const API_BOOKMARK_THUMBNAIL_VIEWPORTS: Record<Viewport, APIViewport> = {
   PLANE_XY: "XY",
   PLANE_YZ: "YZ",
   PLANE_XZ: "XZ",
@@ -283,9 +280,9 @@ const API_BOOKMARK_THUMBNAIL_VIEWPORTS: Record<
 };
 
 // The viewports that are visible in the current layout, by thumbnail priority.
-export function getRenderedBookmarkThumbnailViewports(): BookmarkThumbnailViewport[] {
+export function getRenderedBookmarkThumbnailViewports(): Viewport[] {
   const state = Store.getState();
-  const candidates: BookmarkThumbnailViewport[] =
+  const candidates: Viewport[] =
     state.temporaryConfiguration.viewMode === constants.MODE_PLANE_TRACING
       ? BOOKMARK_THUMBNAIL_PRIORITY
       : [FlightViewport];
@@ -304,10 +301,10 @@ export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | 
 }
 
 export async function captureBookmarkThumbnailsOfViewport(
-  viewport: BookmarkThumbnailViewport,
+  viewport: Viewport,
 ): Promise<BookmarkThumbnails | null> {
   const { width, height } = getInputCatcherRect(Store.getState(), viewport);
-  // A clear color of 0xffffff is mapped to the theme's background color, matching the on-screen look.
+  // A clear color of 0xffffff is mapped to black or white depending on the theme (see getBackgroundColor).
   const buffer = renderToTexture(viewport, undefined, undefined, false, 0xffffff, true);
   const blob = await convertBufferToImage(
     buffer,

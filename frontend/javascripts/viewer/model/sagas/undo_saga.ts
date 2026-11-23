@@ -467,8 +467,9 @@ function* manageUndoStates(): Saga<never> {
 
         previousAction = userBoundingBoxAction;
       } else if (bookmarkAction) {
-        // Bookmark changes of other users (or replayed ones of this user) are incorporated with the
-        // same actions, but must not be undone.
+        // Bookmark changes replayed during rebasing (e.g. of this user) are incorporated with the
+        // same actions, but must not be undone. Undo is not available in live collaboration, so
+        // the undo stack does not need to account for changes of other users.
         const isRebasingOrForwarding = yield* select(
           (state) => state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
         );

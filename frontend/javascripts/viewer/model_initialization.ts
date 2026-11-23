@@ -27,7 +27,6 @@ import merge from "lodash-es/merge";
 import messages from "messages";
 import type {
   APIAnnotation,
-  APIAnnotationBookmark,
   APIAnnotationUserState,
   APICompoundType,
   APIDataLayer,
@@ -149,12 +148,22 @@ export async function initialize(
         annotationId,
         initialMaybeCompoundType,
       );
-      // The tracing store keeps the merged bookmarks of the compound annotation.
-      const bookmarks = await getAnnotationBookmarks(
+      // The tracing store keeps the merged bookmarks of the compound annotation. The compound view
+      // is read-only, so it is still shown if they cannot be loaded.
+      const bookmarksResult = await getAnnotationBookmarks(
         compoundAnnotation.tracingStore.url,
         compoundAnnotation.id,
       );
-      annotation = { ...compoundAnnotation, bookmarks };
+      if (!bookmarksResult.ok) {
+        console.warn(
+          "Could not load the bookmarks of the compound annotation.",
+          bookmarksResult.error,
+        );
+      }
+      annotation = {
+        ...compoundAnnotation,
+        bookmarks: bookmarksResult.ok ? bookmarksResult.value : [],
+      };
     } else {
       const unversionedAnnotationResult = await getUnversionedAnnotationInformation(annotationId);
       if (!unversionedAnnotationResult.ok) {
@@ -170,11 +179,15 @@ export async function initialize(
       );
       // The bookmarks are fetched at the version of the proto. Otherwise, another user could save
       // bookmark changes in between, which would then be missing or be applied twice.
-      const bookmarks: APIAnnotationBookmark[] = await getAnnotationBookmarks(
+      const bookmarksResult = await getAnnotationBookmarks(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,
         annotationProto.version,
       );
+      if (!bookmarksResult.ok) {
+        throw bookmarksResult.error.cause;
+      }
+      const bookmarks = bookmarksResult.value;
       userState =
         annotationProto != null
           ? getUserStateForTracing(annotationProto, Store.getState().activeUser, annotation?.owner)

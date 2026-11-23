@@ -362,14 +362,6 @@ export function point3ToVector3({ x, y, z }: Point3): Vector3 {
   return [x, y, z];
 }
 
-function _vector3ToPoint3([x, y, z]: Vector3): Point3 {
-  return {
-    x,
-    y,
-    z,
-  };
-}
-
 export function isUserTeamManager(user: APIUser): boolean {
   return user.teams.findIndex((team) => team.isTeamManager) >= 0;
 }

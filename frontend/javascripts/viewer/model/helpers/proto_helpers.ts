@@ -9,6 +9,7 @@ import SkeletonTracingProto from "SkeletonTracing.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'VolumeTracing.proto' or its co... Remove this comment to see the full error message
 import VolumeTracingProto from "VolumeTracing.proto";
 import { toBigInt } from "libs/bigint_helpers";
+import { point3ToVector3 } from "libs/utils";
 import Long from "long";
 import { configure, Root, util } from "protobufjs/light";
 import type {
@@ -17,7 +18,6 @@ import type {
   APITracingStoreAnnotation,
   ServerTracing,
 } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
 import { sanitizeMetadata } from "viewer/model/helpers/metadata_helpers";
 
 // protobufjs resolves its optional Long support via a try/catch require("long") call (see
@@ -134,31 +134,28 @@ export function parseProtoListOfLong(listArrayBuffer: ArrayBuffer): Array<bigint
   return items.map(toBigInt);
 }
 
-type ProtoVec3 = { x: number; y: number; z: number };
-const vec3FromProto = ({ x, y, z }: ProtoVec3): Vector3 => [x, y, z];
-
 function bookmarkStateFromProto(state: any): APIAnnotationBookmarkState {
   return {
     ...state,
-    position: vec3FromProto(state.position),
-    rotation: vec3FromProto(state.rotation),
+    position: point3ToVector3(state.position),
+    rotation: point3ToVector3(state.rotation),
     tdCamera:
       state.tdCamera != null
         ? {
             ...state.tdCamera,
-            position: vec3FromProto(state.tdCamera.position),
-            up: vec3FromProto(state.tdCamera.up),
+            position: point3ToVector3(state.tdCamera.position),
+            up: point3ToVector3(state.tdCamera.up),
           }
         : null,
     layers: state.layers.map((layer: any) => ({
       ...layer,
       intensityRange:
         layer.intensityRange != null ? [layer.intensityRange.x, layer.intensityRange.y] : null,
-      color: layer.color != null ? vec3FromProto(layer.color) : null,
+      color: layer.color != null ? point3ToVector3(layer.color) : null,
       meshes: layer.meshes.map((mesh: any) => ({
         ...mesh,
         segmentId: toBigInt(mesh.segmentId),
-        seedPosition: vec3FromProto(mesh.seedPosition),
+        seedPosition: point3ToVector3(mesh.seedPosition),
       })),
     })),
   };

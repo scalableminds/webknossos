@@ -5,22 +5,22 @@ import {
   FlightViewport,
   FlightViewsToName,
   OrthoViewsToName,
+  type Viewport,
 } from "viewer/constants";
 import {
   type BookmarkThumbnails,
-  type BookmarkThumbnailViewport,
   captureBookmarkThumbnailsOfViewport,
   getRenderedBookmarkThumbnailViewports,
 } from "viewer/view/rendering_utils";
 
 type ViewportThumbnails = {
-  viewport: BookmarkThumbnailViewport;
+  viewport: Viewport;
   thumbnails: BookmarkThumbnails;
 };
 
 const PREVIEW_SIZE = 160;
 
-function getViewportName(viewport: BookmarkThumbnailViewport): string {
+function getViewportName(viewport: Viewport): string {
   return viewport === FlightViewport ? FlightViewsToName[viewport] : OrthoViewsToName[viewport];
 }
 

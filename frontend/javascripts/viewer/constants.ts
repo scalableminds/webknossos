@@ -183,7 +183,7 @@ export const BorderTabs: Record<string, BorderTabType> = {
   BookmarksTab: {
     id: "BookmarksTab",
     name: "Bookmarks",
-    description: "Saved viewpoints",
+    description: "Bookmarks - Save views of the annotation and jump back to them",
   },
   LayerSettingsTab: {
     id: "LayerSettingsTab",

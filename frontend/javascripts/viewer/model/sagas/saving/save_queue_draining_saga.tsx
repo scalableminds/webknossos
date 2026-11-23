@@ -285,25 +285,7 @@ export function* sendSaveRequestToServer(
       }
 
       yield* put(setVersionNumberAction(version + versionIncrement));
-      for (const batch of compactedSaveQueue) {
-        for (const action of batch.actions) {
-          if (action.name === "addBookmark") {
-            yield* put(setBookmarkCreatedAtVersionAction(action.value.id, batch.version));
-          }
-          if (
-            (action.name === "addBookmark" || action.name === "updateBookmarkThumbnail") &&
-            action.value.largeThumbnailDataBase64 != null
-          ) {
-            yield* put(
-              setBookmarkThumbnailVersionAction(
-                action.value.id,
-                batch.version,
-                action.value.largeThumbnailDataBase64,
-              ),
-            );
-          }
-        }
-      }
+      yield* setSavedBookmarkVersions(compactedSaveQueue);
       yield* put(setLastSaveTimestampAction());
       yield* put(shiftSaveQueueAction(saveQueue.length));
 
@@ -389,6 +371,29 @@ function allowAdditionalOperation(pendingId: OperationId, state: WebknossosState
   // The current save operation should not prohibit other operations that the user
   // initiates.
   return true;
+}
+
+// The individual actions are needed by the undo saga, so they are not batched.
+function* setSavedBookmarkVersions(saveQueue: Array<SaveQueueEntry>) {
+  for (const batch of saveQueue) {
+    for (const action of batch.actions) {
+      if (action.name === "addBookmark") {
+        yield* put(setBookmarkCreatedAtVersionAction(action.value.id, batch.version));
+      }
+      if (
+        (action.name === "addBookmark" || action.name === "updateBookmarkThumbnail") &&
+        action.value.largeThumbnailDataBase64 != null
+      ) {
+        yield* put(
+          setBookmarkThumbnailVersionAction(
+            action.value.id,
+            batch.version,
+            action.value.largeThumbnailDataBase64,
+          ),
+        );
+      }
+    }
+  }
 }
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {

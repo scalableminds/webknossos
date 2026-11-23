@@ -76,7 +76,7 @@ import {
   getCurrentBookmarkState,
   toUnsavedBookmarkThumbnail,
 } from "./add_bookmark";
-import { getDefaultBookmarkName, getThumbnailViewportName } from "./bookmark_names";
+import { DEFAULT_BOOKMARK_NAME, getThumbnailViewportName } from "./bookmark_names";
 import { exportBookmarksAsCSV } from "./export_bookmarks_csv";
 import { SwitchThumbnailModal } from "./switch_thumbnail_modal";
 
@@ -110,13 +110,12 @@ function useBookmarkThumbnailSrc(
     }
     let isCancelled = false;
     getBookmarkThumbnailUrl(tracingStoreUrl, annotationId, id, thumbnailVersion, size).then(
-      (url) => {
-        if (!isCancelled) setServerUrl(url);
-      },
-      (error) => {
-        // Thumbnails are optional, so the bookmark is shown without one.
-        console.warn(`Could not load the thumbnail of bookmark ${id}:`, error);
-        if (!isCancelled) setServerUrl(null);
+      (result) => {
+        if (!result.ok) {
+          // Thumbnails are optional, so the bookmark is shown without one.
+          console.warn(`Could not load the thumbnail of bookmark ${id}:`, result.error);
+        }
+        if (!isCancelled) setServerUrl(result.ok ? result.value : null);
       },
     );
     return () => {
@@ -344,7 +343,7 @@ function BookmarkDescriptionModal({
   onClose: () => void;
 }) {
   const dispatch = useDispatch();
-  const bookmarkName = bookmark.name ?? getDefaultBookmarkName(bookmark);
+  const bookmarkName = bookmark.name ?? DEFAULT_BOOKMARK_NAME;
   if (readOnly) {
     return (
       <Modal
@@ -419,7 +418,7 @@ function BookmarkDetails({ bookmark }: { bookmark: APIAnnotationBookmark }) {
           value={
             <InputWithUpdateOnBlur
               value={bookmark.name ?? ""}
-              placeholder={getDefaultBookmarkName(bookmark)}
+              placeholder={DEFAULT_BOOKMARK_NAME}
               onChange={(newName) => renameBookmark(bookmark, newName)}
               disabled={readOnly}
             />
@@ -628,7 +627,7 @@ export default function BookmarksTab() {
         <AdvancedSearchPopover
           data={bookmarks}
           onSelect={handleSelectBookmark}
-          searchKey={(bookmark) => bookmark.name ?? getDefaultBookmarkName(bookmark)}
+          searchKey={(bookmark) => bookmark.name ?? DEFAULT_BOOKMARK_NAME}
           provideShortcut
           targetId={BOOKMARKS_TAB_ID}
         >
@@ -763,9 +762,9 @@ export default function BookmarksTab() {
                       />
                       <div style={{ minWidth: 0, paddingTop: NAME_PADDING_TOP }}>
                         <InlineEditableName
-                          displayedName={bookmark.name ?? getDefaultBookmarkName(bookmark)}
+                          displayedName={bookmark.name ?? DEFAULT_BOOKMARK_NAME}
                           editableValue={bookmark.name ?? ""}
-                          placeholder={getDefaultBookmarkName(bookmark)}
+                          placeholder={DEFAULT_BOOKMARK_NAME}
                           isEditing={renamingBookmarkId === bookmark.id}
                           disableEditing={readOnly}
                           ellipsis={false}
@@ -795,9 +794,7 @@ export default function BookmarksTab() {
       )}
       {switchingThumbnailBookmark != null ? (
         <SwitchThumbnailModal
-          bookmarkName={
-            switchingThumbnailBookmark.name ?? getDefaultBookmarkName(switchingThumbnailBookmark)
-          }
+          bookmarkName={switchingThumbnailBookmark.name ?? DEFAULT_BOOKMARK_NAME}
           onSelect={(thumbnails) =>
             handleSwitchThumbnail(switchingThumbnailBookmark.id, thumbnails)
           }

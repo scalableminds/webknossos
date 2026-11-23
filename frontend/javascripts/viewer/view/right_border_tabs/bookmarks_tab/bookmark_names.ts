@@ -1,10 +1,9 @@
-import type { APIAnnotationBookmark, APIBookmarkThumbnailViewport } from "types/api_types";
+import type { APIViewport } from "types/api_types";
 
 // Shown for bookmarks without a name.
-export const getDefaultBookmarkName = (bookmark: APIAnnotationBookmark) =>
-  `Bookmark ${bookmark.id}`;
+export const DEFAULT_BOOKMARK_NAME = "Unnamed Bookmark";
 
-const THUMBNAIL_VIEWPORT_NAMES: Record<APIBookmarkThumbnailViewport, string> = {
+const THUMBNAIL_VIEWPORT_NAMES: Record<APIViewport, string> = {
   XY: "XY",
   YZ: "YZ",
   XZ: "XZ",
@@ -12,5 +11,5 @@ const THUMBNAIL_VIEWPORT_NAMES: Record<APIBookmarkThumbnailViewport, string> = {
   FLIGHT: "Flight",
 };
 
-export const getThumbnailViewportName = (viewport: APIBookmarkThumbnailViewport) =>
+export const getThumbnailViewportName = (viewport: APIViewport) =>
   THUMBNAIL_VIEWPORT_NAMES[viewport];

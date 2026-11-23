@@ -15,7 +15,7 @@
 //!   triangle soup with three vertices per triangle.
 //! - The neighbors are the faces of the cuboid that contain a voxel of the segment, see [Neighbors].
 
-mod triangle_table;
+pub(crate) mod triangle_table;
 
 use std::sync::Mutex;
 
@@ -77,7 +77,7 @@ impl<'a> Cuboid<'a> {
 
     /// Validates the arguments of a native call for a cuboid of `data_len` bytes. Returns the bytes per element
     /// and the dimensions.
-    fn validate(
+    pub(crate) fn validate(
         data_len: usize,
         bytes_per_element: i32,
         dimensions: &[i32],
@@ -136,7 +136,7 @@ fn blocks_containing(coordinate: usize) -> (usize, usize) {
 
 /// Writes `mask[i] = 1` if element `i` of `row` equals the low `T::SIZE` bytes of `segment_id`, else 0. Returns
 /// whether any element matched.
-fn mask_row<T: Element>(row: &[u8], segment_id: i64, mask: &mut [u8]) -> bool {
+pub(crate) fn mask_row<T: Element>(row: &[u8], segment_id: i64, mask: &mut [u8]) -> bool {
     let segment = T::read(&segment_id.to_le_bytes()[..T::SIZE]);
     let mut any = 0;
     for (out, element) in mask.iter_mut().zip(row.chunks_exact(T::SIZE)) {
@@ -248,7 +248,7 @@ impl SegmentMask {
 /// The cube index of [TRIANGLES] for each combination of two neighboring columns of four voxels: bits 0..3 of the
 /// key are the voxels at x of the rows (y, z), (y + 1, z), (y, z + 1) and (y + 1, z + 1), bits 4..7 the same at
 /// x + 1.
-const CUBE_INDEX: [u8; 256] = {
+pub(crate) const CUBE_INDEX: [u8; 256] = {
     const fn bit(key: usize, i: usize) -> u8 {
         ((key >> i) & 1) as u8
     }
@@ -457,6 +457,17 @@ fn mesh_segment(mask: &SegmentMask, offset: [f32; 3], scale: [f32; 3]) -> Mesh {
         indices,
         neighbors: mask.neighbors,
     }
+}
+
+/// Meshes a cuboid like the native function, for the tests of other modules.
+#[cfg(test)]
+pub(crate) fn mesh_cuboid(
+    cuboid: &Cuboid,
+    segment_id: i64,
+    offset: [f32; 3],
+    scale: [f32; 3],
+) -> Mesh {
+    mesh_segment(&SegmentMask::new(cuboid, segment_id), offset, scale)
 }
 
 fn read_vec3_f32(env: &jni::Env, array: &JFloatArray, name: &str) -> NativeResult<[f32; 3]> {

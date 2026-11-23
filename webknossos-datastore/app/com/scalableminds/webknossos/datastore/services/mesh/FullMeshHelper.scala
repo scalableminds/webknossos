@@ -1,14 +1,34 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
-import com.scalableminds.util.box.Box
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
-import Box.tryo
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.{ByteBuffer, ByteOrder}
+
+/** A chunk to measure the surface of a segment in, see [[NativeSegmentSurface]]: the cuboid at topLeft (in voxels of
+  * the mag) of the given size, of which the voxels from interiorStart (inclusive) to interiorEnd (exclusive) are the
+  * interior.
+  */
+case class SurfaceChunk(topLeft: Vec3Int, size: Vec3Int, interiorStart: Vec3Int, interiorEnd: Vec3Int)
+
+object SurfaceChunk {
+
+  /** The chunk whose interior is the bucket at bucketPosition (in buckets of the mag). Its cuboid extends the bucket by
+    * one voxel on each side, except below 0, where the dataset has no voxels.
+    */
+  def forBucket(bucketPosition: Vec3Int): SurfaceChunk = {
+    val bucketTopLeft = bucketPosition * DataLayer.bucketLength
+    val topLeft =
+      Vec3Int(Math.max(bucketTopLeft.x - 1, 0), Math.max(bucketTopLeft.y - 1, 0), Math.max(bucketTopLeft.z - 1, 0))
+    val interiorStart = bucketTopLeft - topLeft
+    val interiorEnd = interiorStart + Vec3Int.full(DataLayer.bucketLength)
+    SurfaceChunk(topLeft, interiorEnd + Vec3Int.ones, interiorStart, interiorEnd)
+  }
+}
 
 trait FullMeshHelper extends LazyLogging {
   protected lazy val dracoToStlConverter = new NativeDracoToStlConverter()
@@ -100,46 +120,4 @@ trait FullMeshHelper extends LazyLogging {
 
   protected def logMeshingDuration(before: Instant, label: String, lengthBytes: Int): Unit =
     Instant.logSince(before, s"Served $lengthBytes-byte STL mesh via $label,", logger)
-
-  // Computes surface area from the raw per-chunk bytes produced by adHocMeshToStl
-  // (50 bytes per face, no 84-byte STL header). Chunks produced by ad-hoc meshing or
-  // dracoToStl are non-overlapping (adjacent chunks are spaced chunkSize apart while
-  // each chunk samples chunkSize+1 voxels, so their marching-cubes cells share no
-  // boundary), meaning the sum of per-chunk areas equals the total surface area.
-  def surfaceAreaFromRawChunkStlBytes(chunkBytes: Array[Byte]): Float = {
-    val dataBuffer = ByteBuffer.wrap(chunkBytes).order(ByteOrder.LITTLE_ENDIAN)
-    val numFaces = chunkBytes.length / 50
-    val normalSize = 12 // each face starts with a normal vector: 3 floats × 4 bytes
-    var surfaceSum = 0.0f
-    val bytesPerFace = 50
-    for (faceIndex <- 0 until numFaces) {
-      // Skip the normal vector at the start of each face record; read the three vertices directly
-      val base = faceIndex * bytesPerFace + normalSize
-      val v1x = dataBuffer.getFloat(base)
-      val v1y = dataBuffer.getFloat(base + 4)
-      val v1z = dataBuffer.getFloat(base + 8)
-      val v2x = dataBuffer.getFloat(base + 12)
-      val v2y = dataBuffer.getFloat(base + 16)
-      val v2z = dataBuffer.getFloat(base + 20)
-      val v3x = dataBuffer.getFloat(base + 24)
-      val v3y = dataBuffer.getFloat(base + 28)
-      val v3z = dataBuffer.getFloat(base + 32)
-
-      // Build two edge vectors from v1
-      val e1x = v2x - v1x; val e1y = v2y - v1y; val e1z = v2z - v1z // edge v1→v2
-      val e2x = v3x - v1x; val e2y = v3y - v1y; val e2z = v3z - v1z // edge v1→v3
-
-      // Cross product e1 × e2; its magnitude equals twice the triangle area
-      val cx = e1y * e2z - e1z * e2y
-      val cy = e1z * e2x - e1x * e2z
-      val cz = e1x * e2y - e1y * e2x
-      surfaceSum += Math.sqrt(cx * cx + cy * cy + cz * cz).toFloat / 2.0f
-    }
-    surfaceSum
-  }
-
-  def surfaceAreaFromStlBytes(stlBytes: Array[Byte]): Box[Float] = tryo {
-    val stlHeaderSize = 84
-    surfaceAreaFromRawChunkStlBytes(stlBytes.drop(stlHeaderSize))
-  }
 }

@@ -16,6 +16,7 @@ use jni::objects::{JByteArray, JObject};
 use jni::sys::{jdouble, jfloat, jint};
 
 use crate::jni_util::{self, NativeError, NativeResult, invalid_argument};
+use crate::segment_surface::triangle_area;
 
 /// Bytes per STL face: normal and three vertices (3 × f32 each), then a u16 attribute byte count.
 const STL_FACE_SIZE: usize = 50;
@@ -139,21 +140,10 @@ pub fn draco_to_stl(
     let Some(positions) = mesh.named_attribute(GeometryAttributeType::Position) else {
         return invalid_argument("Draco mesh has faces but no position attribute");
     };
-    let quantization_factor = (vertex_quantization_bits > 0)
-        .then(|| 1.0 / (2f64.powf(f64::from(vertex_quantization_bits)) - 1.0));
+    let quantization_factor = quantization_factor(vertex_quantization_bits);
 
     for face in mesh.faces() {
-        let mut pos = [[0f32; 3]; 3];
-        for (corner, &point) in pos.iter_mut().zip(face) {
-            *corner = mapped_value(positions, point)?;
-        }
-        if let Some(factor) = quantization_factor {
-            for coordinate in pos.iter_mut().flatten() {
-                let lower_bits = coordinate.to_bits() as u16;
-                *coordinate = (f64::from(f32::from(lower_bits)) * factor) as f32;
-            }
-        }
-
+        let pos = face_positions(positions, face, quantization_factor)?;
         for component in face_normal(&pos) {
             output.extend_from_slice(&component.to_le_bytes());
         }
@@ -166,6 +156,58 @@ pub fn draco_to_stl(
         output.extend_from_slice(&0u16.to_le_bytes()); // no face attributes
     }
     Ok(output)
+}
+
+/// The factor that requantizes the lower 16 bits of each coordinate, see [draco_to_stl], if positions are quantized.
+fn quantization_factor(vertex_quantization_bits: i32) -> Option<f64> {
+    (vertex_quantization_bits > 0)
+        .then(|| 1.0 / (2f64.powf(f64::from(vertex_quantization_bits)) - 1.0))
+}
+
+/// The positions of the corners of a face, requantized if `quantization_factor` is given, see [draco_to_stl].
+fn face_positions(
+    positions: &PointAttribute,
+    face: &[draco_core::PointIndex; 3],
+    quantization_factor: Option<f64>,
+) -> NativeResult<[[f32; 3]; 3]> {
+    let mut pos = [[0f32; 3]; 3];
+    for (corner, &point) in pos.iter_mut().zip(face) {
+        *corner = mapped_value(positions, point)?;
+    }
+    if let Some(factor) = quantization_factor {
+        for coordinate in pos.iter_mut().flatten() {
+            let lower_bits = coordinate.to_bits() as u16;
+            *coordinate = (f64::from(f32::from(lower_bits)) * factor) as f32;
+        }
+    }
+    Ok(pos)
+}
+
+/// Decodes the Draco mesh in `input`, and returns the total area of its faces with the positions requantized,
+/// offset and scaled as by [draco_to_stl]. Unlike there, the scaled positions are not rounded to f32, and the area is
+/// computed and summed in f64.
+pub fn draco_surface_area(
+    input: &[u8],
+    offset: [f32; 3],
+    scale: [f64; 3],
+    vertex_quantization_bits: i32,
+) -> NativeResult<f64> {
+    let mesh = decode_mesh(input)?;
+    if mesh.num_faces() == 0 {
+        return Ok(0.0);
+    }
+    let Some(positions) = mesh.named_attribute(GeometryAttributeType::Position) else {
+        return invalid_argument("Draco mesh has faces but no position attribute");
+    };
+    let quantization_factor = quantization_factor(vertex_quantization_bits);
+    let mut area = 0.0;
+    for face in mesh.faces() {
+        let [a, b, c] = face_positions(positions, face, quantization_factor)?.map(|vertex| {
+            [0, 1, 2].map(|axis| f64::from(vertex[axis] + offset[axis]) * scale[axis])
+        });
+        area += triangle_area(a, b, c);
+    }
+    Ok(area)
 }
 
 #[unsafe(no_mangle)]
@@ -193,6 +235,33 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_draco_NativeD
             vertex_quantization_bits,
         )?;
         jni_util::new_byte_array(env, &output)
+    })
+}
+
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)] // JNI signature
+pub extern "system" fn Java_com_scalableminds_webknossos_datastore_draco_NativeDracoToStlConverter_dracoSurfaceArea<
+    'local,
+>(
+    env: EnvUnowned<'local>,
+    _this: JObject<'local>,
+    input_bytes: JByteArray<'local>,
+    offset_x: jfloat,
+    offset_y: jfloat,
+    offset_z: jfloat,
+    scale_x: jdouble,
+    scale_y: jdouble,
+    scale_z: jdouble,
+    vertex_quantization_bits: jint,
+) -> jdouble {
+    jni_util::run(env, "computing the surface area of a DRACO Mesh", |env| {
+        let input = jni_util::read_bytes(env, &input_bytes)?;
+        draco_surface_area(
+            &input,
+            [offset_x, offset_y, offset_z],
+            [scale_x, scale_y, scale_z],
+            vertex_quantization_bits,
+        )
     })
 }
 

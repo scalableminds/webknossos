@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.{
@@ -10,7 +10,8 @@ import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
   SegmentIndexData,
   SegmentStatisticsParameters,
-  SegmentStatisticsParametersMeshBased
+  SegmentStatisticsParametersMeshBased,
+  UnsignedLong
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.*
@@ -20,10 +21,15 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   FullMeshRequest,
   MappingType,
   MeshFileService,
-  MeshMappingHelper
+  MeshMappingHelper,
+  SegmentSurface
 }
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
-import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsFileService
+import com.scalableminds.webknossos.datastore.services.segmentstatistics.{
+  SegmentStatisticsFileService,
+  SegmentStatisticsMath
+}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.tools.Fox.toFox
@@ -286,7 +292,7 @@ class SegmentStatisticsController @Inject() (
             request.body
           ).shiftBox
           surfaceAreas <- surfaceAreasFromStatisticsFileBox match {
-            case Full(surfaceAreas) => Fox.successful(surfaceAreas)
+            case Full(surfaceAreas) => Fox.successful(surfaceAreas.map(_.toDouble))
             case _                  => surfaceAreasFromFullMeshService(datasetId, dataSource, dataLayer, request.body)
           }
         } yield Ok(Json.toJson(surfaceAreas))
@@ -318,7 +324,7 @@ class SegmentStatisticsController @Inject() (
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
       params: SegmentStatisticsParametersMeshBased
-  )(using tc: TokenContext): Fox[Seq[Float]] =
+  )(using tc: TokenContext): Fox[Seq[Double]] =
     for {
       meshFileKeyOpt <- Fox.runOptional(params.meshFileName)(
         meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _)
@@ -335,26 +341,66 @@ class SegmentStatisticsController @Inject() (
         case _         => false // All other combinations are not a match
       }
       surfaceAreas <- Fox.serialCombined(params.segmentIds) { segmentId =>
-        val fullMeshRequest = FullMeshRequest(
-          meshFileName = if (meshFileMappingMatches) params.meshFileName else None,
-          lod = None,
-          segmentId = segmentId,
-          mappingName = params.mappingName,
-          mappingType = params.mappingName.map(_ => MappingType.AGGLOMERATE),
-          editableMappingTracingId = None,
-          annotationVersion = None,
-          mag = Some(params.mag),
-          seedPosition = None,
-          additionalCoordinates = params.additionalCoordinates
-        )
-        fullMeshService.segmentSurfaceAreaCache.getOrLoad(
-          (datasetId, dataLayer.name, fullMeshRequest),
-          _ =>
-            fullMeshService
-              .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.loadFullFailed
-        )
+        if (meshFileMappingMatches) {
+          val fullMeshRequest =
+            surfaceFullMeshRequest(segmentId, params.mag, params.mappingName, params.additionalCoordinates)
+              .copy(meshFileName = params.meshFileName)
+          fullMeshService.meshFileSurfaceAreaCache.getOrLoad(
+            (datasetId, dataLayer.name, fullMeshRequest),
+            _ =>
+              fullMeshService
+                .surfaceAreaFromMeshFile(dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.loadFullFailed
+          )
+        } else
+          adHocSurface(
+            datasetId,
+            dataSource,
+            dataLayer,
+            segmentId,
+            params.mag,
+            params.mappingName,
+            params.additionalCoordinates
+          ).map(_.area)
       }
     } yield surfaceAreas
+
+  // The surface of the segment's ad-hoc mesh and its voxel count, shared by the surface area and sphericity requests.
+  private def adHocSurface(
+      datasetId: ObjectId,
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      segmentId: UnsignedLong,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  )(using tc: TokenContext): Fox[SegmentSurface] = {
+    val fullMeshRequest = surfaceFullMeshRequest(segmentId, mag, mappingName, additionalCoordinates)
+    fullMeshService.segmentSurfaceCache.getOrLoad(
+      (datasetId, dataLayer.name, fullMeshRequest),
+      _ =>
+        fullMeshService
+          .measureSurface(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.measureSurfaceFailed
+    )
+  }
+
+  private def surfaceFullMeshRequest(
+      segmentId: UnsignedLong,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  ): FullMeshRequest =
+    FullMeshRequest(
+      meshFileName = None,
+      lod = None,
+      segmentId = segmentId,
+      mappingName = mappingName,
+      mappingType = mappingName.map(_ => MappingType.AGGLOMERATE),
+      editableMappingTracingId = None,
+      annotationVersion = None,
+      mag = Some(mag),
+      seedPosition = None,
+      additionalCoordinates = additionalCoordinates
+    )
 
   def getSegmentCovarianceMatrix(datasetId: ObjectId, dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.fox(validateJson[SegmentStatisticsParameters]) { implicit request =>
@@ -486,27 +532,56 @@ class SegmentStatisticsController @Inject() (
       }
     }
 
+  /** Sphericities: prefer the segment statistics file (if present and compatible with the request); otherwise compute
+    * them from the surface and voxel count of the segment's ad-hoc mesh (needs a segment index).
+    */
   def getSegmentSphericity(datasetId: ObjectId, dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.fox(validateJson[SegmentStatisticsParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          segmentStatisticsFileKey <- segmentStatisticsFileService.lookUpSegmentStatisticsFileKey(
+          sphericitiesFromStatisticsFileBox <- sphericitiesFromSegmentStatisticsFile(
             dataSource.id,
-            dataLayer
-          )
-          _ <- segmentStatisticsFileService.checkMagAndMappingNameMatch(
-            segmentStatisticsFileKey,
             dataLayer,
-            request.body.mag,
-            request.body.mappingName,
-            allowRemapping = false
-          )
-          sphericities <- segmentStatisticsFileService.getSphericities(
-            segmentStatisticsFileKey,
-            request.body.segmentIds.map(_.toLong)
-          )
+            request.body
+          ).shiftBox
+          sphericities <- sphericitiesFromStatisticsFileBox match {
+            case Full(sphericities) => Fox.successful(sphericities.map(_.toDouble))
+            case _                  =>
+              val voxelSize = Vec3Double(request.body.mag) * dataSource.scale.factor
+              Fox.serialCombined(request.body.segmentIds) { segmentId =>
+                adHocSurface(
+                  datasetId,
+                  dataSource,
+                  dataLayer,
+                  segmentId,
+                  request.body.mag,
+                  request.body.mappingName,
+                  request.body.additionalCoordinates
+                ).map(SegmentStatisticsMath.sphericity(_, voxelSize))
+              }
+          }
         } yield Ok(Json.toJson(sphericities))
       }
     }
+
+  private def sphericitiesFromSegmentStatisticsFile(
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
+      params: SegmentStatisticsParameters
+  )(using tc: TokenContext): Fox[Seq[Float]] =
+    for {
+      segmentStatisticsFileKey <- segmentStatisticsFileService.lookUpSegmentStatisticsFileKey(dataSourceId, dataLayer)
+      _ <- segmentStatisticsFileService.checkMagAndMappingNameMatch(
+        segmentStatisticsFileKey,
+        dataLayer,
+        params.mag,
+        params.mappingName,
+        allowRemapping = false
+      )
+      sphericities <- segmentStatisticsFileService.getSphericities(
+        segmentStatisticsFileKey,
+        params.segmentIds.map(_.toLong)
+      )
+    } yield sphericities
 }

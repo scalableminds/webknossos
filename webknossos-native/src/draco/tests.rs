@@ -244,6 +244,56 @@ fn converts_the_corpus() {
     }
 }
 
+/// The total area of STL faces, from their f32 vertices, in f64.
+fn stl_area(stl: &[u8]) -> f64 {
+    floats(stl)
+        .as_chunks::<12>()
+        .0
+        .iter()
+        .map(|face| {
+            let vertex = |i: usize| [0, 1, 2].map(|axis| f64::from(face[3 + 3 * i + axis]));
+            triangle_area(vertex(0), vertex(1), vertex(2))
+        })
+        .sum()
+}
+
+#[test]
+fn computes_the_area_of_a_triangle_after_the_transform() {
+    let input = encode_triangle(
+        GeometryAttributeType::Position,
+        [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [0.0, 3.0, 0.0]],
+    );
+    assert_eq!(
+        draco_surface_area(&input, IDENTITY.0, IDENTITY.1, 0).unwrap(),
+        3.0
+    );
+    // The offset moves the triangle, the scale stretches it: (2 · 4) · (3 · 5) / 2.
+    let area = draco_surface_area(&input, [7.0, -1.0, 2.0], [4.0, 5.0, 6.0], 0).unwrap();
+    assert_eq!(area, 60.0);
+}
+
+#[test]
+fn computes_the_area_of_the_stl_faces_for_the_corpus() {
+    for (name, input) in corpus() {
+        for bits in [0, 10, 16] {
+            for (offset, scale) in [IDENTITY, ([1.5, -2.0, 3.25], [11.24, 11.24, 28.0])] {
+                let stl = draco_to_stl(&input, offset, scale, bits).unwrap();
+                let area = draco_surface_area(&input, offset, scale, bits).unwrap();
+                // Only the rounding of the STL vertices to f32 differs.
+                let expected = stl_area(&stl);
+                assert!(
+                    (area - expected).abs() <= 1e-5 * expected,
+                    "{name}, {bits} bits: {area} vs {expected}"
+                );
+            }
+        }
+    }
+    assert!(matches!(
+        draco_surface_area(b"not draco", IDENTITY.0, IDENTITY.1, 0),
+        Err(NativeError::InvalidArgument(_))
+    ));
+}
+
 /// A deterministic pseudo random number generator (SplitMix64), to avoid a dependency.
 struct Rng(u64);
 

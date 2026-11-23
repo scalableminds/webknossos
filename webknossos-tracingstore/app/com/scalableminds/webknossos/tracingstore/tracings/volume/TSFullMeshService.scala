@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -17,7 +18,14 @@ import com.scalableminds.webknossos.datastore.models.{
   VoxelSize,
   WebknossosAdHocMeshRequest
 }
-import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMesh, FullMeshHelper, FullMeshRequest, MappingType}
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  AdHocMesh,
+  FullMeshHelper,
+  FullMeshRequest,
+  MappingType,
+  SegmentSurface,
+  SurfaceChunk
+}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -50,6 +58,88 @@ class TSFullMeshService @Inject() (
           loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
         else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
     } yield data
+
+  // Keyed by tracing id, the annotation version and the request: at a fixed version, the buckets do not change.
+  private lazy val segmentSurfaceCache: AlfuCache[(String, Long, FullMeshRequest), SegmentSurface] =
+    AlfuCache(maxCapacity = 1000)
+
+  /** Measures the surface area and voxel count of a segment in the mag of the request, see NativeSegmentSurface. Each
+    * bucket of the segment index is one chunk. Needs a segment index.
+    */
+  def measureSurface(
+      annotationId: ObjectId,
+      tracingId: String,
+      fullMeshRequest: FullMeshRequest,
+      version: Option[Long]
+  )(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[SegmentSurface] =
+    for {
+      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Msg.Annotation.notFound
+      // Temporary tracings are not versioned, so their surfaces cannot be cached.
+      isTemporaryTracing <- volumeTracingService.temporaryTracingService.isTemporaryTracing(tracingId)
+      surface <-
+        if (isTemporaryTracing) measureSurfaceUncached(annotationId, tracingId, tracing, fullMeshRequest)
+        else
+          segmentSurfaceCache.getOrLoad(
+            (tracingId, tracing.version, fullMeshRequest),
+            _ => measureSurfaceUncached(annotationId, tracingId, tracing, fullMeshRequest)
+          )
+    } yield surface
+
+  private def measureSurfaceUncached(
+      annotationId: ObjectId,
+      tracingId: String,
+      tracing: VolumeTracing,
+      fullMeshRequest: FullMeshRequest
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentSurface] =
+    for {
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+      _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume
+        .wrongMag(tracingId, mag.toMagLiteral(allowScalar = true))
+      _ <- Fox.fromBool(tracing.hasSegmentIndex.getOrElse(false)) ?~> Msg.Mesh.segmentIndexNeededForSurface
+      before = Instant.now
+      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(
+        annotationId
+      ) ?~> Msg.Dataset.voxelSizeFailedToFetch
+      bucketPositions <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
+      // Keeping several chunks in flight, as each one waits for its buckets to load.
+      surfaces <- Fox.batchCombined(bucketPositions, adHocMeshingBatchSize) { bucketPosition =>
+        val chunk = SurfaceChunk.forBucket(bucketPosition)
+        val adHocMeshRequest = WebknossosAdHocMeshRequest(
+          position = chunk.topLeft * mag,
+          mag = mag,
+          cubeSize = chunk.size,
+          fullMeshRequest.segmentId,
+          voxelSize.factor,
+          fullMeshRequest.mappingName,
+          fullMeshRequest.mappingType,
+          fullMeshRequest.additionalCoordinates,
+          fullMeshRequest.annotationVersion,
+          findNeighbors = false
+        )
+        if (tracing.getHasEditableMapping) {
+          val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+          editableMappingService.measureAdHocSurface(
+            mappingLayer,
+            adHocMeshRequest,
+            chunk.interiorStart,
+            chunk.interiorEnd
+          )
+        } else
+          volumeTracingService.measureAdHocSurface(
+            annotationId,
+            tracingId,
+            tracing,
+            adHocMeshRequest,
+            chunk.interiorStart,
+            chunk.interiorEnd
+          )
+      }
+      _ = Instant.logSince(before, s"Measured the surface of a segment in ${bucketPositions.length} buckets,", logger)
+    } yield surfaces.foldLeft(SegmentSurface.empty)(_ + _)
 
   private def loadFullMeshFromMeshFile(
       annotationId: ObjectId,
@@ -115,27 +205,10 @@ class TSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
-      fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
-      mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
-      bucketPositionsRaw: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
-        tracing,
-        fallbackLayer,
-        tracingId,
-        fullMeshRequest.segmentId.toLong,
-        mag,
-        mappingName,
-        volumeTracingService.editableMappingTracingId(tracing, tracingId),
-        tracing.version,
-        fullMeshRequest.additionalCoordinates
-      )
-      bucketPositions = bucketPositionsRaw.toSeq
-        .map(vec3IntFromProto)
+      bucketPositionsInMag <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
+      bucketPositions = bucketPositionsInMag
         .map(_ * mag * DataLayer.bucketLength)
         .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, fullMeshRequest.additionalCoordinates))
-        .toList
-      _ <- Fox.fromBool(bucketPositions.length <= maxAdHocFullMeshChunks) ?~> Msg.Mesh.tooManyAdHocMeshRequests(
-        maxAdHocFullMeshChunks
-      )
       meshChunks: List[AdHocMesh] <- Fox.serialCombined(bucketPositions) { bucketPosition =>
         val adHocMeshRequest = WebknossosAdHocMeshRequest(
           position = Vec3Int(bucketPosition.voxelMag1X, bucketPosition.voxelMag1Y, bucketPosition.voxelMag1Z),
@@ -152,6 +225,34 @@ class TSFullMeshService @Inject() (
         loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
       }
     } yield meshChunks.map(_.triangleSoup)
+
+  // The buckets (in buckets of mag) with a voxel of the segment, from the segment index.
+  private def segmentIndexBucketPositions(
+      annotationId: ObjectId,
+      tracingId: String,
+      tracing: VolumeTracing,
+      mag: Vec3Int,
+      fullMeshRequest: FullMeshRequest
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Vec3Int]] =
+    for {
+      fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
+      mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
+      bucketPositionsRaw: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+        tracing,
+        fallbackLayer,
+        tracingId,
+        fullMeshRequest.segmentId.toLong,
+        mag,
+        mappingName,
+        volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        tracing.version,
+        fullMeshRequest.additionalCoordinates
+      )
+      bucketPositions = bucketPositionsRaw.toList.map(vec3IntFromProto)
+      _ <- Fox.fromBool(bucketPositions.length <= maxAdHocFullMeshChunks) ?~> Msg.Mesh.tooManyAdHocMeshRequests(
+        maxAdHocFullMeshChunks
+      )
+    } yield bucketPositions
 
   private def getAllAdHocChunksWithNeighborLogic(
       annotationId: ObjectId,

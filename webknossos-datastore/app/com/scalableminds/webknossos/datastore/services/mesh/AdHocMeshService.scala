@@ -41,11 +41,21 @@ case class AdHocMeshRequest(
     findNeighbors: Boolean = true
 )
 
+/** Measures the surface of a segment in the interior of the cuboid of `meshRequest`, see [[NativeSegmentSurface]]. The
+  * interior is given in voxels of the cuboid, from interiorStart (inclusive) to interiorEnd (exclusive).
+  */
+case class SegmentSurfaceRequest(meshRequest: AdHocMeshRequest, interiorStart: Vec3Int, interiorEnd: Vec3Int)
+
 class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration) extends Actor {
 
   def receive: Receive = {
     case request: AdHocMeshRequest =>
       sender() ! Await.result(service.requestAdHocMesh(request)(using request.tokenContext).futureBox, timeout)
+    case request: SegmentSurfaceRequest =>
+      sender() ! Await.result(
+        service.measureSurface(request)(using request.meshRequest.tokenContext).futureBox,
+        timeout
+      )
     case _ =>
       sender() ! Failure("Unexpected message sent to AdHocMeshActor.")
   }
@@ -73,9 +83,61 @@ class AdHocMeshService(
       }
     }
 
+  def requestSurfaceViaActor(request: SegmentSurfaceRequest): Fox[SegmentSurface] =
+    Fox.fromFutureBox {
+      actor.ask(request).mapTo[Box[SegmentSurface]].recover { case e: Exception =>
+        Failure(e.getMessage)
+      }
+    }
+
   private lazy val adHocMesher = new NativeAdHocMesher()
+  private lazy val segmentSurface = new NativeSegmentSurface()
 
   def requestAdHocMesh(request: AdHocMeshRequest)(using tc: TokenContext): Fox[AdHocMesh] = {
+    val cuboid = request.cuboid
+    val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
+    val offset = Vec3Float(
+      cuboid.topLeft.voxelXInMag.toFloat,
+      cuboid.topLeft.voxelYInMag.toFloat,
+      cuboid.topLeft.voxelZInMag.toFloat
+    )
+    val scale = Vec3Float(cuboid.topLeft.mag) * Vec3Float(request.voxelSizeFactor)
+    for {
+      (mappedData, mappedSegmentId) <- loadMappedCuboid(request)
+      mesh <- tryo(
+        adHocMesher.mesh(
+          mappedData,
+          ElementClass.bytesPerElement(request.dataLayer.elementClass),
+          dataDimensions,
+          mappedSegmentId,
+          offset,
+          scale
+        )
+      ).toFox
+    } yield if (request.findNeighbors) mesh else mesh.copy(neighbors = List())
+  }
+
+  def measureSurface(request: SegmentSurfaceRequest)(using tc: TokenContext): Fox[SegmentSurface] = {
+    val meshRequest = request.meshRequest
+    val cuboid = meshRequest.cuboid
+    for {
+      (mappedData, mappedSegmentId) <- loadMappedCuboid(meshRequest)
+      surface <- tryo(
+        segmentSurface.measureSurface(
+          mappedData,
+          ElementClass.bytesPerElement(meshRequest.dataLayer.elementClass),
+          Vec3Int(cuboid.width, cuboid.height, cuboid.depth),
+          mappedSegmentId,
+          request.interiorStart,
+          request.interiorEnd,
+          Vec3Double(cuboid.topLeft.mag) * meshRequest.voxelSizeFactor
+        )
+      ).toFox
+    } yield surface
+  }
+
+  /** Loads the cuboid of the request with the mapping applied, and returns it with the segment id to look for in it. */
+  private def loadMappedCuboid(request: AdHocMeshRequest)(using tc: TokenContext): Fox[(Array[Byte], Long)] = {
     val cuboid = request.cuboid
     val elementClass = request.dataLayer.elementClass
 
@@ -89,15 +151,6 @@ class AdHocMeshService(
         version = request.annotationVersion
       )
     )
-
-    val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
-
-    val offset = Vec3Float(
-      cuboid.topLeft.voxelXInMag.toFloat,
-      cuboid.topLeft.voxelYInMag.toFloat,
-      cuboid.topLeft.voxelZInMag.toFloat
-    )
-    val scale = Vec3Float(cuboid.topLeft.mag) * Vec3Float(request.voxelSizeFactor)
 
     val jsonMappingRequestOpt = (request.mapping, request.mappingType) match {
       case (Some(mappingName), Some(MappingType.JSON)) =>
@@ -118,17 +171,7 @@ class AdHocMeshService(
       mappedSegmentId = jsonMappingOpt.fold(request.segmentId)(
         mappingService.mapSegmentId(_, request.segmentId, elementClass)
       )
-      mesh <- tryo(
-        adHocMesher.mesh(
-          mappedData,
-          ElementClass.bytesPerElement(elementClass),
-          dataDimensions,
-          mappedSegmentId,
-          offset,
-          scale
-        )
-      ).toFox
-    } yield if (request.findNeighbors) mesh else mesh.copy(neighbors = List())
+    } yield (mappedData, mappedSegmentId)
   }
 
   private def applyAgglomerate(request: AdHocMeshRequest, data: Array[Byte])(using

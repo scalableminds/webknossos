@@ -6,7 +6,9 @@ use std::panic::{self, AssertUnwindSafe};
 
 use jni::elements::ReleaseMode;
 use jni::errors::ThrowRuntimeExAndDefault;
-use jni::objects::{JByteArray, JFloatArray, JIntArray, JLongArray, JPrimitiveArray, TypeArray};
+use jni::objects::{
+    JByteArray, JDoubleArray, JFloatArray, JIntArray, JLongArray, JPrimitiveArray, TypeArray,
+};
 use jni::{Env, EnvUnowned};
 
 /// An error of a native function. It reaches Java as a `RuntimeException`.
@@ -169,6 +171,16 @@ pub fn new_float_array<'local>(
     values: &[f32],
 ) -> NativeResult<JFloatArray<'local>> {
     let array = env.new_float_array(values.len())?;
+    array.set_region(env, 0, values)?;
+    Ok(array)
+}
+
+/// Creates a new Java `double[]` with the given contents.
+pub fn new_double_array<'local>(
+    env: &mut Env<'local>,
+    values: &[f64],
+) -> NativeResult<JDoubleArray<'local>> {
+    let array = env.new_double_array(values.len())?;
     array.set_region(env, 0, values)?;
     Ok(array)
 }

@@ -1181,21 +1181,36 @@ export function getSegmentMaxDistances(
   );
 }
 
-/** Dimensionless and scale-invariant, in [0, 1]. */
+/**
+ * Dimensionless and scale-invariant: 1 for a ball, smaller for any other shape (tiny segments can
+ * exceed 1 slightly). Read from the statistics file if `fromStatisticsFile` is set (always on the
+ * datastore), otherwise computed from the segment's ad-hoc mesh by the store that holds the layer.
+ */
 export function getSegmentSphericities(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
+  fromStatisticsFile: boolean,
 ): Promise<number[]> {
-  return fetchSegmentStatistic<number>(
-    layerSourceInfo,
-    "sphericity",
-    mag,
-    segmentIds,
-    additionalCoordinates,
-    mappingName,
+  if (fromStatisticsFile) {
+    return fetchSegmentStatistic<number>(
+      layerSourceInfo,
+      "sphericity",
+      mag,
+      segmentIds,
+      additionalCoordinates,
+      mappingName,
+    );
+  }
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/sphericity?token=${token}`, {
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
+      method: "POST",
+    }),
   );
 }
 

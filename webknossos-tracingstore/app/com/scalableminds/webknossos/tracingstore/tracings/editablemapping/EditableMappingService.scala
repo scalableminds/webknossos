@@ -30,7 +30,9 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   AdHocMesh,
   AdHocMeshRequest,
   AdHocMeshService,
-  AdHocMeshServiceHolder
+  AdHocMeshServiceHolder,
+  SegmentSurface,
+  SegmentSurfaceRequest
 }
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ReversionHelper, TSDatasetErrorLoggingService}
@@ -446,8 +448,24 @@ class EditableMappingService @Inject() (
 
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(using
       tc: TokenContext
-  ): Fox[AdHocMesh] = {
-    val adHocMeshRequest = AdHocMeshRequest(
+  ): Fox[AdHocMesh] =
+    adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequestFor(editableMappingLayer, request))
+
+  // Measures the surface of a segment in the interior of the request's cuboid, see NativeSegmentSurface.
+  def measureAdHocSurface(
+      editableMappingLayer: EditableMappingLayer,
+      request: WebknossosAdHocMeshRequest,
+      interiorStart: Vec3Int,
+      interiorEnd: Vec3Int
+  )(using tc: TokenContext): Fox[SegmentSurface] =
+    adHocMeshService.requestSurfaceViaActor(
+      SegmentSurfaceRequest(adHocMeshRequestFor(editableMappingLayer, request), interiorStart, interiorEnd)
+    )
+
+  private def adHocMeshRequestFor(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(using
+      tc: TokenContext
+  ): AdHocMeshRequest =
+    AdHocMeshRequest(
       datasetId = None,
       dataSourceId = None,
       dataLayer = editableMappingLayer,
@@ -460,8 +478,6 @@ class EditableMappingService @Inject() (
       findNeighbors = request.findNeighbors,
       annotationVersion = request.annotationVersion
     )
-    adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-  }
 
   def getAgglomerateGraphForId(tracingId: String, version: Long, agglomerateId: Long): Fox[AgglomerateGraph] =
     for {

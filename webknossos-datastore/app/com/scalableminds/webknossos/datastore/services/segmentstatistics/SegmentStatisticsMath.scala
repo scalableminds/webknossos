@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.services.segmentstatistics
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.box.Box
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.webknossos.datastore.services.mesh.SegmentSurface
 
 object SegmentStatisticsMath {
 
@@ -52,5 +53,18 @@ object SegmentStatisticsMath {
         (weightedSum / totalVolume).toFloat
       }
     } yield combinedCovarianceMatrix
+
+  /** The sphericity of a segment, defined as for segment statistics files (computed by voxelytics): the surface area of
+    * a ball with the segment's volume, divided by the segment's surface area, i.e. π^(1/3) · (6 · volume)^(2/3) / area.
+    * 1 for a ball, smaller for any other shape. The volume is the voxel count times the volume of a voxel, which has
+    * the size voxelSize (in the mag the surface was measured in), so that volume and area share their unit. 0 for a
+    * segment without surface, i.e. without voxels.
+    */
+  def sphericity(surface: SegmentSurface, voxelSize: Vec3Double): Double =
+    if (surface.area <= 0) 0.0
+    else {
+      val volume = surface.voxelCount * voxelSize.x * voxelSize.y * voxelSize.z
+      Math.cbrt(Math.PI) * Math.pow(6 * volume, 2.0 / 3.0) / surface.area
+    }
 
 }

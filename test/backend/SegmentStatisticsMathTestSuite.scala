@@ -1,6 +1,7 @@
 package backend
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.webknossos.datastore.services.mesh.SegmentSurface
 import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsMath
 import org.scalatest.wordspec.AsyncWordSpec
 
@@ -30,6 +31,24 @@ class SegmentStatisticsMathTestSuite extends AsyncWordSpec {
     "scale down a voxel count for an anisotropically coarser requested mag" in
       // requested mag is 2x coarser in x and y only, so voxels are 4x larger, i.e. 4x fewer of them
       assert(SegmentStatisticsMath.rescaleVolumeToMag(400L, Vec3Int(1, 1, 1), Vec3Int(2, 2, 1)) == 100L)
+  }
+
+  "sphericity" should {
+    "be 1 for a ball" in {
+      // 1000 voxels whose size is chosen so that together they have the volume of a ball of radius 3.
+      val radius = 3.0
+      val voxelSize = Vec3Double(0.6, 0.6, 4 * Math.PI * radius * radius * radius / 3 / 1000 / 0.36)
+      val sphere = SegmentSurface(4 * Math.PI * radius * radius, 1000L)
+      assert(Math.abs(SegmentStatisticsMath.sphericity(sphere, voxelSize) - 1.0) < 1e-12)
+    }
+    "be smaller for a cube" in {
+      // A cube of 10³ voxels of size 2: (π · 6 · 8000²)^(1/3) / 2400 = (π / 6)^(1/3).
+      val cube = SegmentSurface(6 * 20.0 * 20.0, 1000L)
+      val sphericity = SegmentStatisticsMath.sphericity(cube, Vec3Double(2, 2, 2))
+      assert(Math.abs(sphericity - Math.cbrt(Math.PI / 6)) < 1e-12)
+    }
+    "be 0 for a segment without surface" in
+      assert(SegmentStatisticsMath.sphericity(SegmentSurface.empty, Vec3Double(1, 1, 1)) == 0.0)
   }
 
   "weightedCenterOfMass" should {

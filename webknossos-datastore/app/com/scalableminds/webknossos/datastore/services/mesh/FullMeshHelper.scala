@@ -39,6 +39,22 @@ trait FullMeshHelper extends LazyLogging {
   // Upper bound for ad-hoc meshing requests per full mesh, so that huge segments cannot occupy the meshing workers indefinitely
   protected lazy val maxAdHocFullMeshChunks: Int = 25000
 
+  /** The buckets (in buckets of the mag) to mesh a segment in, given the buckets that contain it (from the segment
+    * index): those and the buckets below them in x, y and z, also diagonally. A bucket's cuboid spans the bucket plus
+    * one voxel at its high end, so it meshes the cubes whose origin lies in the bucket. A cube touching a voxel of the
+    * segment may have its origin in a bucket below, which need not contain the segment itself; without those buckets,
+    * the mesh has holes where the segment touches a bucket's lower faces. Buckets below 0 are left out, as the dataset
+    * has no voxels there.
+    */
+  protected def bucketsToMesh(segmentBuckets: Seq[Vec3Int]): Seq[Vec3Int] = {
+    val offsets = for {
+      dx <- 0 to 1
+      dy <- 0 to 1
+      dz <- 0 to 1
+    } yield Vec3Int(dx, dy, dz)
+    segmentBuckets.flatMap(bucket => offsets.map(bucket - _)).filter(p => p.x >= 0 && p.y >= 0 && p.z >= 0).distinct
+  }
+
   protected def generateNextTopLeftsFromNeighbors(
       oldTopLeft: VoxelPosition,
       neighborIds: List[Int],

@@ -145,12 +145,8 @@ function DatasetView({
         onSelectDataset={onSelectDataset}
         selectedDatasets={selectedDatasets}
         searchQuery={searchQuery || ""}
-        searchTags={searchTags}
-        setSearchTags={setSearchTags}
         onSelectFolder={onSelectFolder}
         isUserAdminOrDatasetManager={isUserAdminOrDatasetManager(user)}
-        datasetFilteringMode={datasetFilteringMode}
-        setDatasetFilteringMode={setDatasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         addTagToSearch={addTagToSearch}
         onClearSearchAndFilters={clearSearchAndFilters}

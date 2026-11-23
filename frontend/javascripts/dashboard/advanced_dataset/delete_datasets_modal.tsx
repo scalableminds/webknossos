@@ -37,6 +37,8 @@ export function useDeleteDatasetsModal({
       );
     }
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+    // A folder may be empty now.
+    queryClient.invalidateQueries({ queryKey: ["datasetsExistInFolder"] });
   };
 
   const deleteDatasetsMutation = useMutation({

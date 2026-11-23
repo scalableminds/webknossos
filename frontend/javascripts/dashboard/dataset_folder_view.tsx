@@ -230,17 +230,16 @@ function DatasetFolderViewInner(props: Props) {
     context.globalSearchQuery == null;
   // The listed datasets are filtered (e.g., unreported ones are hidden by default), so check
   // whether the folder contains any dataset at all. This runs in parallel to loading the list.
-  const { data: doesRootFolderContainAnyDatasets } = useDoesFolderContainDatasetsQuery(
-    context.activeFolderId,
-    {},
-    hasOnlyRootFolder,
-  );
+  const {
+    data: doesRootFolderContainAnyDatasets,
+    isPending: isCheckingWhetherRootFolderContainsDatasets,
+  } = useDoesFolderContainDatasetsQuery(context.activeFolderId, {}, hasOnlyRootFolder);
   const mightBeBrandNewEmptyOrg =
     hasOnlyRootFolder && context.datasets.length === 0 && !context.isLoading;
   const isBrandNewEmptyOrg = mightBeBrandNewEmptyOrg && doesRootFolderContainAnyDatasets === false;
   // Avoid briefly showing the generic empty-folder hint before the onboarding content.
   const isCheckingForBrandNewEmptyOrg =
-    mightBeBrandNewEmptyOrg && doesRootFolderContainAnyDatasets == null;
+    mightBeBrandNewEmptyOrg && isCheckingWhetherRootFolderContainsDatasets;
 
   const folderModal = folderModalState != null && (
     <FolderModal {...folderModalState} onClose={() => setFolderModalState(null)} />

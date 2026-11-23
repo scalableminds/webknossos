@@ -19,10 +19,7 @@ import DatasetActionView, {
   getDatasetActionContextMenu,
 } from "dashboard/advanced_dataset/dataset_action_view";
 import { DraggableDatasetType } from "dashboard/advanced_dataset/dnd_types";
-import type {
-  DatasetCollectionContextValue,
-  DatasetFilteringMode,
-} from "dashboard/dataset/dataset_collection_context";
+import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import {
   type DnDDropItemProps,
@@ -84,11 +81,7 @@ type Props = {
   datasets: Array<APIDatasetCompact>;
   subfolders: FolderItem[];
   searchQuery: string;
-  searchTags: Array<string>;
-  setSearchTags: (tags: string[]) => void;
   isUserAdminOrDatasetManager: boolean;
-  datasetFilteringMode: DatasetFilteringMode;
-  setDatasetFilteringMode: (mode: DatasetFilteringMode) => void;
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onClearSearchAndFilters: () => void;
@@ -506,7 +499,8 @@ class DatasetTable extends PureComponent<Props, State> {
       // The table's loading spinner covers this; avoid flashing the empty-state hint.
       return null;
     }
-    const { searchQuery, searchTags, datasetFilteringMode } = this.props;
+    const { searchQuery } = this.props;
+    const { searchTags, datasetFilteringMode } = this.props.context;
     const isSearchOrFilterActive =
       searchQuery.length > 0 ||
       searchTags.length > 0 ||
@@ -693,31 +687,31 @@ class DatasetTable extends PureComponent<Props, State> {
           }
         >
           <TagFilterChip
-            selectedTags={this.props.searchTags}
+            selectedTags={this.props.context.searchTags}
             availableTags={this.props.datasets.flatMap((dataset) => dataset.tags)}
-            onChange={this.props.setSearchTags}
+            onChange={this.props.context.setSearchTags}
           />
           {this.props.isUserAdminOrDatasetManager ? (
             <FilterChip
               label="Status"
-              active={this.props.datasetFilteringMode !== "onlyShowReported"}
+              active={this.props.context.datasetFilteringMode !== "onlyShowReported"}
             >
               <Space orientation="vertical" size={4}>
                 <Radio
-                  checked={this.props.datasetFilteringMode === "onlyShowReported"}
-                  onChange={() => this.props.setDatasetFilteringMode("onlyShowReported")}
+                  checked={this.props.context.datasetFilteringMode === "onlyShowReported"}
+                  onChange={() => this.props.context.setDatasetFilteringMode("onlyShowReported")}
                 >
                   Available
                 </Radio>
                 <Radio
-                  checked={this.props.datasetFilteringMode === "onlyShowUnreported"}
-                  onChange={() => this.props.setDatasetFilteringMode("onlyShowUnreported")}
+                  checked={this.props.context.datasetFilteringMode === "onlyShowUnreported"}
+                  onChange={() => this.props.context.setDatasetFilteringMode("onlyShowUnreported")}
                 >
                   Missing
                 </Radio>
                 <Radio
-                  checked={this.props.datasetFilteringMode === "showAllDatasets"}
-                  onChange={() => this.props.setDatasetFilteringMode("showAllDatasets")}
+                  checked={this.props.context.datasetFilteringMode === "showAllDatasets"}
+                  onChange={() => this.props.context.setDatasetFilteringMode("showAllDatasets")}
                 >
                   All
                 </Radio>

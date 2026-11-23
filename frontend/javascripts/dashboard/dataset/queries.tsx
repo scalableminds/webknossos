@@ -136,7 +136,8 @@ export function useDatasetSearchQuery(
     refetchOnWindowFocus: false,
     enabled: query != null,
     placeholderData: keepPreviousData,
-    ...(loadAll ? SHORT_LIVED_QUERY_OPTIONS : {}),
+    // Search results are rarely reused, and each search, filter and sorting is cached separately.
+    ...SHORT_LIVED_QUERY_OPTIONS,
   });
 }
 
@@ -508,48 +509,42 @@ export function useUpdateDatasetMutation(folderId: string | null) {
         annotationCount: previousDataset?.annotationCount,
         latestOwnAnnotationId: previousDataset?.latestOwnAnnotationId,
       });
-      // The folder is cached once per filter/sort combination, so update all of them.
-      queryClient.setQueriesData(
-        { queryKey: mutationKey },
-        (oldItems: APIDatasetCompact[] | undefined) =>
+      // The folder is cached once per filter/sort combination, so update all of them. Since the
+      // backend filters the lists, drop the dataset from those lists whose filters it no longer
+      // matches (or if it was moved to another folder).
+      for (const [queryKey, oldItems] of queryClient.getQueriesData<APIDatasetCompact[]>({
+        queryKey: mutationKey,
+      })) {
+        if (oldItems == null) {
+          continue;
+        }
+        const listParams = queryKey[2] as DatasetListParams | undefined;
+        queryClient.setQueryData(
+          queryKey,
           oldItems
-            ?.map((oldDataset: APIDatasetCompact) => {
-              return oldDataset.id === updatedDataset.id
-                ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
+            .map((oldDataset: APIDatasetCompact) =>
+              oldDataset.id === updatedDataset.id
+                ? // Keep lastUsedByUser consistent with the list's order, which comes from the
+                  // backend and only changes when the list is reloaded.
                   toCompact({
                     ...updatedDataset,
                     lastUsedByUser: oldDataset.lastUsedByUser,
                   })
-                : oldDataset;
-            })
-            .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
-      );
+                : oldDataset,
+            )
+            .filter(
+              (dataset: APIDatasetCompact) =>
+                dataset.folderId === folderId && doesDatasetMatchListParams(dataset, listParams),
+            ),
+        );
+      }
       // Also update the cached dataset under the key "datasetById".
       queryClient.setQueryData(["datasetById", updatedDataset.id], updatedDataset);
       const targetFolderId = updatedDataset.folderId;
       if (targetFolderId !== folderId) {
-        // The dataset was moved to another folder. Add the dataset to that target folder
-        queryClient.setQueriesData(
-          { queryKey: ["datasetsByFolder", targetFolderId] },
-          (oldItems: APIDatasetCompact[] | undefined) => {
-            if (oldItems == null) {
-              // Don't update the query data, if it doesn't exist, yet.
-              // Otherwise, this would lead to weird intermediate states
-              // (i.e., moving a dataset to folder X and switching to X
-              // will only show the moved dataset and a spinner; when loading
-              // has finished, the page will be complete).
-              return undefined;
-            }
-            return (
-              oldItems
-                // The dataset shouldn't be in oldItems, but if it should be
-                // for some reason (e.g., a bug), we filter it away to avoid
-                // duplicates.
-                .filter((el) => el.id !== updatedDataset.id)
-                .concat([toCompact(updatedDataset)])
-            );
-          },
-        );
+        // The dataset was moved to another folder. Its position in the target folder's lists
+        // depends on the backend sorting and filtering, so drop them to load them freshly.
+        queryClient.removeQueries({ queryKey: ["datasetsByFolder", targetFolderId] });
       }
       // Invalidate all search results so that outdated data won't be shown.
       // We could also update the dataset instances in the cache, but this can
@@ -568,6 +563,22 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       handleGenericError(err, "Could not update dataset.");
     },
   });
+}
+
+// Whether a dataset matches the backend filters of a cached dataset list.
+function doesDatasetMatchListParams(
+  dataset: APIDatasetCompact,
+  listParams: DatasetListParams | undefined,
+): boolean {
+  if (listParams == null) {
+    return true;
+  }
+  const { tags, isUnreported, isActive } = listParams;
+  return (
+    (tags ?? []).every((tag) => dataset.tags.includes(tag)) &&
+    (isUnreported == null || dataset.isUnreported === isUnreported) &&
+    (isActive == null || dataset.isActive === isActive)
+  );
 }
 
 function diffDatasets(
@@ -658,8 +669,8 @@ function getUnobtrusivelyUpdatedDatasets(
 ): APIDatasetCompact[] {
   /*
    * Only update existing datasets from oldDatasets with the ones from new datasets, so that the rendered
-   * dataset list doesn't change in size (which would cause annoying scroll jumps). Also, don't change the
-   * lastUsedByUser property, as this would change the ordering when the default sorting is used.
+   * dataset list doesn't change in size or order (which would cause annoying scroll jumps). Also, keep the
+   * lastUsedByUser property, so that it stays consistent with that order (the backend sorts by it by default).
    */
 
   const idFn = (dataset: APIDatasetCompact) => dataset.id;

@@ -19,6 +19,7 @@ import com.webauthn4j.data.extension.authenticator.{
   AuthenticationExtensionsAuthenticatorOutputs,
   RegistrationExtensionAuthenticatorOutput
 }
+import com.scalableminds.util.box.Box
 import com.scalableminds.util.box.Box.tryo
 import utils.sql.{SQLDAO, SqlClient}
 import play.api.libs.json.*
@@ -32,23 +33,80 @@ case class WebAuthnCredential(
     name: String,
     credentialRecord: WebAuthnCredentialRecord,
     isDeleted: Boolean
-) {
-  def serializeAttestedCredential(objectConverter: ObjectConverter): Array[Byte] = {
-    val converter = new AttestedCredentialDataConverter(objectConverter)
-    converter.convert(credentialRecord.getAttestedCredentialData)
-  }
+)
 
-  def serializeAttestationStatement(objectConverter: ObjectConverter)(implicit ec: ExecutionContext): Fox[JsObject] = {
+// The parts of a credential record that are stored in the database, see webknossos.webauthnCredentials.
+case class SerializedWebAuthnCredentialRecord(
+    credentialId: Array[Byte],
+    userVerified: Boolean,
+    backupEligible: Boolean,
+    backupState: Boolean,
+    attestationStatement: JsObject,
+    attestedCredential: Array[Byte],
+    extensions: JsObject,
+    signatureCount: Long
+)
+
+object SerializedWebAuthnCredentialRecord {
+
+  def serialize(record: WebAuthnCredentialRecord): Box[SerializedWebAuthnCredentialRecord] = {
+    val objectConverter = new ObjectConverter()
+    val jsonMapper = objectConverter.getJsonMapper
     val envelope = new AttestationStatementEnvelope()
-    envelope.fmt = credentialRecord.getAttestationStatement.getFormat
-    envelope.attestationStatement = credentialRecord.getAttestationStatement
-    val rawJson = objectConverter.getJsonMapper.writeValueAsString(envelope)
-    JsonHelper.parseAs[JsObject](rawJson).toFox
+    envelope.fmt = record.getAttestationStatement.getFormat
+    envelope.attestationStatement = record.getAttestationStatement
+    for {
+      attestationStatement <- JsonHelper.parseAs[JsObject](jsonMapper.writeValueAsString(envelope))
+      extensions <- JsonHelper.parseAs[JsObject](jsonMapper.writeValueAsString(record.getAuthenticatorExtensions))
+      attestedCredential <- tryo(
+        new AttestedCredentialDataConverter(objectConverter).convert(record.getAttestedCredentialData)
+      )
+    } yield SerializedWebAuthnCredentialRecord(
+      credentialId = record.getAttestedCredentialData.getCredentialId,
+      userVerified = record.isUvInitialized.booleanValue,
+      backupEligible = record.isBackupEligible.booleanValue,
+      backupState = record.isBackedUp.booleanValue,
+      attestationStatement = attestationStatement,
+      attestedCredential = attestedCredential,
+      extensions = extensions,
+      signatureCount = record.getCounter
+    )
   }
 
-  def serializedExtensions(converter: ObjectConverter)(implicit ec: ExecutionContext): Fox[JsObject] = {
-    val rawJson = converter.getJsonMapper.writeValueAsString(credentialRecord.getAuthenticatorExtensions)
-    JsonHelper.parseAs[JsObject](rawJson).toFox
+  def deserialize(
+      attestationStatementJson: String,
+      attestedCredential: Array[Byte],
+      extensionsJson: String,
+      userVerified: Boolean,
+      backupEligible: Boolean,
+      backupState: Boolean,
+      signatureCount: Long
+  ): Box[WebAuthnCredentialRecord] = {
+    val objectConverter = new ObjectConverter()
+    val jsonMapper = objectConverter.getJsonMapper
+    for {
+      attestedCredentialData <- tryo(new AttestedCredentialDataConverter(objectConverter).convert(attestedCredential))
+      authenticatorExtensions <- tryo(
+        jsonMapper.readValue(
+          extensionsJson,
+          new TypeReference[AuthenticationExtensionsAuthenticatorOutputs[RegistrationExtensionAuthenticatorOutput]] {}
+        )
+      )
+      attestationStatement <- tryo(
+        jsonMapper.readValue(attestationStatementJson, new TypeReference[AttestationStatementEnvelope] {})
+      )
+    } yield new WebAuthnCredentialRecord(
+      attestationStatement.getAttestationStatement,
+      userVerified,
+      backupEligible,
+      backupState,
+      signatureCount,
+      attestedCredentialData,
+      authenticatorExtensions,
+      null, // clientData - No client data is collected during registration.
+      null, // clientExtensions - Client extensions are ignored.
+      null // transports - All transport methods are allowed.
+    )
   }
 }
 
@@ -82,35 +140,20 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
   protected val collection = Webauthncredentials
   protected def resultConverter = GetResultWebauthncredentialsRow
 
-  protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] = {
-    val objectConverter = new ObjectConverter()
-    val converter = objectConverter.getJsonMapper
-    val attestedCredentialDataConverter = new AttestedCredentialDataConverter(objectConverter)
+  protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] =
     for {
-      attestedCredential <- tryo(attestedCredentialDataConverter.convert(r.serializedattestedcredential)).toFox
-      authenticatorExtensions <- tryo(
-        converter.readValue(
-          r.serializedextensions,
-          new TypeReference[AuthenticationExtensionsAuthenticatorOutputs[RegistrationExtensionAuthenticatorOutput]] {}
+      record <- SerializedWebAuthnCredentialRecord
+        .deserialize(
+          attestationStatementJson = r.serializedattestationstatement,
+          attestedCredential = r.serializedattestedcredential,
+          extensionsJson = r.serializedextensions,
+          userVerified = r.userverified,
+          backupEligible = r.backupeligible,
+          backupState = r.backupstate,
+          signatureCount = r.signaturecount.toLong
         )
-      ).toFox
-      attestationStatement <- tryo(
-        converter.readValue(r.serializedattestationstatement, new TypeReference[AttestationStatementEnvelope] {})
-      ).toFox
-      record = new WebAuthnCredentialRecord(
-        attestationStatement.getAttestationStatement,
-        r.userverified,
-        r.backupeligible,
-        r.backupstate,
-        r.signaturecount.toLong,
-        attestedCredential,
-        authenticatorExtensions,
-        null, // clientData - No client data is collected during registration.
-        null, // clientExtensions - Client extensions are ignored.
-        null // transports - All transport methods are allowed.
-      )
+        .toFox
     } yield WebAuthnCredential(ObjectId(r._id), ObjectId(r._multiuser), r.name, record, r.isdeleted)
-  }
 
   def findAllForUser(multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
     for {
@@ -134,24 +177,16 @@ class WebAuthnCredentialDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
       parsed <- parseFirst(r, multiUserId)
     } yield parsed
 
-  def insertOne(c: WebAuthnCredential): Fox[Unit] = {
-    val converter = new ObjectConverter()
-    val serializedAttestedCredential = c.serializeAttestedCredential(converter)
-    val credentialId = c.credentialRecord.getAttestedCredentialData.getCredentialId
-    val userVerified = c.credentialRecord.isUvInitialized.booleanValue
-    val backupEligible = c.credentialRecord.isBackupEligible.booleanValue
-    val backupState = c.credentialRecord.isBackedUp.booleanValue
+  def insertOne(c: WebAuthnCredential): Fox[Unit] =
     for {
-      serializedAuthenticatorExtensions <- c.serializedExtensions(converter)
-      serializedAttestationStatement <- c.serializeAttestationStatement(converter)
+      s <- SerializedWebAuthnCredentialRecord.serialize(c.credentialRecord).toFox
       _ <- run(
         q"""INSERT INTO $existingCollectionName (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState,
                                                  serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount)
-                       VALUES(${c._id}, ${c._multiUser}, $credentialId, ${c.name}, $userVerified, $backupEligible, $backupState, $serializedAttestationStatement,
-                         $serializedAttestedCredential, $serializedAuthenticatorExtensions, ${c.credentialRecord.getCounter.toInt})""".asUpdate
+                       VALUES(${c._id}, ${c._multiUser}, ${s.credentialId}, ${c.name}, ${s.userVerified}, ${s.backupEligible}, ${s.backupState}, ${s.attestationStatement},
+                         ${s.attestedCredential}, ${s.extensions}, ${s.signatureCount.toInt})""".asUpdate
       )
     } yield ()
-  }
 
   def updateSignCount(c: WebAuthnCredential): Fox[Unit] = {
     val signatureCount = c.credentialRecord.getCounter

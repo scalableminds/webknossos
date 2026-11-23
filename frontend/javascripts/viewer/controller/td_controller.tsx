@@ -5,7 +5,7 @@ import { clamp, waitForElementWithId } from "libs/utils";
 import get from "lodash-es/get";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import { type Object3D, type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
+import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import Constants, {
   type OrthoView,
@@ -22,7 +22,7 @@ import {
   ProofreadToolController,
   SkeletonToolController,
 } from "viewer/controller/combinations/tool_controls";
-import CustomLOD from "viewer/controller/custom_lod";
+import getSceneController from "viewer/controller/scene_controller_provider";
 import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
@@ -384,12 +384,9 @@ class TDController extends PureComponent<Props> {
     const meshId: bigint | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
     const unmappedSegmentId: bigint | null = hitResult?.unmappedSegmentId || null;
     const meshClickedPosition = hitResult ? hitResult.point : null;
-    // The meshes of each segmentation layer are grouped in a CustomLOD named after the layer.
-    let layerGroup: Object3D | null = hitResult.node;
-    while (layerGroup != null && !(layerGroup instanceof CustomLOD)) {
-      layerGroup = layerGroup.parent;
-    }
-    const layerName = layerGroup?.name ?? null;
+    const layerName = getSceneController().segmentMeshController.getLayerNameOfMeshObject(
+      hitResult.node,
+    );
     return {
       meshId,
       unmappedSegmentId,

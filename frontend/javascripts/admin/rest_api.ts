@@ -1,3 +1,4 @@
+import { type AdHocMeshGeometry, parseAdHocMeshResponse } from "admin/api/ad_hoc_mesh_response";
 import type { ApiResult, RetryOptions } from "admin/api/api_result";
 import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
@@ -2308,10 +2309,11 @@ export function computeAdHocMesh(
   options: RequestOptions = {},
   retryOptions?: RetryOptions,
 ): Promise<
-  ApiResult<{
-    buffer: ArrayBuffer;
-    neighbors: Array<number>;
-  }>
+  ApiResult<
+    AdHocMeshGeometry & {
+      neighbors: Array<number>;
+    }
+  >
 > {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
@@ -2345,15 +2347,13 @@ export function computeAdHocMesh(
               mapping: mappingName,
               voxelSizeFactorInUnit: scaleFactor,
               mag,
+              indexed: true,
               ...rest,
             },
           },
         );
         const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
-        return {
-          buffer,
-          neighbors,
-        };
+        return { ...parseAdHocMeshResponse(buffer, headers["vertex-count"]), neighbors };
       }),
     options,
     retryOptions,

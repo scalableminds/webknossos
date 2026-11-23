@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Failure}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
+import com.scalableminds.util.box.Box.tryo
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -14,7 +15,6 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceMappingRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.services.mapping.{JsonMapping, MappingService}
@@ -23,11 +23,8 @@ import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool
 import org.apache.pekko.util.Timeout
 
-import java.nio.*
-import scala.collection.mutable
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext}
-import scala.reflect.ClassTag
 
 case class AdHocMeshRequest(
     datasetId: Option[ObjectId],
@@ -42,12 +39,6 @@ case class AdHocMeshRequest(
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
     findNeighbors: Boolean = true
-)
-
-case class DataTypeFunctors[T, B](
-    getTypedBufferFn: ByteBuffer => B,
-    copyDataFn: (B, Array[T]) => Unit,
-    fromLong: Long => T
 )
 
 class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration) extends Actor {
@@ -72,128 +63,21 @@ class AdHocMeshService(
 
   implicit private val timeout: Timeout = Timeout(adHocMeshTimeout)
 
-  private val marchingCubesChunkSize = 32
-
   private val actor: ActorRef =
     actorSystem.actorOf(RoundRobinPool(adHocMeshActorPoolSize).props(Props(new AdHocMeshActor(this, timeout.duration))))
 
-  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
+  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[AdHocMesh] =
     Fox.fromFutureBox {
-      actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover { case e: Exception =>
+      actor.ask(request).mapTo[Box[AdHocMesh]].recover { case e: Exception =>
         Failure(e.getMessage)
       }
     }
 
-  def requestAdHocMesh(request: AdHocMeshRequest)(using tc: TokenContext): Fox[(Array[Float], List[Int])] =
-    request.dataLayer.elementClass match {
-      case ElementClass.uint8 | ElementClass.int8 =>
-        generateAdHocMeshImpl[Byte, ByteBuffer](
-          request,
-          DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte)
-        )
+  private lazy val adHocMesher = new NativeAdHocMesher()
 
-      case ElementClass.uint16 | ElementClass.int16 =>
-        generateAdHocMeshImpl[Short, ShortBuffer](
-          request,
-          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort)
-        )
-
-      case ElementClass.uint32 | ElementClass.int32 =>
-        generateAdHocMeshImpl[Int, IntBuffer](
-          request,
-          DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt)
-        )
-      case ElementClass.uint64 | ElementClass.int64 =>
-        generateAdHocMeshImpl[Long, LongBuffer](
-          request,
-          DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity)
-        )
-    }
-
-  private def generateAdHocMeshImpl[T: ClassTag, B <: Buffer](
-      request: AdHocMeshRequest,
-      dataTypeFunctors: DataTypeFunctors[T, B]
-  )(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
-
-    val jsonMappingRequestOpt: Option[DataServiceMappingRequest] =
-      (request.mapping, request.mappingType) match {
-        case (Some(mappingName), Some(MappingType.JSON)) =>
-          Some(DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName))
-        case _ => None
-      }
-
-    val elementClass = request.dataLayer.elementClass
-
-    def applyJsonMappingIfNeeded(jsonMappingOpt: Option[JsonMapping], data: Array[Byte]): Fox[Array[Byte]] =
-      jsonMappingOpt.map(mappingService.applyMapping(_, data, elementClass).toFox).getOrElse(Fox.successful(data))
-
-    def mapSegmentIdIfNeeded(jsonMappingOpt: Option[JsonMapping], segmentId: Long): Long =
-      jsonMappingOpt.map(mappingService.mapSegmentId(_, segmentId, elementClass)).getOrElse(segmentId)
-
-    def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
-      request.mapping match {
-        case Some(_) =>
-          request.mappingType match {
-            case Some(MappingType.AGGLOMERATE) =>
-              binaryDataService.agglomerateServiceOpt.map { agglomerateService =>
-                val dataRequest = DataServiceDataRequest(
-                  request.datasetId,
-                  request.dataSourceId,
-                  request.dataLayer,
-                  request.cuboid,
-                  DataServiceRequestSettings(halfByte = false, request.mapping, request.annotationVersion)
-                )
-                agglomerateService.applyAgglomerate(dataRequest)(data)
-              }.getOrElse(Fox.successful(data))
-            case _ =>
-              Fox.successful(data)
-          }
-        case _ =>
-          Fox.successful(data)
-      }
-
-    def convertData(data: Array[Byte]): Array[T] = {
-      val srcBuffer = dataTypeFunctors.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
-      srcBuffer.rewind()
-      val dstArray = Array.ofDim[T](srcBuffer.remaining())
-      dataTypeFunctors.copyDataFn(srcBuffer, dstArray)
-      dstArray
-    }
-
-    def subVolumeContainsSegmentId[T](
-        data: Array[T],
-        dataDimensions: Vec3Int,
-        boundingBox: BoundingBox,
-        segmentId: T
-    ): Boolean =
-      boundingBox.topLeft.x until boundingBox.bottomRight.x exists { x =>
-        boundingBox.topLeft.y until boundingBox.bottomRight.y exists { y =>
-          boundingBox.topLeft.z until boundingBox.bottomRight.z exists { z =>
-            val voxelOffset = x + y * dataDimensions.x + z * dataDimensions.x * dataDimensions.y
-            data(voxelOffset) == segmentId
-          }
-        }
-      }
-
-    def findNeighbors[T](data: Array[T], dataDimensions: Vec3Int, segmentId: T): List[Int] = {
-      val x = dataDimensions.x - 1
-      val y = dataDimensions.y - 1
-      val z = dataDimensions.z - 1
-      val front_xy = BoundingBox(Vec3Int(0, 0, 0), x, y, 1)
-      val front_xz = BoundingBox(Vec3Int(0, 0, 0), x, 1, z)
-      val front_yz = BoundingBox(Vec3Int(0, 0, 0), 1, y, z)
-      val back_xy = BoundingBox(Vec3Int(0, 0, z), x, y, 1)
-      val back_xz = BoundingBox(Vec3Int(0, y, 0), x, 1, z)
-      val back_yz = BoundingBox(Vec3Int(x, 0, 0), 1, y, z)
-      val surfaceBoundingBoxes = List(front_xy, front_xz, front_yz, back_xy, back_xz, back_yz)
-      surfaceBoundingBoxes.zipWithIndex.filter { case (surfaceBoundingBox, _) =>
-        subVolumeContainsSegmentId(data, dataDimensions, surfaceBoundingBox, segmentId)
-      }.map { case (_, index) =>
-        index
-      }
-    }
-
+  def requestAdHocMesh(request: AdHocMeshRequest)(using tc: TokenContext): Fox[AdHocMesh] = {
     val cuboid = request.cuboid
+    val elementClass = request.dataLayer.elementClass
 
     val dataRequest = DataServiceDataRequest(
       request.datasetId,
@@ -215,42 +99,61 @@ class AdHocMeshService(
     )
     val scale = Vec3Float(cuboid.topLeft.mag) * Vec3Float(request.voxelSizeFactor)
 
-    val vertexBuffer = mutable.ArrayBuffer[Float]()
-
-    // Started right away, so that loading the mapping runs concurrently with loading the data.
-    val jsonMappingOptFox = Fox.runOptional(jsonMappingRequestOpt)(mappingService.loadMapping)
+    val jsonMappingRequestOpt = (request.mapping, request.mappingType) match {
+      case (Some(mappingName), Some(MappingType.JSON)) =>
+        Some(DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName))
+      case _ => None
+    }
 
     for {
+      _ <- Fox.fromBool(ElementClass.segmentationElementClasses.contains(elementClass)) ?~>
+        s"Ad-hoc meshing is not supported for element class $elementClass"
+      // Started before loading the data, so that loading the mapping runs concurrently with it.
+      jsonMappingOptFox = Fox.runOptional(jsonMappingRequestOpt)(mappingService.loadMapping)
       data <- binaryDataService.handleDataRequest(dataRequest)
-      agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
+      agglomerateMappedData <- applyAgglomerate(request, data) ?~> "failed to apply agglomerate for ad-hoc meshing"
       jsonMappingOpt <- jsonMappingOptFox ?~> "failed to load json mapping"
-      mappedBytes <- applyJsonMappingIfNeeded(jsonMappingOpt, agglomerateMappedData) ?~> "failed to apply json mapping"
-      mappedData = convertData(mappedBytes)
-      mappedSegmentId = dataTypeFunctors.fromLong(mapSegmentIdIfNeeded(jsonMappingOpt, request.segmentId))
-      neighbors =
-        if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) }
-        else {
-          List()
-        }
-
-    } yield {
-      for {
-        x <- 0 until dataDimensions.x by marchingCubesChunkSize
-        y <- 0 until dataDimensions.y by marchingCubesChunkSize
-        z <- 0 until dataDimensions.z by marchingCubesChunkSize
-      } {
-        val boundingBox = BoundingBox(
-          Vec3Int(x, y, z),
-          math.min(dataDimensions.x - x, marchingCubesChunkSize + 1),
-          math.min(dataDimensions.y - y, marchingCubesChunkSize + 1),
-          math.min(dataDimensions.z - z, marchingCubesChunkSize + 1)
+      mappedData <- applyJsonMappingIfNeeded(jsonMappingOpt, agglomerateMappedData, elementClass) ?~>
+        "failed to apply json mapping"
+      mappedSegmentId = jsonMappingOpt.fold(request.segmentId)(
+        mappingService.mapSegmentId(_, request.segmentId, elementClass)
+      )
+      mesh <- tryo(
+        adHocMesher.mesh(
+          mappedData,
+          ElementClass.bytesPerElement(elementClass),
+          dataDimensions,
+          mappedSegmentId,
+          offset,
+          scale
         )
-        if (subVolumeContainsSegmentId(mappedData, dataDimensions, boundingBox, mappedSegmentId)) {
-          MarchingCubes
-            .marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, offset, scale, vertexBuffer)
-        }
-      }
-      (vertexBuffer.toArray, neighbors)
-    }
+      ).toFox
+    } yield if (request.findNeighbors) mesh else mesh.copy(neighbors = List())
   }
+
+  private def applyAgglomerate(request: AdHocMeshRequest, data: Array[Byte])(using
+      tc: TokenContext
+  ): Fox[Array[Byte]] =
+    request.mappingType match {
+      case Some(MappingType.AGGLOMERATE) if request.mapping.isDefined =>
+        binaryDataService.agglomerateServiceOpt.map { agglomerateService =>
+          val dataRequest = DataServiceDataRequest(
+            request.datasetId,
+            request.dataSourceId,
+            request.dataLayer,
+            request.cuboid,
+            DataServiceRequestSettings(halfByte = false, request.mapping, request.annotationVersion)
+          )
+          agglomerateService.applyAgglomerate(dataRequest)(data)
+        }.getOrElse(Fox.successful(data))
+      case _ =>
+        Fox.successful(data)
+    }
+
+  private def applyJsonMappingIfNeeded(
+      jsonMappingOpt: Option[JsonMapping],
+      data: Array[Byte],
+      elementClass: ElementClass.Value
+  ): Fox[Array[Byte]] =
+    jsonMappingOpt.map(mappingService.applyMapping(_, data, elementClass).toFox).getOrElse(Fox.successful(data))
 }

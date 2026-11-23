@@ -20,7 +20,6 @@ import type {
 } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import Constants, { MappingStatusEnum } from "viewer/constants";
-import CustomLOD from "viewer/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
   sortByDistanceTo,
@@ -28,6 +27,7 @@ import {
   VertexSegmentMapping,
 } from "viewer/controller/mesh_helpers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getLODIndexForTDViewTarget } from "viewer/controller/segment_lod";
 import {
   getMappingInfo,
   getSegmentationLayerByName,
@@ -351,7 +351,6 @@ function* _getChunkLoadingDescriptors(
   const availableChunksMap: ChunksMap = {};
   let loadingOrder: number[] = [];
 
-  const { segmentMeshController } = getSceneController();
   const version = meshFile.formatVersion;
 
   const editableMapping = yield* select((state) =>
@@ -400,22 +399,10 @@ function* _getChunkLoadingDescriptors(
     loadingOrder.push(lodIndex);
     meshLodInfo.transform;
   });
-  const currentLODGroup: CustomLOD =
-    (yield* call(
-      {
-        context: segmentMeshController,
-        fn: segmentMeshController.getLODGroupOfLayer,
-      },
-      segmentationLayer.name,
-    )) ?? new CustomLOD();
-  const currentLODIndex = yield* call(
-    {
-      context: currentLODGroup,
-      fn: currentLODGroup.getCurrentLOD,
-    },
-    Math.max(...loadingOrder),
-  );
-  // Load the chunks closest to the current LOD first.
+  // The LOD that is shown for a segment depends on its distance to the camera, which
+  // isn't known before its chunks are loaded. Approximate it with the LOD at the depth
+  // of the 3D viewport's orbit target and load the chunks closest to that LOD first.
+  const currentLODIndex = yield* call(getLODIndexForTDViewTarget, Math.max(...loadingOrder));
   loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
 
   return {

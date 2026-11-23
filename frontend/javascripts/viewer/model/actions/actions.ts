@@ -119,7 +119,9 @@ export const getNewIdAction = (
 export type ReservableIdDomain = "SegmentGroup" | "BoundingBox" | "Bookmark";
 
 // Bookmarks belong to the annotation rather than a tracing. Their id reservations use
-// this value in place of a tracing id.
+// this value in place of a tracing id. It is an empty string rather than null, because
+// tracingId is part of the primary key of annotation_reserved_ids (see schema.sql) and
+// therefore cannot be NULL.
 export const ANNOTATION_SCOPED_TRACING_ID = "";
 
 export const dispatchGetNewIdAsync = async (

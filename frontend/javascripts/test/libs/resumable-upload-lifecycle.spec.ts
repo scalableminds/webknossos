@@ -223,6 +223,62 @@ describe("Resumable chunk lifecycle", () => {
     expect(fileErrorSpy).not.toHaveBeenCalled();
   });
 
+  it("should not count network-error retries towards maxChunkRetries for HTTP errors", async () => {
+    // Five network errors, then two retryable HTTP errors, then success. With
+    // maxChunkRetries: 2, the HTTP errors must still be retried.
+    const responses: Array<() => Promise<Response>> = [
+      ...Array.from({ length: 5 }, () => () => Promise.reject(new TypeError("Network failure"))),
+      () => Promise.resolve(new Response("unavailable", { status: 503 })),
+      () => Promise.resolve(new Response("unavailable", { status: 503 })),
+      () => Promise.resolve(new Response("ok")),
+    ];
+    const fetchMock = vi.fn(() => responses.shift()!());
+    vi.stubGlobal("fetch", fetchMock);
+    const resumable = new ResumableUpload({
+      target: "/upload",
+      chunkSize: 10,
+      testChunks: false,
+      maxChunkRetries: 2,
+      chunkRetryInterval: 1,
+    });
+    resumable.addFile(new File(["x".repeat(10)], "test.txt"));
+    const fileErrorSpy = vi.fn();
+    resumable.addEventListener("fileError", fileErrorSpy);
+    const fileSuccess = new Promise<void>((resolve) =>
+      resumable.addEventListener("fileSuccess", () => resolve()),
+    );
+    await sleep(0);
+
+    resumable.upload();
+
+    await fileSuccess;
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fileErrorSpy).not.toHaveBeenCalled();
+  });
+
+  it("should fail once the HTTP-error retries exceed maxChunkRetries", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response("unavailable", { status: 503 })));
+    vi.stubGlobal("fetch", fetchMock);
+    const resumable = new ResumableUpload({
+      target: "/upload",
+      chunkSize: 10,
+      testChunks: false,
+      maxChunkRetries: 2,
+      chunkRetryInterval: 1,
+    });
+    resumable.addFile(new File(["x".repeat(10)], "test.txt"));
+    const fileError = new Promise<void>((resolve) =>
+      resumable.addEventListener("fileError", () => resolve()),
+    );
+    await sleep(0);
+
+    resumable.upload();
+
+    await fileError;
+    // The initial attempt plus two retries.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("should not leave abort listeners behind after waiting for retries", async () => {
     let attempts = 0;
     vi.stubGlobal(

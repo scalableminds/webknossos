@@ -198,7 +198,8 @@ class DSFullMeshService @Inject() (
       mag: Vec3Int
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
-      targetMagPositions <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
+      segmentBuckets <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
+      targetMagPositions = bucketsToMesh(segmentBuckets.toSeq)
       // Dispatch chunks to the actor pool keeping actorPoolSize requests in flight at a time.
       meshChunks: List[AdHocMesh] <- Fox.batchCombined(
         targetMagPositions.toIndexedSeq,

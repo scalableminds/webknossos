@@ -205,11 +205,12 @@ class TSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
-      bucketPositionsInMag <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
-      bucketPositions = bucketPositionsInMag
+      segmentBuckets <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
+      bucketPositions = bucketsToMesh(segmentBuckets).toList
         .map(_ * mag * DataLayer.bucketLength)
         .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, fullMeshRequest.additionalCoordinates))
-      meshChunks: List[AdHocMesh] <- Fox.serialCombined(bucketPositions) { bucketPosition =>
+      // Keeping several chunks in flight, as each one waits for its buckets to load.
+      meshChunks: List[AdHocMesh] <- Fox.batchCombined(bucketPositions, adHocMeshingBatchSize) { bucketPosition =>
         val adHocMeshRequest = WebknossosAdHocMeshRequest(
           position = Vec3Int(bucketPosition.voxelMag1X, bucketPosition.voxelMag1Y, bucketPosition.voxelMag1Z),
           mag = mag,

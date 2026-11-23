@@ -432,3 +432,105 @@ fn rejects_invalid_arguments() {
         assert!(message.contains("at most"), "{message}");
     }
 }
+
+/// The triangles of a triangle soup as their vertices' bits, sorted, to compare meshes regardless of triangle order.
+fn sorted_triangles(soup: &[f32]) -> Vec<[[u32; 3]; 3]> {
+    let mut triangles = triangles(soup);
+    triangles.sort_unstable();
+    triangles
+}
+
+/// Meshes the given buckets of a u8 volume one by one, as the datastore meshes a segment from its segment index: each
+/// bucket's cuboid spans the bucket plus one voxel at its high end, so it meshes the cubes whose origin lies in it.
+fn mesh_buckets(
+    data: &[u8],
+    dimensions: [usize; 3],
+    bucket_length: usize,
+    buckets: &std::collections::BTreeSet<[usize; 3]>,
+    segment_id: i64,
+) -> Vec<f32> {
+    let [width, height, _] = dimensions;
+    let mut soup = Vec::new();
+    for bucket in buckets {
+        let start = bucket.map(|b| b * bucket_length);
+        let end = [0, 1, 2].map(|axis| (start[axis] + bucket_length + 1).min(dimensions[axis]));
+        let mut cuboid = Vec::new();
+        for z in start[2]..end[2] {
+            for y in start[1]..end[1] {
+                let row = start[0] + width * (y + height * z);
+                cuboid.extend_from_slice(&data[row..row + end[0] - start[0]]);
+            }
+        }
+        let size = [0, 1, 2].map(|axis| (end[axis] - start[axis]) as i32);
+        let cuboid = Cuboid::new(&cuboid, 1, &size).unwrap();
+        let offset = start.map(|s| s as f32);
+        soup.extend(triangle_soup(&ad_hoc_mesh(
+            &cuboid, segment_id, offset, UNIT,
+        )));
+    }
+    soup
+}
+
+#[test]
+fn meshing_the_segment_buckets_and_their_lower_neighbors_gives_the_whole_mesh() {
+    // A cube's triangles come from the bucket of its origin corner, which can lie one bucket below the buckets that
+    // contain the segment (in x, y, z or diagonally) without containing a voxel of the segment itself.
+    let bucket_length = 8;
+    let dimensions = [43, 37, 30];
+    let mut random = Random(23);
+    let balls: Vec<([f64; 3], f64)> = (0..7)
+        .map(|_| {
+            let center = dimensions.map(|d| 4.0 + (random.next() % (d as u64 - 8)) as f64);
+            (center, 1.5 + (random.next() % 5) as f64)
+        })
+        .collect();
+    let data = volume::<u8>(dimensions, 1, 0, |x, y, z| {
+        let [width, height, depth] = dimensions;
+        // The border stays background, so that the whole volume's mesh is closed.
+        if x == 0 || y == 0 || z == 0 || x == width - 1 || y == height - 1 || z == depth - 1 {
+            return false;
+        }
+        // A cube filling exactly bucket (2, 2, 2): none of the buckets below it contains the segment.
+        let in_bucket = [x, y, z].iter().all(|c| (16..24).contains(c));
+        in_bucket
+            || balls.iter().any(|(center, radius)| {
+                let d = [
+                    x as f64 - center[0],
+                    y as f64 - center[1],
+                    z as f64 - center[2],
+                ];
+                d[0] * d[0] + d[1] * d[1] + d[2] * d[2] <= radius * radius
+            })
+    });
+    let whole = triangle_soup(&mesh_of(&data, 1, dimensions, 1));
+    assert_watertight(&whole);
+
+    let [width, height, depth] = dimensions;
+    let mut segment_buckets = std::collections::BTreeSet::new();
+    for z in 0..depth {
+        for y in 0..height {
+            for x in 0..width {
+                if data[x + width * (y + height * z)] == 1 {
+                    segment_buckets.insert([x, y, z].map(|c| c / bucket_length));
+                }
+            }
+        }
+    }
+    let mut with_lower_neighbors = std::collections::BTreeSet::new();
+    for bucket in &segment_buckets {
+        for d in 0..8 {
+            let offset = [d & 1, d >> 1 & 1, d >> 2 & 1];
+            if (0..3).all(|axis| bucket[axis] >= offset[axis]) {
+                with_lower_neighbors.insert([0, 1, 2].map(|axis| bucket[axis] - offset[axis]));
+            }
+        }
+    }
+    assert!(with_lower_neighbors.len() > segment_buckets.len());
+
+    let chunked = mesh_buckets(&data, dimensions, bucket_length, &with_lower_neighbors, 1);
+    assert_eq!(sorted_triangles(&chunked), sorted_triangles(&whole));
+
+    // Meshing only the segment's own buckets misses triangles: the mesh has holes.
+    let own_buckets_only = mesh_buckets(&data, dimensions, bucket_length, &segment_buckets, 1);
+    assert!(triangles(&own_buckets_only).len() < triangles(&whole).len());
+}

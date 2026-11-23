@@ -56,4 +56,30 @@ class FullMeshHelperTestSuite extends AnyWordSpec with FullMeshHelper {
       assert(signedVolume > 0)
     }
   }
+
+  "bucketsToMesh" should {
+    "add the buckets below each segment bucket, also diagonally" in {
+      val buckets = bucketsToMesh(Seq(Vec3Int(5, 5, 5)))
+      assert(buckets.toSet == (for {
+        x <- 4 to 5
+        y <- 4 to 5
+        z <- 4 to 5
+      } yield Vec3Int(x, y, z)).toSet)
+    }
+
+    "list each bucket once and leave out buckets below 0" in {
+      val buckets = bucketsToMesh(Seq(Vec3Int(0, 3, 1), Vec3Int(0, 4, 1)))
+      assert(buckets.distinct.length == buckets.length)
+      assert(
+        buckets.toSet == Set(
+          Vec3Int(0, 2, 0),
+          Vec3Int(0, 2, 1),
+          Vec3Int(0, 3, 0),
+          Vec3Int(0, 3, 1),
+          Vec3Int(0, 4, 0),
+          Vec3Int(0, 4, 1)
+        )
+      )
+    }
+  }
 }

@@ -485,6 +485,7 @@ object Msg {
     def notFoundWrongHost(datasetId: ObjectId, gotHost: String, thisHost: String): String =
       s"Dataset “$datasetId” could not be found or accessed. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates “$gotHost” while this instance is “$thisHost”."
     def notUsable(id: ObjectId): String = s"Dataset “$id” is not imported or incomplete."
+    def invalidSortBy(value: String): String = s"Invalid sortBy value: “$value”."
     def publicWritesFailed(id: ObjectId): String = s"Could not write json for dataset “$id”."
     val bucketCountMismatch: String =
       "Bucket count mismatch while loading multiple data buckets for dataset."

@@ -336,7 +336,7 @@ class DatasetController @Inject() (
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       sortByOpt <- Fox.runOptional(sortBy)(s =>
-        DatasetSortBy.fromString(s).toFox ?~> s"Invalid sortBy value: $s" ~> BAD_REQUEST
+        DatasetSortBy.fromString(s).toFox ?~> Msg.Dataset.invalidSortBy(s) ~> BAD_REQUEST
       )
       organizationIdOpt =
         if (onlyMyOrganization.getOrElse(false))

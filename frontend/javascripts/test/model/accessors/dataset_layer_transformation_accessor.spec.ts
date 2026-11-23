@@ -11,7 +11,7 @@ import {
   rebaseTranslationToPivot,
   type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { transformPointUnscaled } from "viewer/model/helpers/transformation_helpers";
+import { getTransformPointUnscaledFn } from "viewer/model/helpers/transformation_helpers";
 import { describe, expect, it } from "vitest";
 
 const EPSILON = 0.001;
@@ -26,7 +26,9 @@ function transformPoint(
   transforms: ReturnType<typeof buildLiveTransforms>,
   point: Vector3,
 ): Vector3 {
-  return transformPointUnscaled(combineCoordinateTransformations(transforms, [1, 1, 1]))(point);
+  return getTransformPointUnscaledFn(combineCoordinateTransformations(transforms, [1, 1, 1]))(
+    point,
+  );
 }
 
 describe("Live layer transforms", () => {
@@ -119,8 +121,8 @@ describe("Live layer transforms", () => {
     for (const point of [[0, 0, 0], [1, 2, 3], oldPivot, newPivot, [-512, 4096, 77]] as Vector3[]) {
       almostEqual(
         expect,
-        transformPointUnscaled(before)(point),
-        transformPointUnscaled(after)(point),
+        getTransformPointUnscaledFn(before)(point),
+        getTransformPointUnscaledFn(after)(point),
         1e-6,
       );
     }
@@ -165,8 +167,8 @@ describe("Live layer transforms", () => {
       for (const point of [randomVector(-1000, 1000), oldPivot, newPivot]) {
         almostEqual(
           expect,
-          transformPointUnscaled(before)(point),
-          transformPointUnscaled(after)(point),
+          getTransformPointUnscaledFn(before)(point),
+          getTransformPointUnscaledFn(after)(point),
           1e-6,
         );
       }

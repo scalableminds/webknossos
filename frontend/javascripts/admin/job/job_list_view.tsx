@@ -555,12 +555,22 @@ function JobListView() {
       );
     } else if (
       job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
+      job.command === APIJobCommand.TRAIN_INSTANCE_MODEL ||
       job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
     ) {
       return (
         <span>
-          {job.state === "SUCCESS" &&
-            'The model may now be selected from the "AI Analysis" button when viewing a dataset.'}
+          {job.resultLink && (
+            <Link to={job.resultLink} title="View Model">
+              <EyeOutlined className="icon-margin-right" />
+              View
+            </Link>
+          )}
+          {job.state === "SUCCESS" && (
+            <p>
+              The model may now be selected from the "AI Analysis" button when viewing a dataset.
+            </p>
+          )}
         </span>
       );
     } else {

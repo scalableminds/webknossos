@@ -122,8 +122,12 @@ export async function startExportTiffJob(
   annotationId: string | null | undefined,
   annotationLayerName: string | null | undefined,
   exportFormat: APIExportFormat,
+  sharingToken: string | null | undefined,
 ): Promise<APIJob> {
   const params = new URLSearchParams({ bbox: bbox.join(","), exportFormat });
+  if (sharingToken != null) {
+    params.append("sharingToken", sharingToken);
+  }
   if (layerName != null) {
     params.append("layerName", layerName);
   }

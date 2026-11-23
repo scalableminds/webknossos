@@ -105,7 +105,7 @@ function findMeshNodeForAgglomerate(
   layerName: string,
   agglomerateId: bigint,
 ): any {
-  const layerLODGroup = context.segmentMeshController.getLODGroupOfLayer(layerName);
+  const layerLODGroup = context.segmentMeshController.getLayerGroup(layerName);
   let meshNode: any = null;
   layerLODGroup?.traverse((obj: any) => {
     if (meshNode == null && "geometry" in obj && obj.parent?.segmentId === agglomerateId) {

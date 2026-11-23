@@ -12,7 +12,7 @@ For API details, see the WEBKNOSSOS [Frontend API documentation](../../frontend-
 3. Fill in:
    - `Script Name`: Human-readable label shown in selectors.
    - `Gist URL`: URL of the script source, a public [GitHub Gist](https://gist.github.com/) that your setup can access.
-   - `Owner`: User responsible for maintaining the script.
+   - `Owner`: User responsible for maintaining the script. Only the owner can edit or delete it.
 4. Save the script.
 
 After saving, the script appears in the Scripts list and can be selected from the WEBKNOSSOS viewer or during task creation.

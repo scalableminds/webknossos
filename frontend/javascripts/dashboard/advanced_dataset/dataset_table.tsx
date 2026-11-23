@@ -35,9 +35,8 @@ import {
   RowMetaLine,
   TagFilterChip,
 } from "dashboard/list_filter_header";
-import { ZeroStorageReasonList } from "dashboard/storage_info";
+import { UsedStorageAmount } from "dashboard/storage_info";
 import { stringToTagColor } from "libs/colors";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import { pluralize, scrollToTop } from "libs/utils";
@@ -343,23 +342,7 @@ class DatasetRenderer {
 
   renderStorageColumn(): React.ReactNode {
     if (this.data.usedStorageBytes == null) return null;
-    const formattedBytes = formatCountToDataAmountUnit(this.data.usedStorageBytes, true);
-    return this.data.usedStorageBytes > 0 ? (
-      <FastTooltip title={`${new Intl.NumberFormat().format(this.data.usedStorageBytes)} bytes`}>
-        {formattedBytes}
-      </FastTooltip>
-    ) : (
-      <FastTooltip
-        dynamicRenderer={() => (
-          <>
-            The storage may be zero because:
-            {ZeroStorageReasonList}
-          </>
-        )}
-      >
-        {formattedBytes}
-      </FastTooltip>
-    );
+    return <UsedStorageAmount bytes={this.data.usedStorageBytes} />;
   }
   renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;

@@ -72,6 +72,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_SEGMENT_STATISTICS_SCOPE": {
+      return updateKey(state, "uiInformation", {
+        segmentStatisticsScope: action.scope,
+      });
+    }
+
     case "SET_SYSTEM_THEME": {
       return updateKey(state, "uiInformation", {
         systemTheme: action.systemTheme,

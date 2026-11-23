@@ -171,6 +171,27 @@ function toOptionalFixed(num: number, decimalPrecision: number): string {
   return isInt ? roundedValue.toFixed(Math.min(decimalPrecision, 1)) : roundedValue.toString();
 }
 
+// Returns the factor by which the number has to be divided and the unit it is in afterwards.
+// Zero and non-finite numbers keep their unit, as there is no better one for them.
+function getConversionToBestUnit(
+  number: number,
+  unitDimension: UnitDimension,
+  unitMap: Map<number, string>,
+  preferShorterDecimals: boolean = false,
+  decimalPrecision: number = 1,
+): [number, string] {
+  if (number === 0 || !Number.isFinite(number)) {
+    return [1, adjustUnitToDimension(unitDimension.unit, unitDimension.dimension)];
+  }
+  return findBestUnitForFormatting(
+    number,
+    unitDimension,
+    unitMap,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
+}
+
 function formatNumberInUnit(
   number: number,
   unitDimension: UnitDimension,
@@ -178,23 +199,14 @@ function formatNumberInUnit(
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  let maybeAdjustedUnit;
-  let valueInUnit = number;
-  if (number === 0) {
-    maybeAdjustedUnit = adjustUnitToDimension(unitDimension.unit, unitDimension.dimension);
-  } else {
-    const [conversionFactor, newUnit] = findBestUnitForFormatting(
-      number,
-      unitDimension,
-      unitMap,
-      preferShorterDecimals,
-      decimalPrecision,
-    );
-
-    valueInUnit = number / conversionFactor;
-    maybeAdjustedUnit = newUnit;
-  }
-  return `${toOptionalFixed(valueInUnit, decimalPrecision)}${ThinSpace}${maybeAdjustedUnit}`;
+  const [conversionFactor, unit] = getConversionToBestUnit(
+    number,
+    unitDimension,
+    unitMap,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
+  return `${toOptionalFixed(number / conversionFactor, decimalPrecision)}${ThinSpace}${unit}`;
 }
 
 const nmFactorToUnit = new Map([
@@ -217,6 +229,23 @@ const nmFactorToUnit = new Map([
   [1e30, "Zm"],
   [1e33, "Ym"],
 ]);
+
+/*
+ * Returns the unit that represents the given value best, together with the factor by which values
+ * in the passed unit have to be divided to convert them. In contrast to the formatNumberTo...
+ * functions, this allows to format many values (e.g. a table column) in one common unit.
+ * The dimension distinguishes lengths (1), areas (2) and volumes (3).
+ */
+export function getBestUnitForValue(
+  value: number,
+  unit: UnitShort,
+  dimension: 1 | 2 | 3,
+): { factor: number; unit: string } {
+  const unitMap =
+    dimension === 1 ? nmFactorToUnit : dimension === 2 ? nmFactorToUnit2D : nmFactorToUnit3D;
+  const [factor, bestUnit] = getConversionToBestUnit(Math.abs(value), { unit, dimension }, unitMap);
+  return { factor, unit: bestUnit };
+}
 
 // Accepts a length that is interpreted in the given unit and returns a string
 // that uses a readable unit to represent the length.
@@ -574,8 +603,15 @@ export function formatVoxelsForHighNumbers(voxelCount: number) {
   return `${voxelCount}${ThinSpace}Vx`;
 }
 
-export function formatNumber(num: number): string {
-  return new Intl.NumberFormat("en-US").format(num);
+// Formats the number with thousands separators. If fractionDigits is given, exactly that many
+// decimal places are shown (e.g. to align the values of a table column).
+export function formatNumber(num: number, fractionDigits?: number): string {
+  return new Intl.NumberFormat(
+    "en-US",
+    fractionDigits == null
+      ? undefined
+      : { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits },
+  ).format(num);
 }
 
 export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {

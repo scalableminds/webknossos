@@ -114,7 +114,9 @@ case class DatasetCompactInfo(
     usedStorageBytes: Long,
     thumbnailCacheVersion: Int,
     // Active explorationals listable by the requesting user. Only set if requested.
-    annotationCount: Option[Long] = None
+    annotationCount: Option[Long] = None,
+    // Most recently modified of those annotations that are owned by the requesting user. Only set if requested.
+    latestOwnAnnotationId: Option[ObjectId] = None
 ) derives JsonAutoFormat {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
@@ -296,7 +298,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       sortByOpt: Option[DatasetSortBy] = None,
       limitOpt: Option[Int] = None,
       requestingUserOrga: Option[String] = None,
-      includeAnnotationCount: Boolean = false
+      includeAnnotationInfo: Boolean = false
   )(using ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(
@@ -312,23 +314,24 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         tags
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
-      (annotationCountColumn, annotationCountJoin) = requestingUserIdOpt match {
-        case Some(requestingUserId) if includeAnnotationCount =>
-          // annotationCount join is designed for best index use.
+      (annotationCountColumn, latestOwnAnnotationIdColumn, annotationJoin) = requestingUserIdOpt match {
+        case Some(requestingUserId) if includeAnnotationInfo =>
+          // The annotation join (count and latest own annotation) is designed for best index use.
           // The dataset access check is skipped, since only already-checked datasets are joined.
           (
-            q"COALESCE(annotationCounts.count, 0)",
+            q"COALESCE(annotationsPerDataset.count, 0)",
+            q"annotationsPerDataset.latestOwnAnnotationId",
             q"""LEFT JOIN (
-                  SELECT a._dataset, COUNT(*) AS count
+                  SELECT a._dataset, COUNT(*) AS count, (ARRAY_AGG(a._id ORDER BY a.modified DESC, a._id DESC) FILTER (WHERE a._user = $requestingUserId))[1] AS latestOwnAnnotationId
                   FROM webknossos.annotations_ a
                   WHERE a.typ = ${AnnotationType.Explorational}
                   AND a.state = ${AnnotationState.Active}
                   AND ${AnnotationAccessQueries.ownedOrSharedQ(requestingUserId, q"a.")}
                   GROUP BY a._dataset
-                ) annotationCounts
-                  ON annotationCounts._dataset = d._id"""
+                ) annotationsPerDataset
+                  ON annotationsPerDataset._dataset = d._id"""
           )
-        case _ => (q"NULL::BIGINT", q"")
+        case _ => (q"NULL::BIGINT", q"NULL::TEXT", q"")
       }
       lastUsedTimeColumn = q"COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero})"
       usedStorageColumn = q"COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0)"
@@ -378,7 +381,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               layers.segmentationNames AS segmentationLayerNames,
               $usedStorageColumn AS usedStorageBytes,
               d.thumbnailCacheVersion,
-              $annotationCountColumn AS annotationCount
+              $annotationCountColumn AS annotationCount,
+              $latestOwnAnnotationIdColumn AS latestOwnAnnotationId
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates) d
             JOIN webknossos.organizations o
@@ -406,7 +410,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               FROM webknossos.organization_usedStorage_attachments
               WHERE _dataset = d._id
             ) attachmentStorage ON TRUE
-            $annotationCountJoin
+            $annotationJoin
             $orderByQuery
             $limitQuery
             """
@@ -428,7 +432,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               String,
               Long,
               Int,
-              Option[Long]
+              Option[Long],
+              Option[ObjectId]
           )
         ]
       )
@@ -451,7 +456,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         // Only include usedStorage for datasets of your own organization.
         usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else 0L,
         thumbnailCacheVersion = row._15,
-        annotationCount = row._16
+        annotationCount = row._16,
+        latestOwnAnnotationId = row._17
       )
     )
 

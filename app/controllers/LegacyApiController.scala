@@ -208,7 +208,7 @@ class LegacyApiController @Inject() (
           tags = List.empty,
           sortBy = None,
           limit,
-          includeAnnotationCount = None
+          includeAnnotationInfo = None
         )(request)
       )
     else

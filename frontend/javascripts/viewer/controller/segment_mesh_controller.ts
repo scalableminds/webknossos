@@ -18,6 +18,7 @@ import {
   HemisphereLight,
   Mesh,
   MeshPhysicalMaterial,
+  type Object3D,
   Vector3 as ThreeVector3,
 } from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
@@ -25,7 +26,7 @@ import type { AdditionalCoordinate } from "types/api_types";
 import type { BigIntAsKey, LayerNameAsKey } from "types/type_utils";
 import type { Vector2, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
-import CustomLOD from "viewer/controller/custom_lod";
+import SegmentLOD from "viewer/controller/segment_lod";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -145,18 +146,21 @@ type GroupForLOD = Group & {
 
 export default class SegmentMeshController {
   lightsGroup: Group;
-  // meshesLayerLODRootGroup holds a CustomLOD for each segmentation layer with meshes.
-  // Each CustomLOD group can hold multiple meshes.
+  // meshesLayerLODRootGroup holds a group for each segmentation layer with meshes.
+  // Each layer group holds a SegmentLOD per segment (and additional coordinates) which
+  // shows the LOD that fits the segment's distance to the camera.
   // meshesLayerLODRootGroup
-  // - layer 1
-  //  - CustomLOD
+  // - layer 1 (Group)
+  //  - segment A (SegmentLOD)
   //    - LOD X
   //      - meshes
-  // - layer 2
-  //  - CustomLOD
-  //    - LOD X
-  //      - meshes
+  //  - segment B (SegmentLOD)
+  //    - ...
+  // - layer 2 (Group)
+  //  - ...
   meshesLayerLODRootGroup: Group;
+
+  private segmentLODs: Map<string, SegmentLOD> = new Map();
 
   meshesGroupsPerSegmentId: Record<
     string, // additionalCoordinatesString
@@ -200,6 +204,7 @@ export default class SegmentMeshController {
 
   async addMeshFromVerticesAsync(
     vertices: Float32Array,
+    indices: Uint16Array | Uint32Array | null,
     segmentId: bigint,
     layerName: string,
     opacity: number | undefined,
@@ -209,8 +214,13 @@ export default class SegmentMeshController {
     if (vertices.length === 0) return;
     let bufferGeometry = new BufferGeometry();
     bufferGeometry.setAttribute("position", new BufferAttribute(vertices, 3));
-
-    bufferGeometry = mergeVertices(bufferGeometry);
+    if (indices != null) {
+      bufferGeometry.setIndex(new BufferAttribute(indices, 1));
+    } else {
+      // A triangle soup from an older datastore. Share the vertices between triangles, so that
+      // the normals are smooth.
+      bufferGeometry = mergeVertices(bufferGeometry);
+    }
     bufferGeometry.computeVertexNormals();
 
     bufferGeometry.boundsTree = await computeBvhAsync(bufferGeometry);
@@ -306,21 +316,17 @@ export default class SegmentMeshController {
     const isNewlyAddedMesh = get(this.meshesGroupsPerSegmentId, keys) == null;
     const targetGroup: SceneGroupForMeshes = get(this.meshesGroupsPerSegmentId, keys, new Group());
     setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
-    let layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
-      | CustomLOD
-      | undefined;
-
-    if (layerLODGroup == null) {
-      layerLODGroup = new CustomLOD();
-      layerLODGroup.name = layerName;
-      this.meshesLayerLODRootGroup.add(layerLODGroup);
-    }
+    const segmentLOD = this.getOrCreateSegmentLOD(
+      additionalCoordinatesString,
+      layerName,
+      segmentId,
+    );
 
     if (isNewlyAddedMesh) {
       if (lod === NO_LOD_MESH_INDEX) {
-        layerLODGroup.addNoLODSupportedMesh(targetGroup);
+        segmentLOD.addNoLODSupportedMesh(targetGroup);
       } else {
-        layerLODGroup.addLODMesh(targetGroup, lod);
+        segmentLOD.addLODMesh(targetGroup, lod);
       }
       targetGroup.segmentId = segmentId;
       const dsScaleFactor = Store.getState().dataset.dataSource.scale.factor;
@@ -345,6 +351,8 @@ export default class SegmentMeshController {
 
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
+    // The new chunk might extend the segment's bounds which determine its LOD.
+    segmentLOD.expandBoundingBox(group);
 
     // Mesh chunks can stream in while their segment is hovered. Highlight them, too.
     const hoveredSegment = this.hoveredSegmentToHighlight;
@@ -401,15 +409,11 @@ export default class SegmentMeshController {
         : Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
-    const lodMeshGroupForLayer = this.getLODGroupOfLayer(layerName);
-    if (lodMeshGroupForLayer == null) {
-      // No meshes for this layer
-      return;
-    }
-
     if (meshGroups == null) {
       return;
     }
+    const segmentLODKey = this.getSegmentLODKey(additionalCoordKey, layerName, segmentId);
+    const segmentLOD = this.segmentLODs.get(segmentLODKey);
 
     forEach(meshGroups, (meshGroup, lodStr) => {
       const currentLod = Number.parseInt(lodStr, 10);
@@ -420,18 +424,48 @@ export default class SegmentMeshController {
       }
 
       if (currentLod !== NO_LOD_MESH_INDEX) {
-        lodMeshGroupForLayer.removeLODMesh(meshGroup, currentLod);
+        segmentLOD?.removeLODMesh(meshGroup, currentLod);
       } else {
-        lodMeshGroupForLayer.removeNoLODSupportedMesh(meshGroup);
+        segmentLOD?.removeNoLODSupportedMesh(meshGroup);
       }
       this.disposeMeshGroup(meshGroup);
 
       this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);
     });
     if (options?.lod == null) {
-      // If options.lod is provided, the parent group should not be removed
+      // If options.lod is provided, the parent group and the SegmentLOD should not be
+      // removed. Typically, another LOD of the segment is added right afterwards
+      // (e.g., the merged mesh replaces the chunks), and the SegmentLOD should keep its
+      // current level, so that the hysteresis prevents flickering between LODs.
       this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
+      segmentLOD?.removeFromParent();
+      this.segmentLODs.delete(segmentLODKey);
     }
+  }
+
+  private getSegmentLODKey(additionalCoordKey: string, layerName: string, segmentId: bigint) {
+    return `${additionalCoordKey}|${layerName}|${segmentId}`;
+  }
+
+  private getOrCreateSegmentLOD(
+    additionalCoordKey: string,
+    layerName: string,
+    segmentId: bigint,
+  ): SegmentLOD {
+    const key = this.getSegmentLODKey(additionalCoordKey, layerName, segmentId);
+    let segmentLOD = this.segmentLODs.get(key);
+    if (segmentLOD == null) {
+      let layerGroup = this.getLayerGroup(layerName);
+      if (layerGroup == null) {
+        layerGroup = new Group();
+        layerGroup.name = layerName;
+        this.meshesLayerLODRootGroup.add(layerGroup);
+      }
+      segmentLOD = new SegmentLOD();
+      layerGroup.add(segmentLOD);
+      this.segmentLODs.set(key, segmentLOD);
+    }
+    return segmentLOD;
   }
 
   private disposeMeshGroup(meshGroup: Group): void {
@@ -470,21 +504,35 @@ export default class SegmentMeshController {
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): void {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    forEach(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
-      meshGroup.visible = visibility;
-    });
+    // The visibility of the LOD groups within the SegmentLOD is managed by the
+    // SegmentLOD itself, so the visibility of the whole segment is set on it.
+    const segmentLOD = this.segmentLODs.get(
+      this.getSegmentLODKey(additionalCoordKey, layerName, id),
+    );
+    if (segmentLOD != null) {
+      segmentLOD.visible = visibility;
+    }
   }
 
-  getLODGroupOfLayer(layerName: string): CustomLOD | undefined {
-    return this.meshesLayerLODRootGroup.getObjectByName(layerName) as CustomLOD | undefined;
+  getLayerGroup(layerName: string): Group | undefined {
+    return this.meshesLayerLODRootGroup.children.find(
+      (layerGroup): layerGroup is Group => layerGroup.name === layerName,
+    );
+  }
+
+  // Returns the name of the layer whose mesh contains the given object (e.g., a raycast hit).
+  getLayerNameOfMeshObject(object: Object3D): string | null {
+    let current: Object3D | null = object;
+    while (current != null && current.parent !== this.meshesLayerLODRootGroup) {
+      current = current.parent;
+    }
+    return current?.name ?? null;
   }
 
   setVisibilityOfMeshesOfLayer(layerName: string, visibility: boolean): void {
-    const layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
-      | CustomLOD
-      | undefined;
-    if (layerLODGroup != null) {
-      layerLODGroup.visible = visibility;
+    const layerGroup = this.getLayerGroup(layerName);
+    if (layerGroup != null) {
+      layerGroup.visible = visibility;
     }
   }
 

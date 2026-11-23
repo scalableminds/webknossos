@@ -183,7 +183,7 @@ class DSFullMeshService @Inject() (
         maxAdHocFullMeshChunks
       )
       // Dispatch chunks to the actor pool keeping actorPoolSize requests in flight at a time.
-      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.batchCombined(
+      meshChunks: List[AdHocMesh] <- Fox.batchCombined(
         targetMagPositions.toIndexedSeq,
         config.Datastore.AdHocMesh.actorPoolSize
       ) { targetMagPosition =>
@@ -213,8 +213,7 @@ class DSFullMeshService @Inject() (
         )
         adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
       }
-      allVertices = vertexChunksWithNeighbors.map(_._1)
-    } yield allVertices
+    } yield meshChunks.map(_.triangleSoup)
 
   private def getAllAdHocChunksWithNeighborLogic(
       datasetId: ObjectId,
@@ -256,12 +255,12 @@ class DSFullMeshService @Inject() (
                 fullMeshRequest.additionalCoordinates,
                 fullMeshRequest.annotationVersion
               )
-              adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest).map { case (vertices, neighborIds) =>
+              adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest).map { mesh =>
                 (
-                  vertices,
+                  mesh.triangleSoup,
                   generateNextTopLeftsFromNeighbors(
                     position,
-                    neighborIds,
+                    mesh.neighbors,
                     chunkSize,
                     visited,
                     segmentationLayer.boundingBox

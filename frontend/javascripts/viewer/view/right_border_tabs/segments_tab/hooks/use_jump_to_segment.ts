@@ -3,14 +3,11 @@ import Toast from "libs/toast";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
-import {
-  setAdditionalCoordinatesAction,
-  setPositionAction,
-} from "viewer/model/actions/flycam_actions";
+import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
 import type { Segment } from "viewer/store";
 import Store from "viewer/store";
+import { useJumpToPosition } from "./use_jump_to_position";
 
 /*
  * Moves the camera to a segment's anchor position (and to its additional
@@ -23,6 +20,7 @@ import Store from "viewer/store";
 export function useJumpToSegment(): (segment: Segment) => void {
   const dispatch = useDispatch();
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const jumpToPosition = useJumpToPosition();
 
   return useCallback(
     (segment: Segment) => {
@@ -34,13 +32,7 @@ export function useJumpToSegment(): (segment: Segment) => void {
         Toast.info("Cannot go to this segment, because its position is unknown.");
         return;
       }
-      const transformedPosition = layerToGlobalTransformedPosition(
-        segment.anchorPosition,
-        visibleSegmentationLayer.name,
-        "segmentation",
-        Store.getState(),
-      );
-      dispatch(setPositionAction(transformedPosition));
+      jumpToPosition(segment.anchorPosition, visibleSegmentationLayer.name);
 
       const { additionalCoordinates } = segment;
       if (
@@ -51,6 +43,6 @@ export function useJumpToSegment(): (segment: Segment) => void {
         dispatch(setAdditionalCoordinatesAction(additionalCoordinates));
       }
     },
-    [dispatch, visibleSegmentationLayer],
+    [dispatch, visibleSegmentationLayer, jumpToPosition],
   );
 }

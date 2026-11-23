@@ -460,8 +460,8 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_helpers_Nativ
 ) -> JByteArray<'local> {
     jni_util::run(env, "BucketScanner applySegmentIdMapping", |env| {
         let bucket = jni_util::read_bytes(env, &bucket_bytes)?;
-        let src = jni_util::read_longs(env, &id_mapping_src)?;
-        let dst = jni_util::read_longs(env, &id_mapping_dst)?;
+        let src = jni_util::read_array(env, &id_mapping_src)?;
+        let dst = jni_util::read_array(env, &id_mapping_dst)?;
         let output = apply_segment_id_mapping(&bucket, bytes_per_element, is_signed, &src, &dst)?;
         jni_util::new_byte_array(env, &output)
     })
@@ -484,8 +484,8 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_helpers_Nativ
     jni_util::run(env, "BucketScanner mergeVolumeBucketInPlace", |env| {
         let mut bucket = jni_util::read_bytes(env, &bucket_bytes_mutable)?;
         let incoming = jni_util::read_bytes(env, &incoming_bucket_bytes)?;
-        let src = jni_util::read_longs(env, &id_mapping_src)?;
-        let dst = jni_util::read_longs(env, &id_mapping_dst)?;
+        let src = jni_util::read_array(env, &id_mapping_src)?;
+        let dst = jni_util::read_array(env, &id_mapping_dst)?;
         merge_volume_bucket_in_place(
             &mut bucket,
             &incoming,

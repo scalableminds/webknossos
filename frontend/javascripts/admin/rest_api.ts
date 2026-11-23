@@ -1,3 +1,4 @@
+import { type AdHocMeshGeometry, parseAdHocMeshResponse } from "admin/api/ad_hoc_mesh_response";
 import type { ApiResult, RetryOptions } from "admin/api/api_result";
 import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
@@ -1631,7 +1632,10 @@ export function createResumableUpload(
       chunkSize: 10 * 1024 * 1024, // 10MB
       simultaneousUploads: 3,
       chunkRetryInterval: 2000,
-      maxChunkRetries: undefined,
+      // Only retryable HTTP errors (e.g. 502/503) count towards this limit, network errors are
+      // retried indefinitely. 100 retries every 2 s give the datastore ~200 s to recover before
+      // the file fails and is retried once more with a refreshed token (see below).
+      maxChunkRetries: 100,
       fetchTimeout: 10 * 60 * 1000, // 10m
       generateUniqueIdentifier,
       // The following errors only tell Resumable-upload to not
@@ -2345,10 +2349,11 @@ export function computeAdHocMesh(
   options: RequestOptions = {},
   retryOptions?: RetryOptions,
 ): Promise<
-  ApiResult<{
-    buffer: ArrayBuffer;
-    neighbors: Array<number>;
-  }>
+  ApiResult<
+    AdHocMeshGeometry & {
+      neighbors: Array<number>;
+    }
+  >
 > {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
@@ -2382,15 +2387,13 @@ export function computeAdHocMesh(
               mapping: mappingName,
               voxelSizeFactorInUnit: scaleFactor,
               mag,
+              indexed: true,
               ...rest,
             },
           },
         );
         const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
-        return {
-          buffer,
-          neighbors,
-        };
+        return { ...parseAdHocMeshResponse(buffer, headers["vertex-count"]), neighbors };
       }),
     options,
     retryOptions,

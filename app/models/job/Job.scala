@@ -98,7 +98,7 @@ case class JobCompactInfo(
 
   def enrich: JobCompactInfo = this.copy(
     resultLink = constructResultLink(organizationId),
-    args = args - "webknossos_token" - "user_auth_token"
+    args = args - "webknossos_token" - "user_auth_token" - "sharing_token"
   )
 
 }

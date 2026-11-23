@@ -1,6 +1,11 @@
 import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
+import type {
+  BorderOpenStatus,
+  SegmentStatisticsScope,
+  Theme,
+  WebknossosState,
+} from "viewer/store";
 import type { StartAiJobDrawerState } from "viewer/view/ai_jobs/constants";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
@@ -8,6 +13,7 @@ type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisi
 type SetIsRestoringVersionAction = ReturnType<typeof setIsRestoringVersionAction>;
 type SetStoredLayoutsAction = ReturnType<typeof setStoredLayoutsAction>;
 type SetBorderOpenStatusAction = ReturnType<typeof setBorderOpenStatusAction>;
+type SetSegmentStatisticsScopeAction = ReturnType<typeof setSegmentStatisticsScopeAction>;
 type SetImportingMeshStateAction = ReturnType<typeof setImportingMeshStateAction>;
 type SetIsInAnnotationViewAction = ReturnType<typeof setIsInAnnotationViewAction>;
 type SetHasOrganizationsAction = ReturnType<typeof setHasOrganizationsAction>;
@@ -55,6 +61,7 @@ export type UiAction =
   | SetIsRestoringVersionAction
   | SetImportingMeshStateAction
   | SetBorderOpenStatusAction
+  | SetSegmentStatisticsScopeAction
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
   | SetHasOrganizationsAction
@@ -111,6 +118,11 @@ export const setBorderOpenStatusAction = (borderOpenStatus: BorderOpenStatus) =>
   ({
     type: "SET_BORDER_OPEN_STATUS",
     borderOpenStatus,
+  }) as const;
+export const setSegmentStatisticsScopeAction = (scope: SegmentStatisticsScope | null) =>
+  ({
+    type: "SET_SEGMENT_STATISTICS_SCOPE",
+    scope,
   }) as const;
 const setImportingMeshStateAction = (isImporting: boolean) =>
   ({

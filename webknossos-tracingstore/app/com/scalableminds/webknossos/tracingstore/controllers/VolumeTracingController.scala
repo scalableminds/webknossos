@@ -44,7 +44,6 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
-import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
@@ -309,22 +308,14 @@ class VolumeTracingController @Inject() (
     Action.fox(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
-          // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
-          // consecutive 3D points (i.e., nine floats) form a triangle.
-          // There are no shared vertices between triangles.
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
-          (vertices: Array[Float], neighbors: List[Int]) <-
+          mesh <-
             if (tracing.getHasEditableMapping) {
               val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.createAdHocMesh(editableMappingLayer, request.body)
             } else volumeTracingService.createAdHocMesh(annotationId, tracingId, tracing, request.body)
-        } yield {
-          // We need four bytes for each float
-          val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
-          responseBuffer.asFloatBuffer().put(vertices)
-          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors)*)
-        }
+        } yield Ok(mesh.toBytes(request.body.indexed)).withHeaders(mesh.responseHeaders(request.body.indexed)*)
       }
     }
 
@@ -342,12 +333,6 @@ class VolumeTracingController @Inject() (
         } yield Ok(data)
       }
     }
-
-  private def getNeighborIndices(neighbors: List[Int]) =
-    List("NEIGHBORS" -> formatNeighborList(neighbors), "Access-Control-Expose-Headers" -> "NEIGHBORS")
-
-  private def formatNeighborList(neighbors: List[Int]): String =
-    "[" + neighbors.mkString(", ") + "]"
 
   def findData(tracingId: String): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {

@@ -45,7 +45,7 @@ lazy val commonSettings = Seq(
   resolvers ++= Dependencies.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
   Compile / packageDoc / publishArtifact := false,
-  coverageExcludedFiles := ".*/target/.*;.*/MarchingCubesTable"
+  coverageExcludedFiles := ".*/target/.*"
 )
 
 lazy val protocolBufferSettings = Seq(

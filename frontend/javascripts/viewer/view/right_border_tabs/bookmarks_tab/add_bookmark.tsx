@@ -46,6 +46,9 @@ export async function addBookmarkForCurrentView(dispatch: Dispatch): Promise<num
     handleGenericError(error as Error, "Could not create a new bookmark.");
     return null;
   }
+  // While a rebase is running, the save-queue diffing ignores changes and resets its baseline
+  // afterwards, so a bookmark added in the meantime would never be saved (see
+  // waitUntilRebaseFinished). The reserved id stays valid across the rebase.
   await waitUntilRebaseFinished();
   const bookmark: APIAnnotationBookmark = {
     id,

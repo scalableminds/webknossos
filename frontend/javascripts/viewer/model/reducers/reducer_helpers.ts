@@ -310,7 +310,11 @@ export function applyBookmarkVersionAction(
       changed = true;
       return { ...bookmark, createdAtVersion: action.createdAtVersion };
     }
-    // Only the thumbnail that was saved gets the version, not one that was captured in the meantime.
+    // While the save request was running, the user may have captured a newer thumbnail for this
+    // bookmark (e.g. by updating it to the current view). That one was not saved yet and must not
+    // get the version, as it still has to be sent. So the version is only set if the bookmark still
+    // shows the thumbnail that was sent, which is recognized by its image data (the frontend-only
+    // thumbnailId is not part of the sent action).
     if (
       bookmark.largeThumbnailDataBase64 !== action.savedLargeThumbnailDataBase64 ||
       bookmark.thumbnailVersion === action.thumbnailVersion

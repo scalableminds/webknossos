@@ -156,8 +156,10 @@ function fitTDCameraToAspectRatio(
 }
 
 // applyState only applies what the url state contains, which is enough for an initial page load.
-// When jumping to a bookmark, the current view also has to be reset where getUrlState omits
-// values that are off or default. Meshes and mappings that are already loaded are reused.
+// When jumping to a bookmark, the things that getUrlState omits when they are off (active node,
+// mapping, visible meshes) also have to be switched off, no defaults are involved. Settings that
+// the url state does not contain at all are left unchanged. Meshes and mappings that are already
+// loaded are reused.
 export function applyBookmarkState(urlState: PartialUrlManagerState, dataset: APIDataset) {
   const state = Store.getState();
   const stateByLayer: UrlStateByLayer = { ...urlState.stateByLayer };

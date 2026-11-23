@@ -24,7 +24,7 @@ import type {
 import {
   type DatasetListParams,
   DEFAULT_DATASET_SORT_BY,
-  MINIMUM_SEARCH_QUERY_LENGTH,
+  isSearchQueryLongEnough,
   SEARCH_RESULTS_LIMIT,
   useCreateFolderMutation,
   useDatasetSearchQuery,
@@ -232,8 +232,7 @@ export default function DatasetCollectionContextProvider({
       setHasUserSetSort(false);
     }
   }
-  const canSortBySearchRelevance =
-    globalSearchQuery != null && globalSearchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH;
+  const canSortBySearchRelevance = isSearchQueryLongEnough(globalSearchQuery);
   const sortBy: DatasetSortBy =
     canSortBySearchRelevance && !hasUserSetSort ? "searchRelevance" : sortOption;
 
@@ -336,7 +335,13 @@ export default function DatasetCollectionContextProvider({
   const updateDatasetMutation = useUpdateDatasetMutation(
     globalSearchQuery == null ? activeFolderId : null,
   );
-  const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
+  // A too short search query isn't sent, so don't show the (placeholder) results of a previous one.
+  const datasets =
+    (globalSearchQuery
+      ? isSearchQueryLongEnough(globalSearchQuery)
+        ? datasetSearchQuery.data
+        : []
+      : datasetsInFolderQuery.data) || [];
 
   // While all results are being loaded, the capped results are still shown as placeholder.
   const areSearchResultsLimited =

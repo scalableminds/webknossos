@@ -45,6 +45,9 @@ export type DatasetListParams = Pick<
 >;
 export const DEFAULT_DATASET_SORT_BY = "lastUsed" satisfies DatasetSortBy;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
+export function isSearchQueryLongEnough(query: string | null): query is string {
+  return query != null && query.length >= MINIMUM_SEARCH_QUERY_LENGTH;
+}
 // Cached dataset lists that are large or rarely reused (e.g., for a non-default filter/sorting)
 // are neither persisted to localStorage nor kept forever, so that they don't exceed its quota.
 const SHORT_LIVED_QUERY_GC_TIME = 5 * 60 * 1000;
@@ -121,7 +124,8 @@ export function useDatasetSearchQuery(
   return useQuery({
     queryKey,
     queryFn: async () => {
-      if (query == null || query.length < MINIMUM_SEARCH_QUERY_LENGTH) {
+      // Explicit refetches bypass `enabled`, so check the length here, too.
+      if (!isSearchQueryLongEnough(query)) {
         return [];
       }
       return await getDatasets({
@@ -134,7 +138,8 @@ export function useDatasetSearchQuery(
       });
     },
     refetchOnWindowFocus: false,
-    enabled: query != null,
+    // Don't fetch (and show a loading state) for each keystroke of a too short query.
+    enabled: isSearchQueryLongEnough(query),
     placeholderData: keepPreviousData,
     // Search results are rarely reused, and each search, filter and sorting is cached separately.
     ...SHORT_LIVED_QUERY_OPTIONS,

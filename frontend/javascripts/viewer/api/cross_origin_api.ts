@@ -15,6 +15,7 @@ import {
   exportTreesAsNmlString,
   findTreeGroupPath,
   replaceTreesInGroup,
+  saveAnnotationNow,
   setAnnotationDescription,
   setAnnotationName,
   setLayerVisibility,
@@ -227,7 +228,7 @@ const handleMessage = async (event) => {
     }
 
     case "save": {
-      await api.tracing.save();
+      await saveAnnotationNow();
       break;
     }
 

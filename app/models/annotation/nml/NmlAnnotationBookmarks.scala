@@ -87,7 +87,7 @@ case class NmlAnnotationBookmarkToWrite(
 )
 
 // A bookmark parsed from an NML. Its references to annotation layers are encoded (see NmlAnnotationLayerRef), and its
-// createdAtVersion and thumbnailVersion are not set yet. The thumbnail locations are paths of other files in the
+// createdAtVersion and thumbnailSavedAtVersion are not set yet. The thumbnail locations are paths of other files in the
 // uploaded zip.
 case class NmlParsedAnnotationBookmark(
     bookmark: AnnotationBookmarkProto,

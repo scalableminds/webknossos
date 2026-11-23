@@ -285,7 +285,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       return updateAnnotation(state, { bookmarks: action.bookmarks });
     }
 
-    case "SET_BOOKMARK_THUMBNAIL_VERSION":
+    case "SET_BOOKMARK_THUMBNAIL_SAVED_AT_VERSION":
     case "SET_BOOKMARK_CREATED_AT_VERSION": {
       return updateAnnotation(state, {
         bookmarks: applyBookmarkVersionAction(state.annotation.bookmarks, action),

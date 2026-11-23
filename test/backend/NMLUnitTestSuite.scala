@@ -415,7 +415,12 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
     "not write the versions of bookmarks" in
       writeAndParseBookmarks(
-        Seq(NmlAnnotationBookmarkToWrite(minimalBookmark.withCreatedAtVersion(12).withThumbnailVersion(13), Map.empty))
+        Seq(
+          NmlAnnotationBookmarkToWrite(
+            minimalBookmark.withCreatedAtVersion(12).withThumbnailSavedAtVersion(13),
+            Map.empty
+          )
+        )
       ).futureBox.map {
         case Full(parsed) => assert(parsed.bookmarks.map(_.bookmark) == Seq(minimalBookmark))
         case _            => fail()

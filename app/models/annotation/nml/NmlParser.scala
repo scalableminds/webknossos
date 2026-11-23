@@ -419,7 +419,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       _ <- Box.fromBool(bookmarkIds.distinct.length == bookmarkIds.length) ?~> Msg.Nml.duplicateBookmarkIds
     } yield bookmarks
 
-  // createdAtVersion and thumbnailVersion are set when the annotation is created from the NML.
+  // createdAtVersion and thumbnailSavedAtVersion are set when the annotation is created from the NML.
   private def parseBookmark(node: XMLNode): Box[NmlParsedAnnotationBookmark] = {
     val idText = getSingleAttribute(node, "id")
     for {

@@ -31,7 +31,7 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
       id = 3,
       created = 0L,
       createdAtVersion = 4L,
-      thumbnailVersion = Some(4L),
+      thumbnailSavedAtVersion = Some(4L),
       name = Some("name"),
       state = AnnotationBookmarkStateProto(
         position = origin,

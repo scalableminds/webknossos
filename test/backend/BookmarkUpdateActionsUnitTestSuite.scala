@@ -36,7 +36,7 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
       clipSkeletonToCurrentSection = false
     ),
     createdAtVersion = 1L,
-    thumbnailVersion = Some(1L),
+    thumbnailSavedAtVersion = Some(1L),
     metadata = Seq(
       MetadataEntryProto("a", stringValue = Some("1")),
       MetadataEntryProto("b", numberValue = Some(2.0)),
@@ -93,15 +93,15 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
   }
 
   "UpdateBookmarkThumbnailAnnotationAction" should {
-    "only set the thumbnail version" in {
+    "only set the thumbnailSavedAtVersion" in {
       val action = UpdateBookmarkThumbnailAnnotationAction(
         id = 1,
         largeThumbnailDataBase64 = None,
         smallThumbnailDataBase64 = None,
-        thumbnailVersion = Some(5L)
+        thumbnailSavedAtVersion = Some(5L)
       )
-      assert(action.applyOn(bookmark) == bookmark.withThumbnailVersion(5L))
-      assert(action.copy(thumbnailVersion = None).applyOn(bookmark) == bookmark.clearThumbnailVersion)
+      assert(action.applyOn(bookmark) == bookmark.withThumbnailSavedAtVersion(5L))
+      assert(action.copy(thumbnailSavedAtVersion = None).applyOn(bookmark) == bookmark.clearThumbnailSavedAtVersion)
     }
 
     "require the save version when carrying thumbnails and an older version when referencing them" in {
@@ -109,18 +109,24 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
         id = 1,
         largeThumbnailDataBase64 = Some("AA=="),
         smallThumbnailDataBase64 = None,
-        thumbnailVersion = Some(9L)
+        thumbnailSavedAtVersion = Some(9L)
       )
-      assert(withThumbnails.thumbnailVersionError(saveVersion = 9L).isEmpty)
-      assert(withThumbnails.referencedThumbnailVersion.isEmpty)
-      assert(withThumbnails.copy(thumbnailVersion = Some(5L)).thumbnailVersionError(saveVersion = 9L).isDefined)
-      assert(withThumbnails.copy(thumbnailVersion = None).thumbnailVersionError(saveVersion = 9L).isDefined)
+      assert(withThumbnails.thumbnailSavedAtVersionError(saveVersion = 9L).isEmpty)
+      assert(withThumbnails.referencedThumbnailSavedAtVersion.isEmpty)
+      assert(
+        withThumbnails.copy(thumbnailSavedAtVersion = Some(5L)).thumbnailSavedAtVersionError(saveVersion = 9L).isDefined
+      )
+      assert(
+        withThumbnails.copy(thumbnailSavedAtVersion = None).thumbnailSavedAtVersionError(saveVersion = 9L).isDefined
+      )
 
-      val referencing = withThumbnails.withoutThumbnails.copy(thumbnailVersion = Some(5L))
-      assert(referencing.thumbnailVersionError(saveVersion = 9L).isEmpty)
-      assert(referencing.referencedThumbnailVersion.contains(5L))
-      assert(referencing.copy(thumbnailVersion = Some(9L)).thumbnailVersionError(saveVersion = 9L).isDefined)
-      assert(referencing.copy(thumbnailVersion = None).thumbnailVersionError(saveVersion = 9L).isEmpty)
+      val referencing = withThumbnails.withoutThumbnails.copy(thumbnailSavedAtVersion = Some(5L))
+      assert(referencing.thumbnailSavedAtVersionError(saveVersion = 9L).isEmpty)
+      assert(referencing.referencedThumbnailSavedAtVersion.contains(5L))
+      assert(
+        referencing.copy(thumbnailSavedAtVersion = Some(9L)).thumbnailSavedAtVersionError(saveVersion = 9L).isDefined
+      )
+      assert(referencing.copy(thumbnailSavedAtVersion = None).thumbnailSavedAtVersionError(saveVersion = 9L).isEmpty)
     }
   }
 
@@ -148,10 +154,10 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
         smallThumbnailDataBase64 = None,
         createdAtVersion = 9L
       )
-      assert(action.thumbnailVersionError(saveVersion = 9L).isEmpty)
-      assert(action.copy(createdAtVersion = 8L).thumbnailVersionError(saveVersion = 9L).isDefined)
+      assert(action.thumbnailSavedAtVersionError(saveVersion = 9L).isEmpty)
+      assert(action.copy(createdAtVersion = 8L).thumbnailSavedAtVersionError(saveVersion = 9L).isDefined)
       assert(action.toProto.createdAtVersion == 9L)
-      assert(action.toProto.thumbnailVersion.isEmpty)
+      assert(action.toProto.thumbnailSavedAtVersion.isEmpty)
     }
   }
 
@@ -174,7 +180,7 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
       assert(state.layers.head.meshes.head.mappingType.contains(MappingTypeProto.JSON))
 
       val thumbnailAction = Json
-        .parse("""{"id": 1, "thumbnailVersion": 3, "thumbnailViewport": "TD"}""")
+        .parse("""{"id": 1, "thumbnailSavedAtVersion": 3, "thumbnailViewport": "TD"}""")
         .as[UpdateBookmarkThumbnailAnnotationAction]
       assert(thumbnailAction.applyOn(bookmark).thumbnailViewport.contains(ThumbnailViewportProto.TD))
     }

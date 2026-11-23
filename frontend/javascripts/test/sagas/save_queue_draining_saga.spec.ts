@@ -421,7 +421,7 @@ describe("Save Saga", () => {
         layers: [],
       },
       createdAtVersion: null,
-      thumbnailVersion: null,
+      thumbnailSavedAtVersion: null,
       thumbnailViewport: null,
       metadata: [],
       smallThumbnailDataBase64: null,
@@ -438,7 +438,7 @@ describe("Save Saga", () => {
     expect(addBookmarkAction.value).toMatchObject({ createdAtVersion: LAST_VERSION + 2 });
   });
 
-  it("addVersionNumbers should set the thumbnailVersion of sent thumbnails only", () => {
+  it("addVersionNumbers should set the thumbnailSavedAtVersion of sent thumbnails only", () => {
     const bookmark: APIAnnotationBookmark = {
       id: 1,
       created: TIMESTAMP,
@@ -454,7 +454,7 @@ describe("Save Saga", () => {
         layers: [],
       },
       createdAtVersion: null,
-      thumbnailVersion: null,
+      thumbnailSavedAtVersion: null,
       thumbnailViewport: null,
       metadata: [],
       smallThumbnailDataBase64: "c21hbGw=",
@@ -465,7 +465,7 @@ describe("Save Saga", () => {
       [
         [addBookmark(bookmark)],
         // References a saved thumbnail, e.g. after undo.
-        [updateBookmarkThumbnail({ ...bookmark, thumbnailVersion: 3 })],
+        [updateBookmarkThumbnail({ ...bookmark, thumbnailSavedAtVersion: 3 })],
         // Has no thumbnail.
         [
           addBookmark({
@@ -480,9 +480,9 @@ describe("Save Saga", () => {
     );
     const [saveQueueWithVersions] = addVersionNumbers(saveQueue, LAST_VERSION);
     expect(saveQueueWithVersions.map((batch) => batch.actions[0].value)).toMatchObject([
-      { thumbnailVersion: LAST_VERSION + 1, createdAtVersion: LAST_VERSION + 1 },
-      { thumbnailVersion: 3 },
-      { thumbnailVersion: null, createdAtVersion: LAST_VERSION + 3 },
+      { thumbnailSavedAtVersion: LAST_VERSION + 1, createdAtVersion: LAST_VERSION + 1 },
+      { thumbnailSavedAtVersion: 3 },
+      { thumbnailSavedAtVersion: null, createdAtVersion: LAST_VERSION + 3 },
     ]);
   });
 });

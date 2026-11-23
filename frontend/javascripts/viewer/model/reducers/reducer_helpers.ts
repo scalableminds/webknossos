@@ -22,7 +22,7 @@ import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/to
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import type {
   SetBookmarkCreatedAtVersionAction,
-  SetBookmarkThumbnailVersionAction,
+  SetBookmarkThumbnailSavedAtVersionAction,
 } from "viewer/model/actions/annotation_actions";
 import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
@@ -300,7 +300,7 @@ export function getApplyUserStateToTreeFn(
 // update its snapshots, so that undo/redo does not restore outdated (e.g., unset) versions.
 export function applyBookmarkVersionAction(
   bookmarks: APIAnnotationBookmark[],
-  action: SetBookmarkCreatedAtVersionAction | SetBookmarkThumbnailVersionAction,
+  action: SetBookmarkCreatedAtVersionAction | SetBookmarkThumbnailSavedAtVersionAction,
 ): APIAnnotationBookmark[] {
   let changed = false;
   const newBookmarks = bookmarks.map((bookmark) => {
@@ -317,12 +317,12 @@ export function applyBookmarkVersionAction(
     // thumbnailId is not part of the sent action).
     if (
       bookmark.largeThumbnailDataBase64 !== action.savedLargeThumbnailDataBase64 ||
-      bookmark.thumbnailVersion === action.thumbnailVersion
+      bookmark.thumbnailSavedAtVersion === action.thumbnailSavedAtVersion
     ) {
       return bookmark;
     }
     changed = true;
-    return { ...bookmark, thumbnailVersion: action.thumbnailVersion };
+    return { ...bookmark, thumbnailSavedAtVersion: action.thumbnailSavedAtVersion };
   });
   return changed ? newBookmarks : bookmarks;
 }

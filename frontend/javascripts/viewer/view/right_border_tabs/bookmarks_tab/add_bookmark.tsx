@@ -20,7 +20,7 @@ export const getCurrentBookmarkState = () =>
 export const toUnsavedBookmarkThumbnail = (thumbnails: BookmarkThumbnails): BookmarkThumbnail => ({
   smallThumbnailDataBase64: thumbnails.smallDataBase64,
   largeThumbnailDataBase64: thumbnails.largeDataBase64,
-  thumbnailVersion: null,
+  thumbnailSavedAtVersion: null,
   thumbnailViewport: thumbnails.viewport,
   thumbnailId: getUid(),
 });
@@ -63,7 +63,7 @@ export async function addBookmarkForCurrentView(dispatch: Dispatch): Promise<num
       : {
           smallThumbnailDataBase64: null,
           largeThumbnailDataBase64: null,
-          thumbnailVersion: null,
+          thumbnailSavedAtVersion: null,
           thumbnailViewport: null,
           thumbnailId: null,
         }),

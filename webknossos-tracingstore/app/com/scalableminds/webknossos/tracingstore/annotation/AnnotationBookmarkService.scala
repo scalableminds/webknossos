@@ -176,7 +176,7 @@ class AnnotationBookmarkService @Inject() (
   private def thumbnailKey(annotationId: ObjectId, bookmarkId: Int, size: BookmarkThumbnailSize.Value): String =
     s"${bookmarkKey(annotationId, bookmarkId)}/$size"
 
-  // Returns the thumbnail stored at exactly the version (the bookmark's thumbnailVersion). Thumbnails stored at other
+  // Returns the thumbnail stored at exactly the version (the bookmark's thumbnailSavedAtVersion). Thumbnails stored at other
   // versions are earlier or later thumbnails of the bookmark (e.g. before an update to the current view, which an
   // undo or revert can point back to), or the bookmark has no thumbnail of this size. Temporary annotations have no
   // versions.
@@ -228,7 +228,7 @@ class AnnotationBookmarkService @Inject() (
         thumbnail
       )
 
-  // Copies the thumbnails the bookmark shows (at its thumbnailVersion) and stores them at version.
+  // Copies the thumbnails the bookmark shows (at its thumbnailSavedAtVersion) and stores them at version.
   // Returns whether there were any.
   private def copyThumbnails(
       annotationId: ObjectId,
@@ -238,13 +238,13 @@ class AnnotationBookmarkService @Inject() (
       version: Long,
       toTemporaryStore: Boolean
   )(implicit ec: ExecutionContext): Fox[Boolean] =
-    bookmark.thumbnailVersion match {
-      case None                   => Fox.successful(false)
-      case Some(thumbnailVersion) =>
+    bookmark.thumbnailSavedAtVersion match {
+      case None                          => Fox.successful(false)
+      case Some(thumbnailSavedAtVersion) =>
         for {
           copied <- Fox.serialCombined(BookmarkThumbnailSize.values.toList) { size =>
             for {
-              thumbnailBox <- findThumbnail(annotationId, bookmark.id, size, thumbnailVersion).shiftBox
+              thumbnailBox <- findThumbnail(annotationId, bookmark.id, size, thumbnailSavedAtVersion).shiftBox
               _ <- Fox.runOptional(thumbnailBox.toOption)(
                 saveThumbnail(newAnnotationId, newBookmarkId, size, version, _, toTemporaryStore)
               )
@@ -254,7 +254,7 @@ class AnnotationBookmarkService @Inject() (
     }
 
   // Uploaded bookmarks are stored at version 0, like the AnnotationProto of an uploaded annotation.
-  // Their thumbnails are stored at their thumbnailVersion, which is only set if there are thumbnails.
+  // Their thumbnails are stored at their thumbnailSavedAtVersion, which is only set if there are thumbnails.
   def saveUploadedBookmarks(annotationId: ObjectId, uploadedBookmarks: Seq[UploadedAnnotationBookmarkProto])(implicit
       ec: ExecutionContext
   ): Fox[Unit] =
@@ -266,27 +266,27 @@ class AnnotationBookmarkService @Inject() (
           BookmarkThumbnailSize.small -> uploaded.smallThumbnail,
           BookmarkThumbnailSize.large -> uploaded.largeThumbnail
         ).collect { case (size, Some(thumbnail)) => (size, thumbnail) }
-        Fox.runOptional(bookmark.thumbnailVersion)(thumbnailVersion =>
+        Fox.runOptional(bookmark.thumbnailSavedAtVersion)(thumbnailSavedAtVersion =>
           Fox.serialCombined(thumbnails.toList) { case (size, thumbnail) =>
-            saveThumbnail(annotationId, bookmark.id, size, thumbnailVersion, thumbnail.toByteArray)
+            saveThumbnail(annotationId, bookmark.id, size, thumbnailSavedAtVersion, thumbnail.toByteArray)
           }
         )
       }
     } yield ()
 
-  // The duplicated bookmarks keep their thumbnailVersion, so their thumbnails are stored at it, too.
+  // The duplicated bookmarks keep their thumbnailSavedAtVersion, so their thumbnails are stored at it, too.
   def duplicateThumbnails(annotationId: ObjectId, newAnnotationId: ObjectId, bookmarks: Seq[AnnotationBookmarkProto])(
       implicit ec: ExecutionContext
   ): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(bookmarks.toList)(bookmark =>
-        Fox.runOptional(bookmark.thumbnailVersion)(thumbnailVersion =>
+        Fox.runOptional(bookmark.thumbnailSavedAtVersion)(thumbnailSavedAtVersion =>
           copyThumbnails(
             annotationId,
             bookmark,
             newAnnotationId,
             bookmark.id,
-            thumbnailVersion,
+            thumbnailSavedAtVersion,
             toTemporaryStore = false
           )
         )
@@ -324,7 +324,7 @@ class AnnotationBookmarkService @Inject() (
           } yield remapping(bookmark, newId)
             .withCreatedAtVersion(newVersion)
             .copy(
-              thumbnailVersion = Option.when(hasThumbnails)(newVersion),
+              thumbnailSavedAtVersion = Option.when(hasThumbnails)(newVersion),
               thumbnailViewport = bookmark.thumbnailViewport.filter(_ => hasThumbnails)
             )
       }

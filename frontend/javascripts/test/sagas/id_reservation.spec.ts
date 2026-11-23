@@ -33,7 +33,7 @@ function createBookmark(id: number): APIAnnotationBookmark {
     name: null,
     description: null,
     createdAtVersion: null,
-    thumbnailVersion: null,
+    thumbnailSavedAtVersion: null,
     thumbnailViewport: null,
     metadata: [],
     state: {

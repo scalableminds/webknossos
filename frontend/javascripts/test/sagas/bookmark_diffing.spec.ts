@@ -18,7 +18,7 @@ const savedBookmark: APIAnnotationBookmark = {
     layers: [],
   },
   createdAtVersion: 3,
-  thumbnailVersion: 3,
+  thumbnailSavedAtVersion: 3,
   thumbnailViewport: null,
   metadata: [],
   smallThumbnailDataBase64: null,
@@ -29,7 +29,7 @@ const savedBookmark: APIAnnotationBookmark = {
 const unsavedThumbnail = {
   smallThumbnailDataBase64: "small",
   largeThumbnailDataBase64: "large",
-  thumbnailVersion: null,
+  thumbnailSavedAtVersion: null,
   thumbnailViewport: null,
   thumbnailId: "captured-thumbnail",
 };
@@ -46,7 +46,7 @@ describe("Bookmark diffing", () => {
       id: 1,
       largeThumbnailDataBase64: "large",
       smallThumbnailDataBase64: "small",
-      thumbnailVersion: null,
+      thumbnailSavedAtVersion: null,
       thumbnailViewport: null,
     });
   });
@@ -57,7 +57,7 @@ describe("Bookmark diffing", () => {
     expect(action.value).toMatchObject({
       largeThumbnailDataBase64: null,
       smallThumbnailDataBase64: null,
-      thumbnailVersion: 3,
+      thumbnailSavedAtVersion: 3,
       thumbnailViewport: null,
     });
   });
@@ -103,14 +103,14 @@ describe("Bookmark diffing", () => {
       id: 1,
       largeThumbnailDataBase64: null,
       smallThumbnailDataBase64: null,
-      thumbnailVersion: 3,
+      thumbnailSavedAtVersion: 3,
       thumbnailViewport: null,
     });
   });
 
   it("does not treat saving a thumbnail as a change", () => {
     const unsaved = { ...savedBookmark, ...unsavedThumbnail };
-    expect(diff([unsaved], [{ ...unsaved, thumbnailVersion: 4 }])).toEqual([]);
+    expect(diff([unsaved], [{ ...unsaved, thumbnailSavedAtVersion: 4 }])).toEqual([]);
   });
 
   it("identifies thumbnails by their id, not by their image data", () => {
@@ -123,7 +123,7 @@ describe("Bookmark diffing", () => {
   });
 
   it("clears a removed thumbnail (e.g. after undo to a state without one)", () => {
-    const withoutThumbnail = { ...savedBookmark, thumbnailVersion: null, thumbnailId: null };
+    const withoutThumbnail = { ...savedBookmark, thumbnailSavedAtVersion: null, thumbnailId: null };
     expect(diff([savedBookmark], [withoutThumbnail])).toEqual([
       {
         name: "updateBookmarkThumbnail",
@@ -131,7 +131,7 @@ describe("Bookmark diffing", () => {
           id: 1,
           largeThumbnailDataBase64: null,
           smallThumbnailDataBase64: null,
-          thumbnailVersion: null,
+          thumbnailSavedAtVersion: null,
           thumbnailViewport: null,
         },
       },

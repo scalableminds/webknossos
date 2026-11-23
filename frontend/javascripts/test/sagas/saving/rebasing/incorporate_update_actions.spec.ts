@@ -903,7 +903,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
             description: "A *markdown* description",
             state: bookmarkState,
             createdAtVersion: null,
-            thumbnailVersion: null,
+            thumbnailSavedAtVersion: null,
             thumbnailViewport: null,
             metadata: [{ key: "k", stringValue: "v" }],
             smallThumbnailDataBase64: null,
@@ -923,7 +923,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           description: "A *markdown* description",
           state: bookmarkState,
           createdAtVersion: 1,
-          thumbnailVersion: null,
+          thumbnailSavedAtVersion: null,
           thumbnailViewport: null,
           metadata: [{ key: "k", stringValue: "v" }],
           smallThumbnailDataBase64: null,
@@ -951,7 +951,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           layers: [],
         },
         createdAtVersion: null,
-        thumbnailVersion: null,
+        thumbnailSavedAtVersion: null,
         thumbnailViewport: null,
         metadata: [
           { key: "a", stringValue: "1" },
@@ -1005,7 +1005,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           layers: [],
         },
         createdAtVersion: null,
-        thumbnailVersion: null,
+        thumbnailSavedAtVersion: null,
         thumbnailViewport: null,
         metadata: [],
         smallThumbnailDataBase64: null,
@@ -1040,10 +1040,13 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       expect(Store.getState().save.queue).toEqual([]);
 
       Store.dispatch(startForwardingUpdateActionsAction());
-      // The thumbnailVersion of stored actions may point to older thumbnails (e.g. after undo).
-      await incorporateActions([updateBookmarkThumbnail({ ...bookmark, thumbnailVersion: 2 })], 4);
+      // The thumbnailSavedAtVersion of stored actions may point to older thumbnails (e.g. after undo).
+      await incorporateActions(
+        [updateBookmarkThumbnail({ ...bookmark, thumbnailSavedAtVersion: 2 })],
+        4,
+      );
       Store.dispatch(finishForwardingUpdateActionsAction());
-      expect(Store.getState().annotation.bookmarks[0].thumbnailVersion).toBe(2);
+      expect(Store.getState().annotation.bookmarks[0].thumbnailSavedAtVersion).toBe(2);
       expect(Store.getState().save.queue).toEqual([]);
 
       Store.dispatch(startForwardingUpdateActionsAction());

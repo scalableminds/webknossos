@@ -1070,18 +1070,18 @@ export function getBookmarkThumbnailUrl(
   tracingStoreUrl: string,
   annotationId: string,
   bookmarkId: number,
-  thumbnailVersion: number,
+  thumbnailSavedAtVersion: number,
   size: "small" | "large",
   options: RequestOptions = {},
   retryOptions?: RetryOptions,
 ): Promise<ApiResult<string>> {
   // The thumbnails of a bookmark can be replaced (and an undo or revert can point back to older ones),
-  // so thumbnailVersion keeps the cached thumbnails apart.
+  // so thumbnailSavedAtVersion keeps the cached thumbnails apart.
   return requestResult(
     () =>
       doWithToken(
         async (token) =>
-          `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks/${bookmarkId}/thumbnail?size=${size}&v=${thumbnailVersion}&token=${token}`,
+          `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks/${bookmarkId}/thumbnail?size=${size}&v=${thumbnailSavedAtVersion}&token=${token}`,
       ),
     options,
     retryOptions,

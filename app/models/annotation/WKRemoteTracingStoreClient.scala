@@ -141,12 +141,12 @@ class WKRemoteTracingStoreClient(
       bookmark: AnnotationBookmarkProto,
       size: BookmarkThumbnailSize.Value
   ): Fox[Option[Array[Byte]]] =
-    bookmark.thumbnailVersion match {
-      case None                   => Fox.successful(None)
-      case Some(thumbnailVersion) =>
+    bookmark.thumbnailSavedAtVersion match {
+      case None                          => Fox.successful(None)
+      case Some(thumbnailSavedAtVersion) =>
         rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/bookmarks/${bookmark.id}/thumbnail")
           .addQueryParam("size", size.toString)
-          .addQueryParam("v", thumbnailVersion)
+          .addQueryParam("v", thumbnailSavedAtVersion)
           .addQueryParam("token", RpcTokenHolder.webknossosToken)
           .silentEvenOnFailure
           .getWithBytesResponse

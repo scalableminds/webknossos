@@ -30,7 +30,7 @@ const bookmark: APIAnnotationBookmark = {
     layers: [],
   },
   createdAtVersion: null,
-  thumbnailVersion: null,
+  thumbnailSavedAtVersion: null,
   thumbnailViewport: null,
   metadata: [],
   smallThumbnailDataBase64: "small",
@@ -84,19 +84,19 @@ describe("Bookmark undo", () => {
     // The snapshot for this undo state is taken before the bookmark is saved.
     Store.dispatch(setBookmarkNameAction(1, "Name"));
     await context.api.tracing.save();
-    const { createdAtVersion, thumbnailVersion } = Store.getState().annotation.bookmarks[0];
+    const { createdAtVersion, thumbnailSavedAtVersion } = Store.getState().annotation.bookmarks[0];
     expect(createdAtVersion).not.toBeNull();
-    expect(thumbnailVersion).toBe(createdAtVersion);
+    expect(thumbnailSavedAtVersion).toBe(createdAtVersion);
 
     Store.dispatch(deleteBookmarkAction(1));
     await dispatchUndoAsync(Store.dispatch);
     await dispatchUndoAsync(Store.dispatch);
     expect(Store.getState().annotation.bookmarks).toMatchObject([
-      { name: null, createdAtVersion, thumbnailVersion },
+      { name: null, createdAtVersion, thumbnailSavedAtVersion },
     ]);
     await dispatchRedoAsync(Store.dispatch);
     expect(Store.getState().annotation.bookmarks).toMatchObject([
-      { name: "Name", createdAtVersion, thumbnailVersion },
+      { name: "Name", createdAtVersion, thumbnailSavedAtVersion },
     ]);
 
     await context.api.tracing.save();
@@ -105,7 +105,7 @@ describe("Bookmark undo", () => {
     )[1];
     // The restored bookmark references its saved thumbnail instead of sending it again.
     expect(restoringAddBookmark?.value).toMatchObject({
-      thumbnailVersion,
+      thumbnailSavedAtVersion,
       largeThumbnailDataBase64: null,
     });
   });

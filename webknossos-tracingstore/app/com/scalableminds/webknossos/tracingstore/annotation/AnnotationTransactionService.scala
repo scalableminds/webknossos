@@ -294,7 +294,11 @@ class AnnotationTransactionService @Inject() (
       _ = stats.count("eagerUpdateBucketActions", eagerUpdateBucketActions.length)
       _ <- assertNoInvalidUpdateGroupCombinations(updateActionGroup, eagerUpdateBucketActions)
       bookmarkThumbnailActions = updateActionGroup.actions.collect { case a: BookmarkThumbnailUpdateAction => a }
-      _ <- assertValidBookmarkThumbnailVersions(annotationId, bookmarkThumbnailActions, updateActionGroup.version)
+      _ <- assertValidBookmarkThumbnailSavedAtVersions(
+        annotationId,
+        bookmarkThumbnailActions,
+        updateActionGroup.version
+      )
       _ <- applyEagerUpdateBucketActions(eagerUpdateBucketActions, annotationId, updateActionGroup.version)
       _ <- Fox.serialCombined(bookmarkThumbnailActions)(a =>
         Fox.serialCombined(a.thumbnails) { case (size, thumbnail) =>
@@ -313,17 +317,17 @@ class AnnotationTransactionService @Inject() (
 
   // The frontend sets the versions of bookmarks and their thumbnails (see BookmarkThumbnailUpdateAction).
   // Referenced thumbnails must have been stored at exactly the referenced version.
-  private def assertValidBookmarkThumbnailVersions(
+  private def assertValidBookmarkThumbnailSavedAtVersions(
       annotationId: ObjectId,
       actions: List[BookmarkThumbnailUpdateAction],
       version: Long
   )(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(actions) { a =>
-        val errorOpt = a.thumbnailVersionError(version)
+        val errorOpt = a.thumbnailSavedAtVersionError(version)
         for {
           _ <- Fox.fromBool(errorOpt.isEmpty) ?~> errorOpt.getOrElse("") ~> BAD_REQUEST
-          _ <- Fox.runOptional(a.referencedThumbnailVersion) { referencedVersion =>
+          _ <- Fox.runOptional(a.referencedThumbnailSavedAtVersion) { referencedVersion =>
             for {
               exist <- annotationBookmarkService.thumbnailsExist(annotationId, a.id, referencedVersion)
               _ <- Fox.fromBool(exist) ?~>

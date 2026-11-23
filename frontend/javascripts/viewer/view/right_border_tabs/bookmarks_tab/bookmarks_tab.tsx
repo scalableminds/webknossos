@@ -96,7 +96,7 @@ function useBookmarkThumbnailSrc(
   const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const [serverUrl, setServerUrl] = useState<string | null>(null);
-  const { id, thumbnailVersion } = bookmark;
+  const { id, thumbnailSavedAtVersion } = bookmark;
   const localDataBase64 =
     size === "small" ? bookmark.smallThumbnailDataBase64 : bookmark.largeThumbnailDataBase64;
 
@@ -104,12 +104,12 @@ function useBookmarkThumbnailSrc(
     // Unsaved thumbnails are not on the server yet.
     if (localDataBase64 != null) return;
     // E.g. after an undo that removed the thumbnail.
-    if (thumbnailVersion == null) {
+    if (thumbnailSavedAtVersion == null) {
       setServerUrl(null);
       return;
     }
     let isCancelled = false;
-    getBookmarkThumbnailUrl(tracingStoreUrl, annotationId, id, thumbnailVersion, size).then(
+    getBookmarkThumbnailUrl(tracingStoreUrl, annotationId, id, thumbnailSavedAtVersion, size).then(
       (result) => {
         if (!result.ok) {
           // Thumbnails are optional, so the bookmark is shown without one.
@@ -121,7 +121,7 @@ function useBookmarkThumbnailSrc(
     return () => {
       isCancelled = true;
     };
-  }, [tracingStoreUrl, annotationId, id, thumbnailVersion, localDataBase64, size]);
+  }, [tracingStoreUrl, annotationId, id, thumbnailSavedAtVersion, localDataBase64, size]);
 
   return localDataBase64 != null
     ? `data:${BOOKMARK_THUMBNAIL_MIME_TYPE};base64,${localDataBase64}`

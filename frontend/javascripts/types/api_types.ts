@@ -721,13 +721,13 @@ export type APIAnnotationBookmark = {
   // The annotation version that added the bookmark. null until the bookmark was saved.
   createdAtVersion: number | null;
   // The annotation version that stored the current thumbnails. null until they were saved.
-  thumbnailVersion: number | null;
+  thumbnailSavedAtVersion: number | null;
   // The viewport the current thumbnails show. null if there are none or it is unknown.
   thumbnailViewport: APIViewport | null;
   metadata: MetadataEntryProto[];
   // Only set for thumbnails captured in this session. Otherwise, the thumbnail is loaded from
   // the server. They are kept after saving, so that the saved thumbnail can be recognized when
-  // its thumbnailVersion is set (see applyBookmarkVersionAction).
+  // its thumbnailSavedAtVersion is set (see applyBookmarkVersionAction).
   smallThumbnailDataBase64: string | null;
   largeThumbnailDataBase64: string | null;
   // Frontend-only. A new random id for every thumbnail that is captured, loaded or incorporated,

@@ -167,7 +167,7 @@ class TSAnnotationController @Inject() (
       }
     }
 
-  // v is the bookmark's thumbnailVersion. The thumbnails stored at a version never change, so they can be cached.
+  // v is the bookmark's thumbnailSavedAtVersion. The thumbnails stored at a version never change, so they can be cached.
   // This does not hold for temporary annotations (see AnnotationBookmarkService.isTemporaryAnnotation).
   def bookmarkThumbnail(annotationId: ObjectId, bookmarkId: Int, size: String, v: Long): Action[AnyContent] =
     Action.fox { implicit request =>

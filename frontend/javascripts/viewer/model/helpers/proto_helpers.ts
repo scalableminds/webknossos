@@ -206,12 +206,13 @@ export function parseProtoAnnotationBookmarks(
     state: bookmarkStateFromProto(bookmark.state),
     createdAtVersion: Number(bookmark.createdAtVersion),
     // Unset if the bookmark has no thumbnails.
-    thumbnailVersion: bookmark.thumbnailVersion != null ? Number(bookmark.thumbnailVersion) : null,
+    thumbnailSavedAtVersion:
+      bookmark.thumbnailSavedAtVersion != null ? Number(bookmark.thumbnailSavedAtVersion) : null,
     thumbnailViewport: bookmark.thumbnailViewport ?? null,
     metadata: sanitizeMetadata(bookmark.metadata),
     // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.
     smallThumbnailDataBase64: null,
     largeThumbnailDataBase64: null,
-    thumbnailId: bookmark.thumbnailVersion != null ? getUid() : null,
+    thumbnailId: bookmark.thumbnailSavedAtVersion != null ? getUid() : null,
   }));
 }

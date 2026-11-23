@@ -287,7 +287,7 @@ class AnnotationIOController @Inject() (
             .withState(state.copy(activeNodeId = state.activeNodeId.filter(nodeIds.contains)))
             .withCreatedAtVersion(version)
             .copy(
-              thumbnailVersion = Option.when(hasThumbnails)(version),
+              thumbnailSavedAtVersion = Option.when(hasThumbnails)(version),
               thumbnailViewport = bookmarkWithResolvedLayers.thumbnailViewport.filter(_ => hasThumbnails)
             )
           UploadedAnnotationBookmarkProto(bookmark, smallThumbnail, largeThumbnail)

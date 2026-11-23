@@ -75,24 +75,25 @@ function* lockAnnotationAndShowReloadToast(toastKey: string, message: string) {
   });
 }
 
-// Stored update actions don't carry thumbnail data, only their thumbnailVersion (unset if the
+// Stored update actions don't carry thumbnail data, only their thumbnailSavedAtVersion (unset if the
 // bookmark has no thumbnails). Unsaved actions of the user still carry the local thumbnails
 // (or reference saved ones).
 function getIncorporatedBookmarkThumbnail(value: {
   smallThumbnailDataBase64?: string | null;
   largeThumbnailDataBase64?: string | null;
-  thumbnailVersion?: number | null;
+  thumbnailSavedAtVersion?: number | null;
   thumbnailViewport?: APIViewport | null;
 }): BookmarkThumbnail {
   const largeThumbnailDataBase64 = value.largeThumbnailDataBase64 ?? null;
-  const thumbnailVersion = value.thumbnailVersion ?? null;
+  const thumbnailSavedAtVersion = value.thumbnailSavedAtVersion ?? null;
   return {
     smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
     largeThumbnailDataBase64,
-    thumbnailVersion,
+    thumbnailSavedAtVersion,
     thumbnailViewport: value.thumbnailViewport ?? null,
     // The diffing baseline is reset after incorporating, so a new id does not cause a change.
-    thumbnailId: largeThumbnailDataBase64 != null || thumbnailVersion != null ? getUid() : null,
+    thumbnailId:
+      largeThumbnailDataBase64 != null || thumbnailSavedAtVersion != null ? getUid() : null,
   };
 }
 

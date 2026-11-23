@@ -66,8 +66,8 @@ type DeleteBookmarkAction = ReturnType<typeof deleteBookmarkAction>;
 type SetBookmarkStateAction = ReturnType<typeof setBookmarkStateAction>;
 type SetBookmarkThumbnailAction = ReturnType<typeof setBookmarkThumbnailAction>;
 type SetBookmarksAction = ReturnType<typeof setBookmarksAction>;
-export type SetBookmarkThumbnailVersionAction = ReturnType<
-  typeof setBookmarkThumbnailVersionAction
+export type SetBookmarkThumbnailSavedAtVersionAction = ReturnType<
+  typeof setBookmarkThumbnailSavedAtVersionAction
 >;
 type SetAnnotationAllowUpdateAction = ReturnType<
   typeof setIsUpdatingAnnotationCurrentlyAllowedAction
@@ -117,7 +117,7 @@ export type AnnotationActionTypes =
   | SetBookmarkStateAction
   | SetBookmarkThumbnailAction
   | SetBookmarksAction
-  | SetBookmarkThumbnailVersionAction
+  | SetBookmarkThumbnailSavedAtVersionAction
   | SetAnnotationAllowUpdateAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -274,12 +274,12 @@ export type BookmarkThumbnail = Pick<
   APIAnnotationBookmark,
   | "smallThumbnailDataBase64"
   | "largeThumbnailDataBase64"
-  | "thumbnailVersion"
+  | "thumbnailSavedAtVersion"
   | "thumbnailViewport"
   | "thumbnailId"
 >;
 
-// A newly captured thumbnail has no thumbnailVersion until it was saved.
+// A newly captured thumbnail has no thumbnailSavedAtVersion until it was saved.
 export const setBookmarkStateAction = (
   bookmarkId: number,
   state: APIAnnotationBookmarkState,
@@ -308,15 +308,15 @@ export const setBookmarksAction = (bookmarks: APIAnnotationBookmark[]) =>
   }) as const;
 
 // Marks the saved thumbnail, unless the bookmark got another thumbnail in the meantime.
-export const setBookmarkThumbnailVersionAction = (
+export const setBookmarkThumbnailSavedAtVersionAction = (
   bookmarkId: number,
-  thumbnailVersion: number,
+  thumbnailSavedAtVersion: number,
   savedLargeThumbnailDataBase64: string,
 ) =>
   ({
-    type: "SET_BOOKMARK_THUMBNAIL_VERSION",
+    type: "SET_BOOKMARK_THUMBNAIL_SAVED_AT_VERSION",
     bookmarkId,
-    thumbnailVersion,
+    thumbnailSavedAtVersion,
     savedLargeThumbnailDataBase64,
   }) as const;
 

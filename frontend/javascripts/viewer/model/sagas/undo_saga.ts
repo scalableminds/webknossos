@@ -15,7 +15,7 @@ import {
 import type { Action } from "viewer/model/actions/actions";
 import type {
   SetBookmarkCreatedAtVersionAction,
-  SetBookmarkThumbnailVersionAction,
+  SetBookmarkThumbnailSavedAtVersionAction,
   SetCollaborationModeAction,
   UserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
@@ -107,7 +107,9 @@ type RelevantActionsForUndoRedo = {
   finishAnnotationStrokeAction?: FinishAnnotationStrokeAction;
   userBoundingBoxAction?: UserBoundingBoxAction;
   bookmarkAction?: Action;
-  bookmarkVersionAction?: SetBookmarkCreatedAtVersionAction | SetBookmarkThumbnailVersionAction;
+  bookmarkVersionAction?:
+    | SetBookmarkCreatedAtVersionAction
+    | SetBookmarkThumbnailSavedAtVersionAction;
   importVolumeTracingAction?: ImportVolumeTracingAction;
   undo?: UndoAction;
   redo?: RedoAction;
@@ -132,7 +134,7 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
     };
   } else if (
     action.type === "SET_BOOKMARK_CREATED_AT_VERSION" ||
-    action.type === "SET_BOOKMARK_THUMBNAIL_VERSION"
+    action.type === "SET_BOOKMARK_THUMBNAIL_SAVED_AT_VERSION"
   ) {
     return {
       bookmarkVersionAction: action,
@@ -266,7 +268,7 @@ function* manageUndoStates(): Saga<never> {
     ...BookmarkUndoRelevantActions,
     // Versions assigned by the server when saving. Not undoable, but the snapshots need them.
     "SET_BOOKMARK_CREATED_AT_VERSION",
-    "SET_BOOKMARK_THUMBNAIL_VERSION",
+    "SET_BOOKMARK_THUMBNAIL_SAVED_AT_VERSION",
     "ADD_BUCKET_TO_UNDO",
     "SET_SEGMENT_GROUPS",
     "FINISH_ANNOTATION_STROKE",

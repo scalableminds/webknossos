@@ -19,7 +19,7 @@ import {
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   setBookmarkCreatedAtVersionAction,
-  setBookmarkThumbnailVersionAction,
+  setBookmarkThumbnailSavedAtVersionAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   type OperationId,
@@ -385,7 +385,7 @@ function* setSavedBookmarkVersions(saveQueue: Array<SaveQueueEntry>) {
         action.value.largeThumbnailDataBase64 != null
       ) {
         yield* put(
-          setBookmarkThumbnailVersionAction(
+          setBookmarkThumbnailSavedAtVersionAction(
             action.value.id,
             batch.version,
             action.value.largeThumbnailDataBase64,
@@ -485,7 +485,7 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQ
   return slicedBatches;
 }
 
-// Sets the createdAtVersion of added bookmarks and the thumbnailVersion of sent thumbnails to the
+// Sets the createdAtVersion of added bookmarks and the thumbnailSavedAtVersion of sent thumbnails to the
 // version of the save request. As the versions are assigned anew for every save request (e.g.
 // after rebasing), so are these. The server rejects the request if they don't match.
 function addVersionToBookmarkAction(action: UpdateAction, version: number): UpdateAction {
@@ -494,10 +494,10 @@ function addVersionToBookmarkAction(action: UpdateAction, version: number): Upda
   }
   const hasThumbnails =
     action.value.largeThumbnailDataBase64 != null || action.value.smallThumbnailDataBase64 != null;
-  const thumbnailVersion = hasThumbnails ? version : action.value.thumbnailVersion;
+  const thumbnailSavedAtVersion = hasThumbnails ? version : action.value.thumbnailSavedAtVersion;
   return action.name === "addBookmark"
-    ? { ...action, value: { ...action.value, createdAtVersion: version, thumbnailVersion } }
-    : { ...action, value: { ...action.value, thumbnailVersion } };
+    ? { ...action, value: { ...action.value, createdAtVersion: version, thumbnailSavedAtVersion } }
+    : { ...action, value: { ...action.value, thumbnailSavedAtVersion } };
 }
 
 export function addVersionNumbers(

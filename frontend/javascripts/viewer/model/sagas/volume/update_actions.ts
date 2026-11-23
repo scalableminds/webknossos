@@ -1293,20 +1293,20 @@ export function updateMetadataOfAnnotation(description: string) {
 
 // A saved thumbnail is referenced by its version, so that no image data has to be sent again
 // (e.g. when a deleted bookmark is restored by undo). Otherwise, the local thumbnails are sent
-// and their thumbnailVersion is set to the version of the save request, see addVersionNumbers.
+// and their thumbnailSavedAtVersion is set to the version of the save request, see addVersionNumbers.
 // The server validates the versions and strips the image data from the stored update actions.
 function getThumbnailUpdate(bookmark: APIAnnotationBookmark) {
-  return bookmark.thumbnailVersion != null
+  return bookmark.thumbnailSavedAtVersion != null
     ? {
         largeThumbnailDataBase64: null,
         smallThumbnailDataBase64: null,
-        thumbnailVersion: bookmark.thumbnailVersion,
+        thumbnailSavedAtVersion: bookmark.thumbnailSavedAtVersion,
         thumbnailViewport: bookmark.thumbnailViewport,
       }
     : {
         largeThumbnailDataBase64: bookmark.largeThumbnailDataBase64,
         smallThumbnailDataBase64: bookmark.smallThumbnailDataBase64,
-        thumbnailVersion: null as number | null,
+        thumbnailSavedAtVersion: null as number | null,
         thumbnailViewport: bookmark.thumbnailViewport,
       };
 }

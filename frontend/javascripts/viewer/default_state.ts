@@ -342,5 +342,9 @@ const defaultState: WebknossosState = {
     activeOperations: [],
     childOperations: [],
   },
+  layerRegistrationLandmarkIframe: {
+    viewState: null,
+    landmarkPairInfo: null,
+  },
 };
 export default defaultState;

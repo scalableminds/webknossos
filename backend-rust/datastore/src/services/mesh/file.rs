@@ -196,22 +196,22 @@ impl MeshFileService {
             })
             .await
     }
+    /// Mesh files computed without a mapping may store an empty mapping name, which becomes `None`.
     pub async fn mapping_name(
         &self,
         key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<Option<String>> {
-        match key.attachment.data_format {
-            LayerAttachmentDataformat::Hdf5 => Ok(self
+        let mapping = match key.attachment.data_format {
+            LayerAttachmentDataformat::Hdf5 => self
                 .hdf5(key, |reader| reader.root_string("mapping_name"))
                 .await
-                .ok()),
-            LayerAttachmentDataformat::Zarr3 => {
-                Ok(self.attributes(key, token).await?.mapping.clone())
-            }
-            LayerAttachmentDataformat::NeuroglancerPrecomputed => Ok(None),
-            _ => Err(unsupported(key)),
-        }
+                .ok(),
+            LayerAttachmentDataformat::Zarr3 => self.attributes(key, token).await?.mapping.clone(),
+            LayerAttachmentDataformat::NeuroglancerPrecomputed => None,
+            _ => return Err(unsupported(key)),
+        };
+        Ok(mapping.filter(|m| !m.is_empty()))
     }
     async fn version(&self, key: &AttachmentFileKey, token: Option<&str>) -> DsResult<i64> {
         match key.attachment.data_format {

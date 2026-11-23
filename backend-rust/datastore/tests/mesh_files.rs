@@ -319,3 +319,35 @@ async fn empty_requests_and_zero_length_hdf5_reads_keep_native_boundaries() {
         .is_err()
     );
 }
+
+#[tokio::test]
+async fn empty_mapping_name_counts_as_unmapped() {
+    let zarr: Value =
+        serde_json::from_slice(include_bytes!("fixtures/meshes/zarr3/zarr.json")).unwrap();
+    let svc = service();
+    for (stored, expected) in [
+        ("", None),
+        ("agglomerate_view_70", Some("agglomerate_view_70")),
+    ] {
+        let dir = std::env::temp_dir().join(format!(
+            "wk_mesh_mapping_name_{}_{}",
+            std::process::id(),
+            stored.len()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut zarr = zarr.clone();
+        zarr["attributes"]["voxelytics"]["artifact_attributes"]["mapping_name"] = json!(stored);
+        std::fs::write(dir.join("zarr.json"), serde_json::to_vec(&zarr).unwrap()).unwrap();
+        let k = AttachmentFileKey {
+            source: DataSourceId::new("ds", "org"),
+            layer: "seg".into(),
+            attachment: LayerAttachment::from_json(
+                &json!({"name":"mapped","path":dir,"dataFormat":"zarr3"}),
+            )
+            .unwrap(),
+        };
+        let mapping = svc.mapping_name(&k, None).await.unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(mapping.as_deref(), expected);
+    }
+}

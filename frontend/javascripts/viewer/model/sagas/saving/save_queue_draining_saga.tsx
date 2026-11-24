@@ -285,9 +285,9 @@ export function* sendSaveRequestToServer(
       }
 
       yield* put(setVersionNumberAction(version + versionIncrement));
-      yield* setSavedBookmarkVersions(compactedSaveQueue);
       yield* put(setLastSaveTimestampAction());
       yield* put(shiftSaveQueueAction(saveQueue.length));
+      yield* setSavedBookmarkVersions(compactedSaveQueue);
 
       try {
         yield* call(markBucketsAsNotDirty, compactedSaveQueue);

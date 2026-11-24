@@ -297,6 +297,8 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   segmentationLayerNames: Array<string>;
   // Active explorational annotations the user can list. Only present if requested.
   annotationCount?: number;
+  // Most recently modified of those annotations that are owned by the user. Only present if requested.
+  latestOwnAnnotationId?: string;
 };
 
 export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {
@@ -338,6 +340,10 @@ export type APITeamMembership = {
 };
 export type ExperienceMap = Readonly<Record<string, number>>;
 export type ExperienceDomainList = Array<string>;
+export type TaskExperience = {
+  readonly domain: string;
+  readonly value: number;
+};
 
 export type APIUserCompact = {
   readonly firstName: string;
@@ -468,13 +474,11 @@ export type APIScript = APIScriptTypeBase & {
   readonly id: string;
   readonly owner: APIUserBase;
 };
-export type APIScriptUpdater = APIScriptTypeBase & {
-  readonly id: string;
-  readonly owner: string;
-};
+// Matches ScriptParameters in ScriptController.scala.
 export type APIScriptCreator = APIScriptTypeBase & {
   readonly owner: string;
 };
+export type APIScriptUpdater = APIScriptCreator;
 type APIProjectTypeBase = {
   readonly name: string;
   readonly team: string; // id
@@ -489,14 +493,16 @@ export type APIProject = APIProjectTypeBase & {
   readonly owner: APIUserBase;
   readonly created: number;
 };
-export type APIProjectUpdater = APIProjectTypeBase & {
-  readonly id: string;
+// Matches ProjectParameters in ProjectController.scala.
+export type APIProjectCreator = Pick<
+  APIProjectTypeBase,
+  "name" | "team" | "priority" | "expectedTime" | "isBlacklistedFromReport"
+> & {
   readonly owner: string;
-  readonly created: number;
+  // Defaults to false on creation and is ignored on update.
+  readonly paused?: boolean;
 };
-export type APIProjectCreator = APIProjectTypeBase & {
-  readonly owner: string;
-};
+export type APIProjectUpdater = APIProjectCreator;
 export type APIProjectWithStatus = APIProject & {
   readonly pendingInstances: number;
   readonly tracingTime: number;
@@ -511,10 +517,8 @@ export type APITask = {
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly id: string;
-  readonly neededExperience: {
-    readonly domain: string;
-    readonly value: number;
-  };
+  // null if any member of the project's team may get the task
+  readonly neededExperience: TaskExperience | null | undefined;
   readonly projectName: string;
   readonly projectId: string;
   readonly script: APIScript | null | undefined;
@@ -605,6 +609,8 @@ export type AnnotationViewConfiguration = {
     string,
     {
       isDisabled: boolean;
+      agglomerateDiffReferenceMappingName?: string | null;
+      isAgglomerateDiffEnabled?: boolean;
     }
   >;
 };
@@ -958,6 +964,13 @@ export type TreeAgglomerateInfo = {
   // Note: The editable mapping's id is always equal to the id of it associated volume tracing.
   tracingId?: string | undefined;
   mappingName?: string | undefined;
+  // Only set for agglomerates of a mapping (mappingName), as the layer of an editable mapping is
+  // given by tracingId. Used to compare agglomerate skeletons to a reference mapping (see
+  // agglomerate_diff_saga).
+  layerName?: string | undefined;
+  // The position (in the coordinate system of the layer) that was clicked to load the agglomerate
+  // skeleton, if any. Agglomerate diffs compare the reference agglomerate at this position.
+  clickedPosition?: Vector3 | undefined;
 };
 export type ServerSkeletonTracingTree = {
   branchPoints: Array<ServerBranchPoint>;

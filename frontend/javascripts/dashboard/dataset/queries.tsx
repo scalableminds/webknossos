@@ -412,13 +412,14 @@ export function useUpdateDatasetMutation(folderId: string | null) {
     },
     mutationKey,
     onSuccess: (updatedDataset: APIMaybeUnimportedDataset) => {
-      // The full dataset doesn't contain the annotation count, so carry it over from the list.
-      const previousAnnotationCount = (
+      // The full dataset doesn't contain the annotation info, so carry it over from the list.
+      const previousDataset = (
         queryClient.getQueryData(mutationKey) as APIDatasetCompact[] | undefined
-      )?.find((ds) => ds.id === updatedDataset.id)?.annotationCount;
+      )?.find((ds) => ds.id === updatedDataset.id);
       const toCompact = (dataset: APIMaybeUnimportedDataset): APIDatasetCompact => ({
         ...convertDatasetToCompact(dataset),
-        annotationCount: previousAnnotationCount,
+        annotationCount: previousDataset?.annotationCount,
+        latestOwnAnnotationId: previousDataset?.latestOwnAnnotationId,
       });
       queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
         (oldItems || [])

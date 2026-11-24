@@ -29,7 +29,7 @@ import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
-import controllers.{AttachmentRenaming, LayerRenaming, PathDeletionService}
+import controllers.{AttachmentRenaming, LayerRenaming}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO

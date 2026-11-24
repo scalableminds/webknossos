@@ -13,6 +13,7 @@ import { shallowEqual, useDispatch } from "react-redux";
 import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -20,7 +21,6 @@ import {
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import {
   getTooltipPosition,
   isPositionStillInPlane,
@@ -77,9 +77,7 @@ export default function DistanceMeasurementTooltip() {
   const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
-  const planeRatio = useWkSelector((state) =>
-    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
-  );
+  const voxelSize = useWkSelector(getGlobalVoxelSizeFromState);
   const [tooltipRef, tooltipWidth] = useTooltipWidth();
   const dispatch = useDispatch();
   const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
@@ -105,7 +103,7 @@ export default function DistanceMeasurementTooltip() {
         flycamRotation,
         flycamPosition,
         orthoView,
-        planeRatio,
+        voxelSize,
         zoomStep,
       )
     ) {
@@ -117,7 +115,7 @@ export default function DistanceMeasurementTooltip() {
     flycamRotation,
     flycamPosition,
     orthoView,
-    planeRatio,
+    voxelSize,
     zoomStep,
     activeGeometry.resetAndHide,
   ]);
@@ -126,7 +124,7 @@ export default function DistanceMeasurementTooltip() {
   // is followed by a dispatch of setLastMeasuredPositionAction. Reading them in a
   // selector re-renders this component whenever the formatted values change.
   const { valueInVx, valueInMetricUnit } = useWkSelector(
-    (state) => getFormattedMeasurement(activeTool, state.dataset.dataSource.scale),
+    (state) => getFormattedMeasurement(activeTool, getGlobalVoxelSizeFromState(state)),
     shallowEqual,
   );
 

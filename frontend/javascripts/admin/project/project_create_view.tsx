@@ -6,13 +6,17 @@ import {
   getUsers,
   updateProject,
 } from "admin/rest_api";
-import { Button, Checkbox, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
+import { getOnlyItem, usePreselectFormValue } from "admin/use_preselect_form_value";
+import { Button, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
+import {
+  CheckboxFormItemWithDescription,
+  FormItemWithDescription,
+} from "dashboard/dataset/helper_components";
 import { useApi, useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { APITeam, APIUser } from "types/api_types";
+import type { APIProjectCreator, APITeam, APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 
@@ -20,7 +24,7 @@ function ProjectCreateView() {
   const { projectId } = useParams();
   const { token } = theme.useToken();
 
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<APIProjectCreator>();
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
 
@@ -29,12 +33,22 @@ function ProjectCreateView() {
     queryFn: () => getUsers(),
     refetchOnWindowFocus: false,
   });
-  const { data: teams = [], isLoading: isLoadingTeams } = useQueryWithErrorHandling({
+  const {
+    data: teams = [],
+    isLoading: isLoadingTeams,
+    dataUpdatedAt: teamsUpdatedAt,
+  } = useQueryWithErrorHandling({
     queryKey: ["editableTeams"],
     queryFn: getEditableTeams,
     refetchOnWindowFocus: false,
   });
   const isFetchingData = isLoadingUsers || isLoadingTeams;
+  usePreselectFormValue(
+    form,
+    "team",
+    projectId == null ? getOnlyItem(teams)?.id : undefined,
+    teamsUpdatedAt,
+  );
 
   const { data: project } = useQueryWithErrorHandling({
     queryKey: ["projectForEditing", projectId],
@@ -63,8 +77,7 @@ function ProjectCreateView() {
     form.setFieldsValue(defaultFormValues);
   }, [form, projectId, project, activeUser.id]);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
-  const handleSubmit = async (formValues) => {
+  const handleSubmit = async (formValues: APIProjectCreator) => {
     if (projectId) {
       await updateProject(projectId, formValues);
     } else {
@@ -94,31 +107,33 @@ function ProjectCreateView() {
         }}
       >
         <Form onFinish={handleSubmit} layout="vertical" form={form}>
-          <FormItem
+          <FormItemWithDescription
             name="name"
             label="Project Name"
+            description="Letters, digits, hyphens and underscores only. Can't be changed later."
             hasFeedback
             rules={[
               {
                 required: true,
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'RegExp | ... Remove this comment to see the full error message
-                pattern: "^[a-zA-Z0-9_-]*$",
+              },
+              {
+                pattern: /^[a-zA-Z0-9_-]*$/,
                 message: "The project name must not contain whitespace or special characters.",
               },
               {
                 min: 3,
-                required: true,
                 message: "The project name must be at least 3 characters long.",
               },
             ]}
           >
             <Input autoFocus disabled={isEditMode} />
-          </FormItem>
-          <Row gutter={token.paddingMD}>
+          </FormItemWithDescription>
+          <Row gutter={token.paddingMD} align="bottom">
             <Col xs={24} md={12}>
-              <FormItem
+              <FormItemWithDescription
                 name="team"
                 label="Team"
+                description="Only members of this team can get tasks from this project."
                 hasFeedback
                 rules={[
                   {
@@ -137,12 +152,13 @@ function ProjectCreateView() {
                     value: team.id,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <Col xs={24} md={12}>
-              <FormItem
+              <FormItemWithDescription
                 name="owner"
                 label="Owner"
+                description="Gets an email when an annotator exceeds the time limit."
                 hasFeedback
                 rules={[
                   {
@@ -161,15 +177,16 @@ function ProjectCreateView() {
                     value: user.id,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
           </Row>
 
-          <Row gutter={token.paddingMD}>
+          <Row gutter={token.paddingMD} align="bottom">
             <Col xs={24} md={12}>
-              <FormItem
+              <FormItemWithDescription
                 name="priority"
                 label="Priority"
+                description="Tasks from projects with a higher priority are assigned first."
                 hasFeedback
                 rules={[
                   {
@@ -181,12 +198,13 @@ function ProjectCreateView() {
                 ]}
               >
                 <InputNumber style={fullWidth} />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <Col xs={24} md={12}>
-              <FormItem
+              <FormItemWithDescription
                 name="expectedTime"
-                label="Time Limit (Minutes)"
+                label="Time Limit per Task Instance"
+                description="Exceeding it emails the owner. It doesn't stop the annotator."
                 hasFeedback
                 rules={[
                   {
@@ -198,19 +216,17 @@ function ProjectCreateView() {
                   },
                 ]}
               >
-                <InputNumber style={fullWidth} />
-              </FormItem>
+                <InputNumber style={fullWidth} min={1} suffix="minutes" />
+              </FormItemWithDescription>
             </Col>
           </Row>
 
-          <FormItemWithInfo
+          <CheckboxFormItemWithDescription
             name="isBlacklistedFromReport"
-            label="Visibility in Project Progress View"
-            info="If checked, the project will not be listed in the project progress view."
-            valuePropName="checked"
+            description="Hides the project from the Project Progress report, e.g. for test or archived projects."
           >
-            <Checkbox>Do not show in Project Progress View</Checkbox>
-          </FormItemWithInfo>
+            Hide from Project Progress
+          </CheckboxFormItemWithDescription>
 
           <FormItem>
             <Button type="primary" htmlType="submit">

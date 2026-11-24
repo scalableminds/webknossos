@@ -19,8 +19,7 @@ import type {
   APISegmentationLayer,
 } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
-import Constants from "viewer/constants";
-import CustomLOD from "viewer/controller/custom_lod";
+import Constants, { MappingStatusEnum } from "viewer/constants";
 import {
   type BufferGeometryWithInfo,
   sortByDistanceTo,
@@ -28,13 +27,17 @@ import {
   VertexSegmentMapping,
 } from "viewer/controller/mesh_helpers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getLODIndexForTDViewTarget } from "viewer/controller/segment_lod";
 import {
+  getMappingInfo,
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { sortMeshFilesByPreference } from "viewer/model/accessors/mesh_file_accessor";
 import {
   getEditableMappingForVolumeTracingId,
   getTracingForSegmentationLayer,
+  hasEditableMapping,
   isTracingLayerWithoutFallback,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -84,7 +87,23 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
       (state) => state.localSegmentationStateByLayer[layerName].currentMeshFile,
     );
     if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
-      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].name));
+      const mappingInfo = yield* select((state) =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+      );
+      // A mapping that is still being activated is already taken into account.
+      const activeMappingName =
+        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED
+          ? (mappingInfo.mappingName ?? null)
+          : null;
+      const isEditableMappingActive = yield* select((state) =>
+        hasEditableMapping(state, layerName),
+      );
+      const [preferredMeshFile] = sortMeshFilesByPreference(
+        availableMeshFiles,
+        activeMappingName,
+        isEditableMappingActive,
+      );
+      yield* put(updateCurrentMeshFileAction(layerName, preferredMeshFile.name));
     }
   }
 
@@ -332,7 +351,6 @@ function* _getChunkLoadingDescriptors(
   const availableChunksMap: ChunksMap = {};
   let loadingOrder: number[] = [];
 
-  const { segmentMeshController } = getSceneController();
   const version = meshFile.formatVersion;
 
   const editableMapping = yield* select((state) =>
@@ -381,22 +399,10 @@ function* _getChunkLoadingDescriptors(
     loadingOrder.push(lodIndex);
     meshLodInfo.transform;
   });
-  const currentLODGroup: CustomLOD =
-    (yield* call(
-      {
-        context: segmentMeshController,
-        fn: segmentMeshController.getLODGroupOfLayer,
-      },
-      segmentationLayer.name,
-    )) ?? new CustomLOD();
-  const currentLODIndex = yield* call(
-    {
-      context: currentLODGroup,
-      fn: currentLODGroup.getCurrentLOD,
-    },
-    Math.max(...loadingOrder),
-  );
-  // Load the chunks closest to the current LOD first.
+  // The LOD that is shown for a segment depends on its distance to the camera, which
+  // isn't known before its chunks are loaded. Approximate it with the LOD at the depth
+  // of the 3D viewport's orbit target and load the chunks closest to that LOD first.
+  const currentLODIndex = yield* call(getLODIndexForTDViewTarget, Math.max(...loadingOrder));
   loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
 
   return {

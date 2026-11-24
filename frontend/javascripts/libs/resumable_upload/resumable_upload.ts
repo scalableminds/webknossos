@@ -90,7 +90,7 @@ export interface ConfigurationHash {
    */
   generateUniqueIdentifier?: ((file: File, event?: Event) => string | Promise<string>) | null;
   /**
-   * The maximum number of retries for a chunk before the upload is failed. Valid values are any positive integer and `undefined` for no limit. (Default: `undefined`)
+   * The maximum number of retries after retryable HTTP errors for a chunk before the upload is failed. Network errors and timeouts are always retried and don't count towards this limit. Use `Number.POSITIVE_INFINITY` for no limit. (Default: `100`)
    */
   maxChunkRetries?: number;
   /**

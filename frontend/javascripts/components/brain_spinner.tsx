@@ -53,7 +53,7 @@ export function BrainSpinnerWithError({
 }: {
   gotUnhandledError: boolean;
   organizationToSwitchTo: APIOrganization | null | undefined;
-  entity?: "dataset" | "workflow";
+  entity?: "dataset" | "workflow" | "AI model";
 }) {
   const switchToOwningOrganizationButton = (
     <AsyncButton

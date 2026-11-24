@@ -5,11 +5,14 @@ import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "viewer/constants";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
-import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getGlobalVoxelSizeFromState,
+  getTransformsForSkeletonLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getUnitPerPixel } from "viewer/model/scaleinfo";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
@@ -24,6 +27,11 @@ export const NodeTypes = {
 };
 export const COLOR_TEXTURE_WIDTH = 1024.0;
 export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
+// The alpha channel of a tree color encodes the visibility of the tree (0: invisible, 0.5: only
+// the nodes are visible, 1: visible). For dimmed trees, DIMMED_TREE_ALPHA_OFFSET is added.
+export const DIMMED_TREE_ALPHA_OFFSET = 2.0;
+// E.g., agglomerate skeletons are dimmed while their agglomerate diff is shown on top of them
+export const DIMMED_TREE_OPACITY = 0.25;
 
 class NodeShader {
   material: RawShaderMaterial;
@@ -55,8 +63,8 @@ class NodeShader {
         // will and should be square regardless of the plane's aspect ratio.
         value: getZoomValue(state.flycam),
       },
-      voxelSizeMin: {
-        value: getBaseVoxelInUnit(state.dataset.dataSource.scale.factor),
+      unitPerPixelAtZoomStep1: {
+        value: getUnitPerPixel(getGlobalVoxelSizeFromState(state)),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,
@@ -112,6 +120,12 @@ class NodeShader {
         (_state) => _state.userConfiguration.highlightCommentedNodes,
         (highlightCommentedNodes) => {
           this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
+        },
+      ),
+      listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState),
+        (voxelSize) => {
+          this.uniforms.unitPerPixelAtZoomStep1.value = getUnitPerPixel(voxelSize);
         },
       ),
       listenToStoreProperty(
@@ -198,7 +212,7 @@ out vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float planeZoomFactor;
-uniform float voxelSizeMin;
+uniform float unitPerPixelAtZoomStep1;
 uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
@@ -240,6 +254,7 @@ out float v_isHighlightedCommented;
 out float v_isActiveNode;
 out float v_innerPointSize;
 out float v_outerPointSize;
+out float v_opacity;
 in float nodeId;
 in float treeId;
 
@@ -286,9 +301,10 @@ void main() {
     vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
 
     color = rgba.rgb;
-    float alpha = rgba.a;
+    float alpha = mod(rgba.a, ${formatNumberAsGLSLFloat(DIMMED_TREE_ALPHA_OFFSET)});
     // A alpha value of 0.5 indicates that the edges of the tree are not visible but its nodes are.
     bool isVisible = alpha == 1.0 || alpha == 0.5 ;
+    v_opacity = rgba.a >= ${formatNumberAsGLSLFloat(DIMMED_TREE_ALPHA_OFFSET)} ? ${formatNumberAsGLSLFloat(DIMMED_TREE_OPACITY)} : 1.0;
 
     // DELETED OR INVISIBLE NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {
@@ -324,7 +340,7 @@ void main() {
       gl_PointSize = overrideParticleSize;
     } else {
       gl_PointSize = max(
-        radius / planeZoomFactor / voxelSizeMin,
+        radius / planeZoomFactor / unitPerPixelAtZoomStep1,
         overrideParticleSize
       ) * viewportScale;
     }
@@ -393,12 +409,16 @@ void main() {
 precision highp float;
 
 uniform float viewMode;
+// The precision has to match the declaration in the vertex shader (int defaults to mediump in
+// fragment shaders), otherwise the program fails to link.
+uniform highp int isPicking;
 
 in vec3 color;
 in float v_isHighlightedCommented;
 in float v_isActiveNode;
 in float v_innerPointSize;
 in float v_outerPointSize;
+in float v_opacity;
 
 out vec4 outputColor;
 
@@ -454,6 +474,11 @@ void main()
         // overwrites other nodes.
         discard;
       }
+    }
+
+    // During picking, the color encodes the node id, which must not be blended with the background
+    if (isPicking == 0) {
+      outputColor.a *= v_opacity;
     }
 }`;
   }

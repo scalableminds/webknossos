@@ -35,8 +35,9 @@ import {
   startForwardingUpdateActionsAction,
 } from "viewer/model/actions/save_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import type { ApplyingUpdateResults } from "viewer/model/sagas/saving/rebasing/applying_update_artifacts";
 import { tryToIncorporateActions } from "viewer/model/sagas/saving/rebasing/incorporate_update_actions_sagas";
+import { MeshRefreshCollector } from "viewer/model/sagas/saving/rebasing/mesh_refresh_collector";
+import type { ApplyingUpdatesResult } from "viewer/model/sagas/saving/rebasing/rebasing_types";
 import {
   addUserBoundingBoxInSkeletonTracing,
   addUserBoundingBoxInVolumeTracing,
@@ -160,13 +161,15 @@ function* incorporateActionsEffect(
   actions: IncorporatableUpdateAction[],
   version: number,
   areUnsavedChangesOfUser = false,
+  meshRefreshes: MeshRefreshCollector | null = null,
 ) {
   const timestampedActions = actions.map(
     (a) => ({ ...a, value: { ...a.value, actionTimestamp: 0 } }) as unknown as ServerUpdateAction,
   );
-  const result: ApplyingUpdateResults | undefined = yield tryToIncorporateActions(
+  const result: ApplyingUpdatesResult | undefined = yield tryToIncorporateActions(
     [{ version, value: timestampedActions }],
     areUnsavedChangesOfUser,
+    meshRefreshes,
   );
   for (const action of actions) {
     seenActionTypes.add(action.name);
@@ -178,8 +181,8 @@ async function incorporateActions(
   actions: IncorporatableUpdateAction[],
   version: number,
   areUnsavedChangesOfUser = false,
-): Promise<ApplyingUpdateResults | undefined> {
-  let result: ApplyingUpdateResults | undefined;
+): Promise<ApplyingUpdatesResult | undefined> {
+  let result: ApplyingUpdatesResult | undefined;
   const task = startSaga(function* () {
     result = yield* incorporateActionsEffect(actions, version, areUnsavedChangesOfUser);
   });
@@ -704,13 +707,19 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       mockInitialBucketAndAgglomerateData(context, [], Store.getState());
       const { tracingId } = Store.getState().annotation.volumes[0];
 
-      let result: ApplyingUpdateResults | undefined;
+      let result: ApplyingUpdatesResult | undefined;
+      const meshRefreshes = new MeshRefreshCollector();
       const task = startSaga(function* () {
         yield* initializeMappingAndTool(context, tracingId);
         yield* expectMapping(tracingId, initialMapping);
         yield loadAgglomerateMeshes([1]);
 
-        result = yield* incorporateActionsEffect([mergeAgglomerate(1n, 4n, 1n, 4n, tracingId)], 1);
+        result = yield* incorporateActionsEffect(
+          [mergeAgglomerate(1n, 4n, 1n, 4n, tracingId)],
+          1,
+          false,
+          meshRefreshes,
+        );
       });
       await task.toPromise();
 
@@ -718,15 +727,16 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       await startSaga(function* () {
         yield* expectMapping(tracingId, expectedMappingAfterMerge);
       }).toPromise();
-      expect(result?.artifactInfos.meshIdsToRemovePerLayer.get(tracingId)?.has(1n)).toBe(true);
-      expect(result?.artifactInfos.meshesToLoadPerLayer.get(tracingId)?.has(1n)).toBe(true);
+      expect(meshRefreshes.meshIdsToRemovePerLayer.get(tracingId)?.has(1n)).toBe(true);
+      expect(meshRefreshes.displayPropsOfMeshesToLoadPerLayer.get(tracingId)?.has(1n)).toBe(true);
     });
 
     it<WebknossosTestContext>("splits agglomerates and records mesh artifacts for splitAgglomerate", async (context) => {
       const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
       const { tracingId } = Store.getState().annotation.volumes[0];
 
-      let result: ApplyingUpdateResults | undefined;
+      let result: ApplyingUpdatesResult | undefined;
+      const meshRefreshes = new MeshRefreshCollector();
       const task = startSaga(function* () {
         yield* initializeMappingAndTool(context, tracingId);
         yield* expectMapping(tracingId, initialMapping);
@@ -744,6 +754,8 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
         result = yield* incorporateActionsEffect(
           [splitAgglomerate(1n, 2n, 1n, tracingId)],
           backendVersionAfterSplit,
+          false,
+          meshRefreshes,
         );
       });
       await task.toPromise();
@@ -758,8 +770,10 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       expect(mapping?.get(1)).toBe(1);
       expect(mapping?.get(2)).not.toBe(1);
       expect(mapping?.get(2)).toBe(mapping?.get(3));
-      expect(result?.artifactInfos.meshIdsToRemovePerLayer.get(tracingId)?.has(1n)).toBe(true);
-      expect(result?.artifactInfos.meshesToLoadPerLayer.get(tracingId)?.size).toBeGreaterThan(0);
+      expect(meshRefreshes.meshIdsToRemovePerLayer.get(tracingId)?.has(1n)).toBe(true);
+      expect(meshRefreshes.displayPropsOfMeshesToLoadPerLayer.get(tracingId)?.size).toBeGreaterThan(
+        0,
+      );
     });
 
     it("resolves updateMappingName against the AGGLOMERATE type and applies isEditable/isLocked", async () => {

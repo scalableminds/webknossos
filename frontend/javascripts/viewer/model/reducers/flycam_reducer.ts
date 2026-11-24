@@ -14,10 +14,14 @@ import {
 } from "viewer/model/accessors/flycam_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
 import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
-import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
+import {
+  getGlobalVoxelSize,
+  getGlobalVoxelSizeFromState,
+  getTransformedDatasetBoundingBox,
+} from "../accessors/dataset_layer_transformation_accessor";
 import type { MoveFlycamOrthoAction, MovePlaneFlycamOrthoAction } from "../actions/flycam_actions";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
@@ -100,7 +104,8 @@ function rotateReducer(
 }
 
 function resetMatrix(matrix: Matrix4x4, voxelSize: VoxelSize) {
-  const scale = getBaseVoxelFactorsInUnit(voxelSize);
+  // The flycam's local coordinates are measured in multiples of the smallest voxel extent.
+  const scale = getVoxelPerPixel(voxelSize);
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation. The default rotation of 180 degree around z is applied.
@@ -213,7 +218,7 @@ export function setDirectionReducer(state: WebknossosState, direction: Vector3) 
 function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
-    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
+    let matrix = resetMatrix(state.flycam.currentMatrix, getGlobalVoxelSizeFromState(state));
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
     matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
@@ -237,7 +242,7 @@ function handleMoveFlycamOrtho(
   action: MovePlaneFlycamOrthoAction | MoveFlycamOrthoAction,
   { transposeToPlane, useDatasetScale }: { transposeToPlane: boolean; useDatasetScale: boolean },
 ): WebknossosState {
-  const { dataset, flycam } = state;
+  const { flycam } = state;
 
   const { planeId, increaseSpeedWithZoom } = action;
   const vector =
@@ -261,11 +266,12 @@ function handleMoveFlycamOrtho(
     deltaInWorldV3 = V3.multiply(deltaInWorldV3, state.flycam.spaceDirectionOrtho);
   }
 
-  const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
+  const zoomStep = increaseSpeedWithZoom ? flycam.zoomStep : 1;
+  // With useDatasetScale, the vector is given in screen pixels.
   const scaleFactor: Vector3 = useDatasetScale
-    ? getBaseVoxelFactorsInUnit(dataset.dataSource.scale)
-    : [1, 1, 1];
-  let deltaInWorldZoomed = V3.multiply(V3.scale(deltaInWorldV3, zoomFactor), scaleFactor);
+    ? getVoxelPerPixel(getGlobalVoxelSizeFromState(state), zoomStep)
+    : [zoomStep, zoomStep, zoomStep];
+  let deltaInWorldZoomed = V3.multiply(deltaInWorldV3, scaleFactor);
 
   const newState = moveReducer(state, deltaInWorldZoomed);
   return action.clampToDatasetBounds
@@ -279,7 +285,13 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       return update(state, {
         flycam: {
           currentMatrix: {
-            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale),
+            $set: resetMatrix(
+              state.flycam.currentMatrix,
+              getGlobalVoxelSize(
+                action.dataset,
+                state.datasetConfiguration.nativelyRenderedLayerName,
+              ),
+            ),
           },
           rotation: {
             $set: [0, 0, 0],
@@ -363,6 +375,20 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
           additionalCoordinates: { $set: values },
         },
       });
+    }
+
+    case "UPDATE_DATASET_SETTING":
+    case "SET_LAYER_TRANSFORMS": {
+      // These can change the voxel size of the global space, which the flycam matrix is scaled by.
+      // This reducer runs after the settings and dataset reducers, so the state is up to date.
+      if (
+        action.type === "UPDATE_DATASET_SETTING" &&
+        action.propertyName !== "nativelyRenderedLayerName"
+      ) {
+        return state;
+      }
+      // Read the rotation from the matrix, because flycam.rotation is rounded to whole degrees.
+      return setRotationReducer(state, getRotationInDegrees(state.flycam.currentMatrix));
     }
 
     case "SET_ROTATION": {

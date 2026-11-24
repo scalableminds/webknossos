@@ -76,6 +76,12 @@ export const layerViewConfiguration = {
     required: ["name", "type"],
     additionalProperties: false,
   },
+  agglomerateDiffReferenceMappingName: {
+    type: ["string", "null"],
+  },
+  isAgglomerateDiffEnabled: {
+    type: "boolean",
+  },
 };
 export const defaultDatasetViewConfiguration: DatasetConfiguration = {
   fourBit: false,

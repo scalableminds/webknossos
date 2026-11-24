@@ -1,4 +1,5 @@
 import reduceReducers from "viewer/model/helpers/reduce_reducers";
+import AgglomerateDiffReducer from "viewer/model/reducers/agglomerate_diff_reducer";
 import AnnotationReducer from "viewer/model/reducers/annotation_reducer";
 import ConnectomeReducer from "viewer/model/reducers/connectome_reducer";
 import DatasetReducer from "viewer/model/reducers/dataset_reducer";
@@ -39,6 +40,7 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ToolReducer,
   ConnectomeReducer,
+  AgglomerateDiffReducer,
   OrganizationReducer,
   MipBBoxReducer,
   OperationContextReducer,

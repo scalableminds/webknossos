@@ -238,7 +238,12 @@ impl Hdf5AgglomerateService {
         })
         .await
     }
-    pub async fn graph(k: &AttachmentFileKey, id: i64, limit: u64) -> DsResult<AgglomerateGraph> {
+    pub async fn graph(
+        k: &AttachmentFileKey,
+        id: i64,
+        limit: u64,
+        include_affinities: bool,
+    ) -> DsResult<AgglomerateGraph> {
         Self::fresh(k, move |reader| {
             let (node_start, nodes) = range(reader, "agglomerate_to_segments_offsets", id)?;
             let (edge_start, edges) = range(reader, "agglomerate_to_edges_offsets", id)?;
@@ -263,7 +268,7 @@ impl Hdf5AgglomerateService {
             }
             let mut affinities = Vec::new();
             let mut cursor = 0;
-            while cursor < edges {
+            while include_affinities && cursor < edges {
                 let count = ROW_BATCH.min(edges - cursor);
                 affinities.extend(reader.float32_values(
                     "agglomerate_to_affinities",

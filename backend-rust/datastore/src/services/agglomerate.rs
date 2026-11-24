@@ -2,6 +2,7 @@
 //!
 //! Agglomerate files are layer attachments. Zarr3 attachment groups are read with the existing
 //! Zarr3 reader; local HDF5 files use their own cached mapping blocks and fresh graph readers.
+pub mod graph_differ;
 pub(crate) mod hdf5;
 pub mod mapping;
 
@@ -25,7 +26,9 @@ use crate::{
         data_requests::DataServiceDataRequest,
         enums::{ElementClass, LayerAttachmentDataformat},
     },
-    proto::{AgglomerateEdge, AgglomerateGraph, SkeletonTracing, datastore as pb},
+    proto::{
+        AgglomerateEdge, AgglomerateGraph, AgglomerateGraphDiff, SkeletonTracing, datastore as pb,
+    },
     services::binary_data::AgglomerateMapper,
 };
 
@@ -420,6 +423,8 @@ impl AgglomerateService {
                 agglomerate_id,
                 tracing_id: None,
                 mapping_name: Some(key.attachment.name.clone()),
+                layer_name: None,
+                clicked_position: None,
             }),
             ..Default::default()
         };
@@ -458,42 +463,75 @@ impl AgglomerateService {
             .ok_or_else(|| DsError::failure("Could not determine array shape"))
     }
 
-    /// Scala `generateAgglomerateGraph` (Zarr3).
+    /// Scala `generateAgglomerateGraph`, limited by `agglomerateGraph.maxEdges`.
     pub async fn generate_agglomerate_graph(
         &self,
         key: &AttachmentFileKey,
         agglomerate_id: i64,
         token: Option<&str>,
     ) -> DsResult<AgglomerateGraph> {
+        self.agglomerate_graph(key, agglomerate_id, self.graph_max_edges, true, token)
+            .await
+    }
+
+    /// Scala `generateAgglomerateGraph` with an explicit edge limit. Reading the affinities can
+    /// be skipped if they are not needed (one read less per graph).
+    async fn agglomerate_graph(
+        &self,
+        key: &AttachmentFileKey,
+        agglomerate_id: i64,
+        edge_limit: u64,
+        include_affinities: bool,
+        token: Option<&str>,
+    ) -> DsResult<AgglomerateGraph> {
         Self::supports(key)?;
         if key.attachment.data_format == LayerAttachmentDataformat::Hdf5 {
-            return Hdf5AgglomerateService::graph(key, agglomerate_id, self.graph_max_edges).await;
+            return Hdf5AgglomerateService::graph(
+                key,
+                agglomerate_id,
+                edge_limit,
+                include_affinities,
+            )
+            .await;
         }
-        let (node_start, node_count) = self
-            .range(
+        // Each read from a remote agglomerate file needs several requests, so independent reads
+        // are done in parallel.
+        let (node_range, edge_range) = futures::join!(
+            self.range(
                 key,
                 KEY_AGGLOMERATE_TO_SEGMENTS_OFFSETS,
                 agglomerate_id,
                 token,
+            ),
+            self.range(key, KEY_AGGLOMERATE_TO_EDGES_OFFSETS, agglomerate_id, token)
+        );
+        let (node_start, node_count) = node_range?;
+        let (edge_start, edge_count) = edge_range?;
+        Self::check_limits(node_count, edge_count, edge_limit)?;
+        let segments = async {
+            let array = self.array(key, KEY_AGGLOMERATE_TO_SEGMENTS, token).await?;
+            Self::read_longs(&array, &[node_start], &[node_count as i32], token).await
+        };
+        let affinities = async {
+            if !include_affinities {
+                return Ok(Vec::new());
+            }
+            let array = self
+                .array(key, KEY_AGGLOMERATE_TO_AFFINITIES, token)
+                .await?;
+            floats(
+                &array
+                    .read_as_multi_array(&[edge_start], &[edge_count as i32], token)
+                    .await?,
             )
-            .await?;
-        let (edge_start, edge_count) = self
-            .range(key, KEY_AGGLOMERATE_TO_EDGES_OFFSETS, agglomerate_id, token)
-            .await?;
-        Self::check_limits(node_count, edge_count, self.graph_max_edges)?;
-        let positions = self.positions(key, node_start, node_count, token).await?;
-        let segments_array = self.array(key, KEY_AGGLOMERATE_TO_SEGMENTS, token).await?;
-        let segments =
-            Self::read_longs(&segments_array, &[node_start], &[node_count as i32], token).await?;
-        let edges = self.edges(key, edge_start, edge_count, token).await?;
-        let affinities_array = self
-            .array(key, KEY_AGGLOMERATE_TO_AFFINITIES, token)
-            .await?;
-        let affinities = floats(
-            &affinities_array
-                .read_as_multi_array(&[edge_start], &[edge_count as i32], token)
-                .await?,
-        )?;
+        };
+        let (positions, segments, edges, affinities) = futures::join!(
+            self.positions(key, node_start, node_count, token),
+            segments,
+            self.edges(key, edge_start, edge_count, token),
+            affinities
+        );
+        let (positions, segments, edges, affinities) = (positions?, segments?, edges?, affinities?);
         let segment = |i: i32| {
             usize::try_from(i)
                 .ok()
@@ -520,6 +558,59 @@ impl AgglomerateService {
             positions,
             affinities,
         })
+    }
+
+    /// Scala `generateDiffToReference`: compares the agglomerate to the reference agglomerate
+    /// that contains the given segment of the agglomerate (e.g., the one that was clicked on).
+    /// Other reference agglomerates are not loaded, as these might be huge mergers.
+    pub async fn generate_diff_to_reference(
+        &self,
+        key: &AttachmentFileKey,
+        reference_key: &AttachmentFileKey,
+        agglomerate_id: i64,
+        segment_id: i64,
+        token: Option<&str>,
+    ) -> DsResult<AgglomerateGraphDiff> {
+        // Diffs are requested automatically for every loaded agglomerate skeleton, so the graphs
+        // are limited like the agglomerate skeletons instead of like explicitly requested
+        // agglomerate graphs. The diff doesn't use the affinities.
+        let edge_limit = self.tree_max_edges;
+        let graph = self.agglomerate_graph(key, agglomerate_id, edge_limit, false, token);
+        let reference_graph = async {
+            let reference_ids = self
+                .agglomerate_ids_for_segment_ids(reference_key, &[segment_id], token)
+                .await?;
+            let reference_agglomerate_id = reference_ids
+                .first()
+                .copied()
+                .filter(|id| *id != 0)
+                .ok_or_else(|| {
+                    DsError::failure(
+                        "The given segment is not part of any agglomerate of the reference \
+                         agglomerate view.",
+                    )
+                })?;
+            let reference_graph = self
+                .agglomerate_graph(
+                    reference_key,
+                    reference_agglomerate_id,
+                    edge_limit,
+                    false,
+                    token,
+                )
+                .await?;
+            Ok::<_, DsError>((reference_agglomerate_id, reference_graph))
+        };
+        // Both graphs are loaded in parallel, which matters for remote agglomerate files.
+        let (graph, reference) = futures::join!(graph, reference_graph);
+        let graph = graph?;
+        if !graph.segments.contains(&(segment_id as u64)) {
+            return Err(DsError::failure(
+                "The given segment is not part of the agglomerate.",
+            ));
+        }
+        let (reference_agglomerate_id, reference_graph) = reference?;
+        graph_differ::diff(&graph, &reference_graph, reference_agglomerate_id as u64)
     }
 
     /// Scala `segmentIdsForAgglomerateId` (Zarr3).

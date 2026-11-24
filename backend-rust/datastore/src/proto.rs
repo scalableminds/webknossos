@@ -3,4 +3,6 @@
 
 pub use webknossos_common::proto::datastore;
 
-pub use datastore::{AgglomerateEdge, AgglomerateGraph, ListOfLong, SkeletonTracing};
+pub use datastore::{
+    AgglomerateEdge, AgglomerateGraph, AgglomerateGraphDiff, ListOfLong, SkeletonTracing,
+};

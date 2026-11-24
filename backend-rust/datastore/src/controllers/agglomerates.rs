@@ -44,6 +44,10 @@ pub fn router() -> Router<AppState> {
                 get(agglomerate_graph),
             )
             .route(
+                "/data/datasets/{datasetId}/layers/{dataLayerName}/agglomerates/{mappingName}/diffToReference/{agglomerateId}",
+                get(agglomerate_diff_to_reference),
+            )
+            .route(
                 "/data/datasets/{datasetId}/layers/{dataLayerName}/agglomerates/{mappingName}/largestAgglomerateId",
                 get(largest_agglomerate_id),
             )
@@ -122,6 +126,48 @@ async fn agglomerate_graph(
     Ok(protobuf(graph.encode_to_vec()))
 }
 
+/// Play query `Long` binding (`segmentId`).
+fn query_long(q: &QueryFields, name: &str) -> DsResult<i64> {
+    let value = q.required(name)?;
+    value.parse().map_err(|_| {
+        DsError::failure(format!(
+            "Cannot parse parameter {name} as Long: For input string: \"{value}\""
+        ))
+    })
+}
+
+async fn agglomerate_diff_to_reference(
+    State(layers): State<DatasetLayers>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
+    tc: TokenContext,
+    Path((id, layer_name, mapping, agglomerate)): Path<(String, String, String, String)>,
+    RawQuery(raw): RawQuery,
+) -> AccessResult<Response> {
+    let agglomerate = path_long("agglomerateId", &agglomerate)?;
+    let q = QueryFields::new(raw);
+    let reference_mapping = q.required("referenceMappingName")?.to_owned();
+    let segment = query_long(&q, "segmentId")?;
+    let (source, layer) = layers.readable(&tc, &id, &layer_name).await?;
+    let key = AgglomerateService::look_up(&source.id, &layer, &mapping)?;
+    let reference_key = AgglomerateService::look_up(&source.id, &layer, &reference_mapping)?;
+    let diff = agglomerates
+        .generate_diff_to_reference(
+            &key,
+            &reference_key,
+            agglomerate,
+            segment,
+            tc.user_token.as_deref(),
+        )
+        .await
+        .map_err(|e| {
+            e.wrap(
+                "Could not compute the difference of the agglomerate to the reference \
+                 agglomerate view.",
+            )
+        })?;
+    Ok(protobuf(diff.encode_to_vec()))
+}
+
 async fn largest_agglomerate_id(
     State(layers): State<DatasetLayers>,
     State(agglomerates): State<Arc<AgglomerateService>>,
@@ -172,12 +218,7 @@ async fn position_for_segment(
     RawQuery(raw): RawQuery,
 ) -> AccessResult<Json<crate::models::Vec3Int>> {
     let q = QueryFields::new(raw);
-    let segment = q.required("segmentId")?;
-    let segment: i64 = segment.parse().map_err(|_| {
-        DsError::failure(format!(
-            "Cannot parse parameter segmentId as Long: For input string: \"{segment}\""
-        ))
-    })?;
+    let segment = query_long(&q, "segmentId")?;
     let key = file_key(&layers, &tc, &id, &layer_name, &mapping).await?;
     let position = agglomerates
         .position_for_segment_id(&key, segment, tc.user_token.as_deref())

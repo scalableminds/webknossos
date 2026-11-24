@@ -13,7 +13,7 @@ use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use webknossos_datastore::{
     AppState,
-    proto::{AgglomerateGraph, ListOfLong, SkeletonTracing},
+    proto::{AgglomerateGraph, AgglomerateGraphDiff, ListOfLong, SkeletonTracing},
     router,
 };
 
@@ -105,6 +105,36 @@ fn agglomerate_file(dir: &Path) {
     );
 }
 
+/// Reference view of `agglomerate_file`: segment 3 was split off from agglomerate 1 and merged
+/// into agglomerate 2 = segments {3, 4, 5} with edges 3-4 and 4-5.
+fn reference_agglomerate_file(dir: &Path) {
+    agglomerate_file(dir);
+    zarr3_array(
+        &dir.join("segment_to_agglomerate"),
+        &[6],
+        "uint64",
+        u64s(&[0, 1, 1, 2, 2, 2]),
+    );
+    zarr3_array(
+        &dir.join("agglomerate_to_segments_offsets"),
+        &[4],
+        "uint64",
+        u64s(&[0, 0, 2, 5]),
+    );
+    zarr3_array(
+        &dir.join("agglomerate_to_edges_offsets"),
+        &[4],
+        "uint64",
+        u64s(&[0, 0, 1, 3]),
+    );
+    zarr3_array(
+        &dir.join("agglomerate_to_edges"),
+        &[3, 2],
+        "uint64",
+        u64s(&[0, 1, 0, 1, 1, 2]),
+    );
+}
+
 /// A 32³ uint8 segmentation whose x-coordinate modulo 6 is the segment id.
 fn segmentation(dir: &Path) {
     std::fs::create_dir_all(dir).unwrap();
@@ -131,6 +161,7 @@ fn segmentation(dir: &Path) {
 async fn start() -> (MockWk, Router) {
     let root = temp();
     agglomerate_file(&root.join("agg"));
+    reference_agglomerate_file(&root.join("ref"));
     segmentation(&root.join("seg"));
     std::fs::copy(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/agglomerates/contiguous.hdf5"),
@@ -145,6 +176,7 @@ async fn start() -> (MockWk, Router) {
             "axisOrder":{"x":0,"y":1,"z":2}}],
         "attachments":{"agglomerates":[
             {"name":"agg","path":root.join("agg").to_str().unwrap(),"dataFormat":"zarr3"},
+            {"name":"ref","path":root.join("ref").to_str().unwrap(),"dataFormat":"zarr3"},
             {"name":"legacy","path":root.join("legacy.hdf5").to_str().unwrap(),"dataFormat":"hdf5"}]}}]});
     let wk = MockWk::start(move |call| {
         if call.path.ends_with("/validateUserAccess") {
@@ -187,7 +219,7 @@ async fn lists_and_looks_up_agglomerates() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         serde_json::from_slice::<Value>(&body).unwrap(),
-        json!(["agg", "legacy"])
+        json!(["agg", "ref", "legacy"])
     );
 
     let (status, _, body) = request(
@@ -304,6 +336,67 @@ async fn builds_agglomerate_graphs_and_trees() {
         (2, Some("agg"))
     );
     assert_eq!(skeleton.zoom_level, 2.0);
+}
+
+#[tokio::test]
+async fn diffs_agglomerates_to_a_reference_view() {
+    let (_wk, app) = start().await;
+    let diff = |agglomerate: u32, query: &str| {
+        let app = app.clone();
+        let path = base(&format!(
+            "agglomerates/agg/diffToReference/{agglomerate}?{query}"
+        ));
+        async move { request(&app, "GET", &path, vec![]).await }
+    };
+    // Agglomerate 1 = {1, 2, 3}; the reference agglomerate of segment 1 is {1, 2}.
+    let (status, headers, body) = diff(1, "referenceMappingName=ref&segmentId=1").await;
+    assert_eq!(status, StatusCode::OK, "{}", String::from_utf8_lossy(&body));
+    assert_eq!(headers["content-type"], "application/x-protobuf");
+    let result = AgglomerateGraphDiff::decode(&body[..]).unwrap();
+    assert_eq!(result.reference_agglomerate_id, 1);
+    assert_eq!(result.positions, [11, 0, 0, 12, 0, 0]);
+    assert_eq!(result.added_edges, [0, 1]);
+    // Only the reference agglomerate of segment 1 is compared, so reference edge 3-4 is unknown.
+    assert!(result.removed_edges.is_empty());
+    // The reference agglomerate of segment 3 is {3, 4, 5}: edge 3-4 is removed (dangling end 4,
+    // whose position comes from the reference file).
+    let (status, _, body) = diff(1, "referenceMappingName=ref&segmentId=3").await;
+    assert_eq!(status, StatusCode::OK);
+    let result = AgglomerateGraphDiff::decode(&body[..]).unwrap();
+    assert_eq!(result.reference_agglomerate_id, 2);
+    assert_eq!(result.positions, [10, 0, 0, 11, 0, 0, 12, 0, 0, 20, 0, 0]);
+    assert_eq!(result.added_edges, [0, 1, 1, 2]);
+    assert_eq!(result.removed_edges, [2, 3]);
+
+    let (status, _, body) = diff(1, "referenceMappingName=agg&segmentId=2").await;
+    assert_eq!(status, StatusCode::OK);
+    let result = AgglomerateGraphDiff::decode(&body[..]).unwrap();
+    assert!(result.positions.is_empty() && result.added_edges.is_empty());
+
+    for (query, message) in [
+        (
+            "referenceMappingName=ref&segmentId=4",
+            "The given segment is not part of the agglomerate.",
+        ),
+        (
+            "referenceMappingName=ref&segmentId=0",
+            "The given segment is not part of the agglomerate.",
+        ),
+    ] {
+        let (status, _, body) = diff(1, query).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let body = String::from_utf8_lossy(&body);
+        assert!(body.contains(message), "{body}");
+        assert!(
+            body.contains("Could not compute the difference of the agglomerate"),
+            "{body}"
+        );
+    }
+    let (status, _, body) = diff(1, "segmentId=1").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(String::from_utf8_lossy(&body).contains("Missing parameter: referenceMappingName"));
+    let (status, _, _) = diff(1, "referenceMappingName=missing&segmentId=1").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]

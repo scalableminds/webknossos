@@ -1,12 +1,13 @@
 import FastTooltip from "components/fast_tooltip";
 import { formatNumberToLength } from "libs/format_utils";
 import { connect } from "react-redux";
-import type { APIDataset } from "types/api_types";
+import type { VoxelSize } from "types/api_types";
 import type { OrthoView } from "viewer/constants";
 import constants, { LongUnitToShortUnitMap, OrthoViews, Unicode } from "viewer/constants";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { getTDViewZoom, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getUnitPerPixel } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
@@ -15,7 +16,7 @@ type OwnProps = {
   viewportID: OrthoView;
 };
 type StateProps = {
-  dataset: APIDataset;
+  voxelSize: VoxelSize;
   zoomValue: number;
   viewportWidthInPixels: number;
   viewportHeightInPixels: number;
@@ -25,9 +26,9 @@ type Props = OwnProps & StateProps;
 function convertPixelsToUnit(
   lengthInPixel: number,
   zoomValue: number,
-  dataset: APIDataset,
+  voxelSize: VoxelSize,
 ): number {
-  return lengthInPixel * zoomValue * getBaseVoxelInUnit(dataset.dataSource.scale.factor);
+  return lengthInPixel * getUnitPerPixel(voxelSize, zoomValue);
 }
 
 const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
@@ -52,10 +53,10 @@ const idealScalebarWidthFactor = 0.3;
 const maxScaleBarWidthFactor = 0.45;
 const minWidthToFillScalebar = 130;
 
-function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
-  const voxelSizeUnit = dataset.dataSource.scale.unit;
-  const viewportWidthInUnit = convertPixelsToUnit(viewportWidthInPixels, zoomValue, dataset);
-  const viewportHeightInUnit = convertPixelsToUnit(viewportHeightInPixels, zoomValue, dataset);
+function Scalebar({ zoomValue, voxelSize, viewportWidthInPixels, viewportHeightInPixels }: Props) {
+  const voxelSizeUnit = voxelSize.unit;
+  const viewportWidthInUnit = convertPixelsToUnit(viewportWidthInPixels, zoomValue, voxelSize);
+  const viewportHeightInUnit = convertPixelsToUnit(viewportHeightInPixels, zoomValue, voxelSize);
   const idealWidthInUnit = viewportWidthInUnit * idealScalebarWidthFactor;
   const scalebarWidthInUnit = getBestScalebarAnchorInNm(idealWidthInUnit);
   const scaleBarWidthFactor = Math.min(
@@ -125,7 +126,7 @@ const mapStateToProps = (state: WebknossosState, ownProps: OwnProps): StateProps
     ownProps.viewportID === OrthoViews.TDView ? getTDViewZoom(state) : getZoomValue(state.flycam);
   return {
     zoomValue,
-    dataset: state.dataset,
+    voxelSize: getGlobalVoxelSizeFromState(state),
     viewportWidthInPixels: width,
     viewportHeightInPixels: height,
   };

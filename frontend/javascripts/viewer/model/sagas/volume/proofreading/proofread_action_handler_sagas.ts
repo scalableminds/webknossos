@@ -3,7 +3,7 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { isEditableEventTarget } from "libs/utils";
 import messages from "messages";
-import { all, call, put } from "typed-redux-saga";
+import { call, put } from "typed-redux-saga";
 import type { Vector3 } from "viewer/constants";
 import {
   isAnnotationEditableByNonOwners,
@@ -551,7 +551,7 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, getDataValue, volumeTracing, annotationVersion } = preparation;
+  const { agglomerateFileMag, mapSegmentId, volumeTracing, annotationVersion } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
   let idInfos;
@@ -627,14 +627,20 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
     const newAnnotationVersion = yield* select((state) => state.annotation.version);
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).
+    // The neighbor segments are added to the mapping, because they are not necessarily
+    // loaded yet, but their new agglomerate ids are needed below. They are removed again
+    // by the next local mapping update if they are not part of the loaded buckets.
+    const neighborSegmentIds = neighborInfo.neighbors.map((neighbor) => BigInt(neighbor.segmentId));
     const autoUpdateAgglomerateTrees = true;
+    const addAdditionalSegmentsToMapping = true;
     const splitMappingInfo = yield* splitAgglomerateInMapping(
       activeMapping,
       targetAgglomerateId,
-      [targetSegmentId],
+      [targetSegmentId, ...neighborSegmentIds],
       volumeTracingId,
       newAnnotationVersion,
       autoUpdateAgglomerateTrees,
+      addAdditionalSegmentsToMapping,
     );
 
     if (splitMappingInfo == null) {
@@ -652,12 +658,12 @@ export function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationC
       ),
     );
 
-    const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([
-      call(getDataValue, targetPosition, mappingWithSplitApplied),
-      ...neighborInfo.neighbors.map((neighbor) =>
-        call(getDataValue, neighbor.position, mappingWithSplitApplied),
-      ),
-    ]);
+    // Look up the new agglomerate ids via the known segment ids instead of reading the
+    // data at the positions (which might not be loaded or could yield other ids in coarse mags).
+    const newTargetAgglomerateId = mapSegmentId(targetSegmentId, mappingWithSplitApplied);
+    const newNeighborAgglomerateIds = neighborSegmentIds.map((segmentId) =>
+      mapSegmentId(segmentId, mappingWithSplitApplied),
+    );
 
     /* Ensure segment items exist for affected segments and reload affected meshes */
     const refreshInfos = [

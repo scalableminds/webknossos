@@ -156,7 +156,7 @@ class JobService @Inject() (
         ownerFirstName = ownerMultiUser.firstName,
         ownerLastName = ownerMultiUser.lastName,
         ownerEmail = ownerMultiUser.email,
-        args = job.args - "webknossos_token" - "user_auth_token",
+        args = job.args - "webknossos_token" - "user_auth_token" - "sharing_token",
         state = job.effectiveState,
         errorDetails = job.latestRunErrorDetails,
         returnValue = job.returnValue,

@@ -241,8 +241,8 @@ export function adaptActiveToolToShortcuts(
     activeTool === AnnotationTool.LINE_MEASUREMENT ||
     activeTool === AnnotationTool.AREA_MEASUREMENT
   ) {
-    // These tools do not have any modifier-related behavior currently (except for ALT
-    // which is already handled below)
+    // These tools are not switched by modifiers (except for ALT which is already handled
+    // below). Modifier behavior such as shift+click in QUICK_SELECT is handled by the tool itself.
   } else if (
     activeTool === AnnotationTool.ERASE_BRUSH ||
     activeTool === AnnotationTool.ERASE_TRACE

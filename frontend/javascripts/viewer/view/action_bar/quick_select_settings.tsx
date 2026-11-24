@@ -39,6 +39,38 @@ function useAISelectUnavailableReason(): string | null {
   return null;
 }
 
+// Rendered in both the AI and the heuristic controls so that users can switch in either direction.
+function AiModeSwitch() {
+  const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
+  const dispatch = useDispatch();
+  const aiSelectUnavailableReason = useAISelectUnavailableReason();
+  const isAISelectAvailable = aiSelectUnavailableReason == null;
+  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+  const quickSelectTooltipText =
+    aiSelectUnavailableReason ??
+    (isQuickSelectHeuristic
+      ? "The quick select tool is now working without AI. Activate AI for better results."
+      : "The quick select tool is now working with AI.");
+  const toggleQuickSelectStrategy = () => {
+    dispatch(
+      updateUserSettingAction("quickSelect", {
+        ...quickSelectConfig,
+        useHeuristic: !quickSelectConfig.useHeuristic,
+      }),
+    );
+  };
+
+  return (
+    <SwitchSetting
+      value={!isQuickSelectHeuristic}
+      onChange={toggleQuickSelectStrategy}
+      disabled={!isAISelectAvailable}
+      tooltipText={quickSelectTooltipText}
+      label="AI Mode"
+    />
+  );
+}
+
 export function QuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
   const isAISelectAvailable = useAISelectUnavailableReason() == null;
@@ -82,6 +114,7 @@ function AiQuickSelectControls() {
           <QuestionCircleOutlined />
         </FastTooltip>
       </div>
+      <AiModeSwitch />
       <NumberSliderSetting
         label="Prediction Depth"
         min={1}
@@ -103,22 +136,6 @@ function HeuristicQuickSelectControls() {
   );
 
   const dispatch = useDispatch();
-  const aiSelectUnavailableReason = useAISelectUnavailableReason();
-  const isAISelectAvailable = aiSelectUnavailableReason == null;
-  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
-  const quickSelectTooltipText =
-    aiSelectUnavailableReason ??
-    (isQuickSelectHeuristic
-      ? "The quick select tool is now working without AI. Activate AI for better results."
-      : "The quick select tool is now working with AI.");
-  const toggleQuickSelectStrategy = () => {
-    dispatch(
-      updateUserSettingAction("quickSelect", {
-        ...quickSelectConfig,
-        useHeuristic: !quickSelectConfig.useHeuristic,
-      }),
-    );
-  };
 
   const onResetValues = () => {
     const { segmentMode, threshold, closeValue, erodeValue, dilateValue, ...rest } =
@@ -182,13 +199,7 @@ function HeuristicQuickSelectControls() {
 
   return (
     <div>
-      <SwitchSetting
-        value={!isQuickSelectHeuristic}
-        onChange={toggleQuickSelectStrategy}
-        disabled={!isAISelectAvailable}
-        tooltipText={quickSelectTooltipText}
-        label="AI Mode"
-      ></SwitchSetting>
+      <AiModeSwitch />
       <SwitchSetting
         label="Show Preview"
         value={quickSelectConfig.showPreview}

@@ -45,6 +45,7 @@ const datasetNames = [
   "connectome_file_test_dataset",
   "kiwi", // This dataset is rotated and translated.
   "test-extreme-anisotropy",
+  "rotated_spheres", // This dataset has anisotropic voxels and is rotated by 90° around y.
 ];
 
 type DatasetName = string;
@@ -67,6 +68,7 @@ const viewOverrides: Record<string, string> = {
     '{"position":[102,109,60],"mode":"orthogonal","zoomStep":0.734,"stateByLayer":{"segmentation":{"connectomeInfo":{"connectomeName":"connectome","agglomerateIdsToImport":[1]}}}}',
   kiwi: "1191,1112,21,0,8.746",
   "test-extreme-anisotropy": "100,100,75,0,6.727",
+  rotated_spheres: "448,448,192,0,1.3",
 };
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   ROI2017_wkw: {

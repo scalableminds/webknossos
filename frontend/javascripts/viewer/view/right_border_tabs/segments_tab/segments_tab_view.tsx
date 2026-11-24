@@ -1,15 +1,12 @@
 import { Divider, Empty } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import {
-  getActiveSegmentationTracing,
-  getVisibleSegments,
-} from "viewer/model/accessors/volumetracing_accessor";
 import { ensureSegmentIndexIsLoadedAction } from "viewer/model/actions/dataset_actions";
-import type { Segment } from "viewer/store";
+import { setSegmentStatisticsScopeAction } from "viewer/model/actions/ui_actions";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
+import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
 import DeleteGroupModalView from "../delete_group_modal_view";
 import { MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 import type { SegmentStatisticsTarget } from "./context_menus";
@@ -19,53 +16,9 @@ import { useSegmentGroupOperations } from "./hooks/use_segment_group_operations"
 import { useSegmentHierarchy } from "./hooks/use_segment_hierarchy";
 import { useSegmentSelection } from "./hooks/use_segment_selection";
 import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
-import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import { SegmentTreeView } from "./segment_tree_view";
 import { SegmentsToolbar, segmentsTabId } from "./segments_toolbar";
 import { mayEditVisibleSegmentation } from "./segments_view_helper";
-
-function SegmentStatisticsModalContainer({
-  target,
-  onClose,
-  getSegmentsOfGroupRecursively,
-}: {
-  target: SegmentStatisticsTarget;
-  onClose: () => void;
-  getSegmentsOfGroupRecursively: (groupId: number) => Segment[];
-}) {
-  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
-  const activeVolumeTracing = useWkSelector(getActiveSegmentationTracing);
-  const segmentGroups = useWkSelector((state) => getVisibleSegments(state).segmentGroups);
-
-  if (visibleSegmentationLayer == null) {
-    return null;
-  }
-  const segments =
-    target.kind === "group" ? getSegmentsOfGroupRecursively(target.groupId) : target.segments;
-  if (segments.length === 0) {
-    return null;
-  }
-
-  return (
-    <SegmentStatisticsModal
-      onCancel={onClose}
-      visibleSegmentationLayer={visibleSegmentationLayer}
-      tracingId={activeVolumeTracing?.tracingId}
-      relevantSegments={segments}
-      csvFilenameSuffix={getCsvFilenameSuffix(target, segments)}
-      segmentGroups={segmentGroups}
-    />
-  );
-}
-
-function getCsvFilenameSuffix(target: SegmentStatisticsTarget, segments: Segment[]): string | null {
-  if (target.kind === "group") {
-    return target.groupId === MISSING_GROUP_ID ? null : `group-${target.groupId}`;
-  }
-  return segments.length === 1
-    ? `segment-${segments[0].id}`
-    : `${segments.length}-selected-segments`;
-}
 
 function SegmentsTabContent() {
   const dispatch = useDispatch();
@@ -74,10 +27,35 @@ function SegmentsTabContent() {
   const groupOperations = useSegmentGroupOperations();
   const meshOperations = useMeshOperations();
   const meshFiles = useMeshFiles();
-  const [statisticsModalTarget, setStatisticsModalTarget] =
-    useState<SegmentStatisticsTarget | null>(null);
 
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const visibleSegmentationLayerName = visibleSegmentationLayer?.name;
+
+  const showStatistics = useCallback(
+    (target: SegmentStatisticsTarget) => {
+      if (visibleSegmentationLayerName == null) {
+        return;
+      }
+      const layerName = visibleSegmentationLayerName;
+      dispatch(
+        setSegmentStatisticsScopeAction(
+          target.kind === "group"
+            ? // The root group contains all segments, which is the unrestricted default.
+              target.groupId === MISSING_GROUP_ID
+              ? null
+              : { kind: "group", layerName, groupId: target.groupId }
+            : {
+                kind: "segments",
+                layerName,
+                segmentIds: target.segments.map((segment) => segment.id),
+              },
+        ),
+      );
+      layoutEmitter.emit(LayoutEvents.showSegmentStatisticsTab);
+    },
+    [dispatch, visibleSegmentationLayerName],
+  );
+
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
   const hasVolumeTracing = useWkSelector((state) => state.annotation.volumes.length > 0);
   // The hierarchy always contains the (virtual) root group node.
@@ -118,7 +96,7 @@ function SegmentsTabContent() {
             groupOperations={groupOperations}
             meshOperations={meshOperations}
             meshFiles={meshFiles}
-            openStatisticsModal={setStatisticsModalTarget}
+            showStatistics={showStatistics}
           />
         )}
       </div>
@@ -127,13 +105,6 @@ function SegmentsTabContent() {
           onCancel={groupOperations.cancelGroupDeletion}
           onJustDeleteGroup={() => groupOperations.confirmGroupDeletion(false)}
           onDeleteGroupAndChildren={() => groupOperations.confirmGroupDeletion(true)}
-        />
-      ) : null}
-      {statisticsModalTarget != null ? (
-        <SegmentStatisticsModalContainer
-          target={statisticsModalTarget}
-          onClose={() => setStatisticsModalTarget(null)}
-          getSegmentsOfGroupRecursively={groupOperations.getSegmentsOfGroupRecursively}
         />
       ) : null}
     </>

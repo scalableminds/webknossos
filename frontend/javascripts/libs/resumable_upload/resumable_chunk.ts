@@ -15,6 +15,9 @@ export class ResumableChunk {
   callback: (event: "progress" | "success" | "error" | "retry", message?: string) => void;
   lastProgressCallback: Date;
   tested = false;
+  // Number of retries after retryable HTTP errors. Network errors and timeouts are retried
+  // indefinitely and therefore not counted, so that a long outage doesn't use up the retries
+  // for the HTTP errors that often follow it (e.g. a 502 from a proxy while it reconnects).
   retries = 0;
   pendingRetry = false;
   markComplete = false;
@@ -95,13 +98,13 @@ export class ResumableChunk {
     }
 
     for (;;) {
-      const retryReason = await this.upload(signal);
-      if (retryReason == null || signal.aborted) return;
+      const retry = await this.upload(signal);
+      if (retry == null || signal.aborted) return;
 
-      this.callback("retry", retryReason);
+      this.callback("retry", retry.reason);
       // A retry listener may have paused or cancelled the upload.
       if (signal.aborted) return;
-      this.retries++;
+      if (retry.isHttpError) this.retries++;
 
       const retryInterval = this.getOpt("chunkRetryInterval");
       if (retryInterval != null) {
@@ -170,7 +173,10 @@ export class ResumableChunk {
 
   // upload() uploads the actual data in a POST call.
   // Resolves to the reason for a retry if the upload should be retried and to null otherwise.
-  private async upload(signal: AbortSignal): Promise<string | null> {
+  // Only retries after HTTP errors count towards maxChunkRetries.
+  private async upload(
+    signal: AbortSignal,
+  ): Promise<{ reason: string; isHttpError: boolean } | null> {
     this.callback("progress");
 
     const standardQueryParameters: Partial<Record<string, any>> = {
@@ -251,14 +257,17 @@ export class ResumableChunk {
         status = "error";
       } else {
         discardBody(response);
-        return `Server responded with ${response.status}`;
+        return { reason: `Server responded with ${response.status}`, isHttpError: true };
       }
       message = await response.text();
     } catch (error: any) {
       if (signal.aborted) return null;
-      // Network errors and timeouts are retried indefinitely. Only HTTP errors are checked
-      // against maxChunkRetries, although every retry increments this.retries.
-      return fetchSignal.hasTimedOut() ? "Timeout" : error.message;
+      // Network errors and timeouts are retried indefinitely and don't count towards
+      // maxChunkRetries.
+      return {
+        reason: fetchSignal.hasTimedOut() ? "Timeout" : error.message,
+        isHttpError: false,
+      };
     } finally {
       fetchSignal.dispose();
     }

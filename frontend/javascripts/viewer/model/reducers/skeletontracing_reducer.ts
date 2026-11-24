@@ -51,6 +51,7 @@ import {
   generateTreeName,
   getMaximumNodeId,
   getOrCreateTree,
+  insertNodeOnEdge,
   mergeTrees,
   removeMissingGroupsFromTrees,
   setExpandedTreeGroups,
@@ -638,6 +639,9 @@ function SkeletonTracingReducer(
             $set: action.tracing,
           },
         },
+        localSkeletonState: {
+          $merge: action.localSkeletonState ?? {},
+        },
       });
     }
 
@@ -953,6 +957,64 @@ function SkeletonTracingReducer(
             },
             cachedMaxNodeId: {
               $set: newMaxNodeId,
+            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: tree.treeId,
+          },
+          activeGroupId: {
+            $set: null,
+          },
+        },
+      });
+    }
+
+    case "INSERT_NODE_ON_EDGE": {
+      if (areGeometriesTransformed(state)) {
+        // Don't create nodes if the skeleton layer is rendered with transforms.
+        return state;
+      }
+      const { timestamp, sourceNodeId, targetNodeId } = action;
+      if (sourceNodeId === targetNodeId) {
+        // Guard explicitly: the edge lookup in insertNodeOnEdge would match any edge of the node.
+        return state;
+      }
+      const tree = findTreeByNodeId(skeletonTracing.trees, sourceNodeId);
+      if (tree == null || tree.type !== TreeTypeEnum.DEFAULT) {
+        return state;
+      }
+      const sourceNode = tree.nodes.getNullable(sourceNodeId);
+      const targetNode = tree.nodes.getNullable(targetNodeId);
+      if (sourceNode == null || targetNode == null) {
+        return state;
+      }
+
+      const insertResult = insertNodeOnEdge(
+        state,
+        skeletonTracing,
+        tree,
+        sourceNode,
+        targetNode,
+        timestamp,
+      );
+      if (insertResult == null) {
+        return state;
+      }
+
+      const [trees, newNode] = insertResult;
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: trees,
+            },
+            activeNodeId: {
+              $set: newNode.id,
+            },
+            cachedMaxNodeId: {
+              $set: newNode.id,
             },
           },
         },

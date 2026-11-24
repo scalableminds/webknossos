@@ -5,11 +5,14 @@ import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "viewer/constants";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
-import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getGlobalVoxelSizeFromState,
+  getTransformsForSkeletonLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getUnitPerPixel } from "viewer/model/scaleinfo";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
@@ -60,8 +63,8 @@ class NodeShader {
         // will and should be square regardless of the plane's aspect ratio.
         value: getZoomValue(state.flycam),
       },
-      voxelSizeMin: {
-        value: getBaseVoxelInUnit(state.dataset.dataSource.scale.factor),
+      unitPerPixelAtZoomStep1: {
+        value: getUnitPerPixel(getGlobalVoxelSizeFromState(state)),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,
@@ -117,6 +120,12 @@ class NodeShader {
         (_state) => _state.userConfiguration.highlightCommentedNodes,
         (highlightCommentedNodes) => {
           this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
+        },
+      ),
+      listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState),
+        (voxelSize) => {
+          this.uniforms.unitPerPixelAtZoomStep1.value = getUnitPerPixel(voxelSize);
         },
       ),
       listenToStoreProperty(
@@ -203,7 +212,7 @@ out vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float planeZoomFactor;
-uniform float voxelSizeMin;
+uniform float unitPerPixelAtZoomStep1;
 uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
@@ -331,7 +340,7 @@ void main() {
       gl_PointSize = overrideParticleSize;
     } else {
       gl_PointSize = max(
-        radius / planeZoomFactor / voxelSizeMin,
+        radius / planeZoomFactor / unitPerPixelAtZoomStep1,
         overrideParticleSize
       ) * viewportScale;
     }

@@ -11,6 +11,7 @@ import Constants, {
   UnitLong,
   ViewModeValues,
 } from "viewer/constants";
+import { createEmptyAgglomerateDiffOverlay } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
 import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
@@ -334,6 +335,7 @@ const defaultState: WebknossosState = {
       activeIndex: -1,
     },
     showSkeletons: true,
+    agglomerateDiffOverlay: createEmptyAgglomerateDiffOverlay(),
   },
   localAnnotationState: {
     idReservationsForBoundingBoxes: [],

@@ -286,7 +286,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
 
   /* Segments that the B-tree has no entry for, or whose segment mesh metadata is empty, have no mesh. Segments whose
    * manifest cannot be read or parsed are left out, like failed lookups. Errors reading the B-tree fail the lookup of
-   * all segments. Segments with a mesh come first, in merge-tree order.
+   * all segments. Segments with a mesh come first.
    */
   private def lookUpSegmentsInBTree(
       meshFileKey: MeshFileKey,

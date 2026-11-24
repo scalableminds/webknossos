@@ -140,8 +140,8 @@ class MeshFileService @Inject() (
       case _ => Fox.successful(0)
     }
 
-  // mergeTreeOrderMappingName: the mapping (or base mapping of an editable mapping) the segment ids belong to an
-  // agglomerate of.
+  // mergeTreeOrderMappingName: the mapping (or the base mapping of an editable mapping) whose agglomerate the segment
+  // ids were looked up from.
   def listMeshChunksForSegmentsMerged(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],

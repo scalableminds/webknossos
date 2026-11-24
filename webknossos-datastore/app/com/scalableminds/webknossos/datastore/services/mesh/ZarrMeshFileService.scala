@@ -220,9 +220,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       lod: Int
   ): Array[Array[Double]] = transform
 
-  /** Lists the mesh chunks of the segments. If they were looked up from an agglomerate of mergeTreeOrderMappingName
-    * (or of an editable mapping based on it), mesh files with segment mesh metadata in merge-tree order find them as
-    * runs.
+  /** Lists the mesh chunks of the segments. If they were looked up from an agglomerate of mergeTreeOrderMappingName (or
+    * of an editable mapping based on it), mesh files with segment mesh metadata in merge-tree order find them as runs.
     */
   def listMeshChunksForMultipleSegments(
       meshFileKey: MeshFileKey,
@@ -350,8 +349,9 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Unit] = {
-    val arrayNames = Seq(keyLeaves, keySegmentMeshMetadata, keyMaxSegmentLevelPerChunk, keyManifests, keyNeuroglancer) ++
-      meshFileAttributes.nInnerNodeLayers.map(layers => (0 until layers).map(keyInnerNodes)).getOrElse(Seq.empty)
+    val arrayNames =
+      Seq(keyLeaves, keySegmentMeshMetadata, keyMaxSegmentLevelPerChunk, keyManifests, keyNeuroglancer) ++
+        meshFileAttributes.nInnerNodeLayers.map(layers => (0 until layers).map(keyInnerNodes)).getOrElse(Seq.empty)
     for {
       _ <- Fox.combined(
         arrayNames.map(arrayName => openZarrArray(meshFileKey, arrayName).shiftBox.map(_ => ())) :+
@@ -373,13 +373,22 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       level: Int
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[SegmentMeshMetadata]] = {
     val requested = segmentIds.toSet
-    def lookUpRounds(seedCounts: List[Int], remaining: Set[Long], found: Seq[SegmentMeshMetadata]): Fox[Seq[SegmentMeshMetadata]] =
+    def lookUpRounds(
+        seedCounts: List[Int],
+        remaining: Set[Long],
+        found: Seq[SegmentMeshMetadata]
+    ): Fox[Seq[SegmentMeshMetadata]] =
       seedCounts match {
         case seedCount :: laterSeedCounts if remaining.nonEmpty =>
           val seeds = ZarrMeshFileService.evenlySpaced(remaining.toArray, seedCount)
           for {
             seedIndices <- lookUpSegmentMeshMetadataIndices(meshFileKey, meshFileAttributes, seeds)
-            runMeshMetadata <- readAgglomerateRuns(meshFileKey, seedIndices.values.toSeq.distinct, level, requested.size)
+            runMeshMetadata <- readAgglomerateRuns(
+              meshFileKey,
+              seedIndices.values.toSeq.distinct,
+              level,
+              requested.size
+            )
             newMeshMetadata = runMeshMetadata.filter(meshMetadata => remaining.contains(meshMetadata.segmentId))
             // Seeds without a mesh are not looked up again.
             notFound = seeds.filterNot(seedIndices.contains).toSet
@@ -391,7 +400,11 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
           } yield result
         case _ =>
           for {
-            remainingMeshMetadata <- lookUpSegmentMeshMetadataBySegmentIds(meshFileKey, meshFileAttributes, remaining.toSeq)
+            remainingMeshMetadata <- lookUpSegmentMeshMetadataBySegmentIds(
+              meshFileKey,
+              meshFileAttributes,
+              remaining.toSeq
+            )
           } yield found ++ remainingMeshMetadata
       }
     lookUpRounds(ZarrMeshFileService.seedCountsPerRound, requested, Seq.empty)
@@ -406,7 +419,11 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       indices <- lookUpSegmentMeshMetadataIndices(meshFileKey, meshFileAttributes, segmentIds)
       meshMetadataArray <- openZarrArray(meshFileKey, keySegmentMeshMetadata)
       segmentsPerChunk = meshMetadataArray.chunkShape(0).toLong
-      chunks <- readChunks[Long](meshMetadataArray, indices.values.map(_ / segmentsPerChunk).toSeq.distinct.sorted, rank = 2)
+      chunks <- readChunks[Long](
+        meshMetadataArray,
+        indices.values.map(_ / segmentsPerChunk).toSeq.distinct.sorted,
+        rank = 2
+      )
     } yield indices.values.toSeq.sorted.map { index =>
       ZarrMeshFileService.segmentMeshMetadataAt(
         chunks(index / segmentsPerChunk),
@@ -415,7 +432,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       )
     }
 
-  // The index into the segment mesh meshMetadata of each segment id that has a mesh, looked up in the leaves.
+  // The index into the segment mesh metadata of each segment id that has a mesh, looked up in the leaves.
   private def lookUpSegmentMeshMetadataIndices(
       meshFileKey: MeshFileKey,
       meshFileAttributes: MeshFileAttributes,
@@ -448,10 +465,12 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
 
   // Reads the runs of the merge-tree order mapping at level that contain the seed indices, except for runs that are too
   // long for the number of requested segments.
-  private def readAgglomerateRuns(meshFileKey: MeshFileKey, seedIndices: Seq[Long], level: Int, requestedCount: Int)(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Seq[SegmentMeshMetadata]] =
+  private def readAgglomerateRuns(
+      meshFileKey: MeshFileKey,
+      seedIndices: Seq[Long],
+      level: Int,
+      requestedCount: Int
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[SegmentMeshMetadata]] =
     for {
       meshMetadataArray <- openZarrArray(meshFileKey, keySegmentMeshMetadata)
       nSegments <- arrayLength(meshMetadataArray)
@@ -470,11 +489,21 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       )
     } yield {
       val runs = seedSpans.map { case (seedIndex, (firstChunk, lastChunk)) =>
-        ZarrMeshFileService.runAround(chunks, segmentsPerChunk, meshMetadataWidth, nSegments, firstChunk, lastChunk, seedIndex, level)
+        ZarrMeshFileService.runAround(
+          chunks,
+          segmentsPerChunk,
+          meshMetadataWidth,
+          nSegments,
+          firstChunk,
+          lastChunk,
+          seedIndex,
+          level
+        )
       }
       runs.distinct.flatMap { case (start, end) =>
         (start until end).map(index =>
-          ZarrMeshFileService.segmentMeshMetadataAt(chunks(index / segmentsPerChunk), meshMetadataWidth, index % segmentsPerChunk)
+          ZarrMeshFileService
+            .segmentMeshMetadataAt(chunks(index / segmentsPerChunk), meshMetadataWidth, index % segmentsPerChunk)
         )
       }
     }
@@ -521,29 +550,17 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
     } yield chunks.toMap
 
   // For each sorted segment id, the chunk of the leaves it falls into, or -1 if it is smaller than all segment ids.
-  // inner_nodes_0 is the root. With n inner node layers, inner_nodes_{n-1}[c] is the first segment id of chunk c of
-  // the leaves and inner_nodes_l[d] the first entry of chunk d of inner_nodes_{l+1}.
+  // inner_nodes_0 is the root, which fits into one chunk. With n inner node layers, inner_nodes_{n-1}[c] is the first
+  // segment id of chunk c of the leaves and inner_nodes_l[d] the first entry of chunk d of inner_nodes_{l+1}.
   private def locateLeafChunks(meshFileKey: MeshFileKey, nInnerNodeLayers: Int, sortedSegmentIds: Array[Long])(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Array[Long]] =
-    for {
-      rootArray <- openZarrArray(meshFileKey, keyInnerNodes(0))
-      rootLength <- arrayLength(rootArray)
-      entriesPerChunk = rootArray.chunkShape(0).toLong
-      rootChunkNumbers = 0L until (rootLength + entriesPerChunk - 1) / entriesPerChunk
-      rootChunks <- readChunks[Long](rootArray, rootChunkNumbers)
-      rootEntries = rootChunkNumbers.flatMap(rootChunks(_)).take(Math.toIntExact(rootLength)).toArray
-      rootPositions = sortedSegmentIds.map(id =>
-        ZarrMeshFileService.lastIndexLessOrEqual(rootEntries, 1, rootEntries.length, id).toLong
-      )
-      positions <- Fox.foldLeft((1 until nInnerNodeLayers).iterator, rootPositions) {
-        (upperLayerPositions, layer) =>
-          descendInnerNodeLayer(meshFileKey, layer, upperLayerPositions, sortedSegmentIds)
-      }
-    } yield positions
+    Fox.foldLeft((0 until nInnerNodeLayers).iterator, sortedSegmentIds.map(_ => 0L)) { (upperLayerPositions, layer) =>
+      descendInnerNodeLayer(meshFileKey, layer, upperLayerPositions, sortedSegmentIds)
+    }
 
-  // Positions in inner node layer l-1 are chunk numbers of inner node layer l.
+  // Positions in inner node layer l-1 are chunk numbers of inner node layer l; the root is chunk 0 of layer 0.
   private def descendInnerNodeLayer(
       meshFileKey: MeshFileKey,
       layer: Int,
@@ -644,7 +661,11 @@ object ZarrMeshFileService {
     if (values.length <= count) values.toSeq
     else (0 until count).map(i => values((i.toLong * values.length / count).toInt))
 
-  def segmentMeshMetadataAt(meshMetadataChunk: Array[Long], meshMetadataWidth: Int, indexInChunk: Long): SegmentMeshMetadata = {
+  def segmentMeshMetadataAt(
+      meshMetadataChunk: Array[Long],
+      meshMetadataWidth: Int,
+      indexInChunk: Long
+  ): SegmentMeshMetadata = {
     val start = Math.toIntExact(indexInChunk) * meshMetadataWidth
     SegmentMeshMetadata(
       meshMetadataChunk(start + meshMetadataSegmentId),
@@ -680,7 +701,9 @@ object ZarrMeshFileService {
       level: Int
   ): (Long, Long) = {
     def levelAt(index: Long): Long =
-      chunks(index / segmentsPerChunk)(Math.toIntExact(index % segmentsPerChunk) * meshMetadataWidth + meshMetadataLevel)
+      chunks(index / segmentsPerChunk)(
+        Math.toIntExact(index % segmentsPerChunk) * meshMetadataWidth + meshMetadataLevel
+      )
     var start = seedIndex
     while (start > firstChunk * segmentsPerChunk && levelAt(start) <= level) start -= 1
     var end = seedIndex + 1

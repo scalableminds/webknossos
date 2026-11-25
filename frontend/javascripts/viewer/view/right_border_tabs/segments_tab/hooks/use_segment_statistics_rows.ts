@@ -333,6 +333,7 @@ export function useSegmentStatisticsRows({
     isBoundingBoxAvailable,
     isVolumeAvailable,
     isSurfaceAreaAvailable,
+    isSphericityAvailable,
     volumes.isLoading,
     volumes.isError,
     surfaceAreas.isLoading,

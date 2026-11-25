@@ -3,6 +3,8 @@ import { Button, Flex, Progress, Spin, Table, type TableColumnType, Typography, 
 import { formatNumber, getBestUnitForValue } from "libs/format_utils";
 import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
 import { type ReactNode, useMemo, useState } from "react";
 import {
   LongUnitToShortUnitMap,
@@ -32,6 +34,19 @@ const VECTOR_COLUMN_WIDTH = 180;
 const DEFAULT_FRACTION_DIGITS = 2;
 // Even the smallest value should get a visible bar.
 const MIN_BAR_PERCENT = 2;
+// Larger values are abbreviated (e.g. "123.4K") to fit into the column. This mostly affects the
+// totals of groups, as the unit of a column is chosen to fit its segments.
+const MIN_ABBREVIATED_VALUE = 1e5;
+const compactNumberFormat = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+function formatCellNumber(number: number, fractionDigits: number): string {
+  return Math.abs(number) >= MIN_ABBREVIATED_VALUE
+    ? compactNumberFormat.format(number)
+    : formatNumber(number, fractionDigits);
+}
 
 type ResolvedUnit = { label: string; factor: number };
 type ValueSpec = StatisticSpec & { title: string; value: StatisticValue };
@@ -149,11 +164,14 @@ function GroupCell({ group }: { group: GroupTableRow }) {
 }
 
 function NumberCell({
-  text,
+  number,
+  fractionDigits,
   barPercent,
   aggregationLabel,
 }: {
-  text: string;
+  // Already converted to the unit of the column.
+  number: number;
+  fractionDigits: number;
   barPercent: number;
   // Set for the aggregated value of a group.
   aggregationLabel?: string;
@@ -163,13 +181,14 @@ function NumberCell({
   return (
     <Flex vertical align="stretch">
       <span
+        title={formatNumber(number, fractionDigits)}
         style={{
           textAlign: "right",
           fontVariantNumeric: "tabular-nums",
           fontWeight: isGroup ? token.fontWeightStrong : undefined,
         }}
       >
-        {text}
+        {formatCellNumber(number, fractionDigits)}
         {isGroup ? (
           <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
             {` ${aggregationLabel}`}
@@ -226,10 +245,11 @@ function getStatisticColumn(
 
   if (value.kind === "number") {
     const numbers = rows.flatMap((row) => value.get(row) ?? []);
-    const min = Math.min(...numbers);
-    const max = Math.max(...numbers);
+    // Spreading many values into Math.min/max would exceed the maximum number of arguments.
+    const minOfSegments = min(numbers) ?? 0;
+    const maxOfSegments = max(numbers) ?? 0;
     // The bars of groups relate the groups to each other, as e.g. totals exceed any single segment.
-    const maxOfGroups = Math.max(...groupRows.flatMap((group) => group.aggregates[spec.key] ?? []));
+    const maxOfGroups = max(groupRows.flatMap((group) => group.aggregates[spec.key] ?? [])) ?? 0;
     const aggregationLabel = AGGREGATION_LABELS[value.aggregation ?? "sum"];
     return {
       key: spec.key,
@@ -246,7 +266,8 @@ function getStatisticColumn(
             const barPercent = maxOfGroups > 0 ? (aggregate / maxOfGroups) * 100 : 100;
             return (
               <NumberCell
-                text={formatNumber(aggregate / unit.factor, fractionDigits)}
+                number={aggregate / unit.factor}
+                fractionDigits={fractionDigits}
                 barPercent={Math.max(MIN_BAR_PERCENT, barPercent)}
                 aggregationLabel={aggregationLabel}
               />
@@ -254,10 +275,14 @@ function getStatisticColumn(
           }
           const number = value.get(tableRow.row);
           if (number == null) return null;
-          const barPercent = max > min ? ((number - min) / (max - min)) * 100 : 100;
+          const barPercent =
+            maxOfSegments > minOfSegments
+              ? ((number - minOfSegments) / (maxOfSegments - minOfSegments)) * 100
+              : 100;
           return (
             <NumberCell
-              text={formatNumber(number / unit.factor, fractionDigits)}
+              number={number / unit.factor}
+              fractionDigits={fractionDigits}
               barPercent={Math.max(MIN_BAR_PERCENT, barPercent)}
             />
           );

@@ -126,13 +126,13 @@ export type CsvValue = string | number | bigint | undefined;
 // raised to the given dimension (length, area or volume).
 export type StatisticUnit = string | { dimension: 1 | 2 | 3 };
 
+export type StatisticAggregation = "sum" | "mean" | "max";
+
 /*
  * How the value of a statistic is obtained for the table. Numbers are right-aligned, sortable and
  * get a bar that relates them to the other rows. Vectors are sorted by their first component or by
  * the product of their components (e.g. the volume of a bounding box).
  */
-export type StatisticAggregation = "sum" | "mean" | "max";
-
 export type StatisticValue =
   | {
       kind: "number";

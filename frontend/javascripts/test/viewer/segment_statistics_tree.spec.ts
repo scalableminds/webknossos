@@ -67,6 +67,9 @@ describe("segment statistics tree", () => {
     expect(aggregateNumbers([1, 2, 6], "mean")).toBe(3);
     expect(aggregateNumbers([1, 2, 6], "max")).toBe(6);
     expect(aggregateNumbers([], "sum")).toBeUndefined();
+    // Spreading this many values into Math.max would throw a RangeError.
+    const manyNumbers = Array.from({ length: 500_000 }, (_, index) => index);
+    expect(aggregateNumbers(manyNumbers, "max")).toBe(499_999);
   });
 
   it("nests rows along the group hierarchy and aggregates recursively", () => {

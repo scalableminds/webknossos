@@ -119,12 +119,21 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
     });
 
   const [groupBy, setGroupBy] = useState<GroupBy>("group");
+  // For a group scope, the nesting starts at the chosen group. Otherwise, each of its ancestors
+  // would get a row that merely repeats the statistics of the chosen group.
+  const rootGroups = useMemo(() => {
+    if (scope?.kind !== "group" || scope.groupId === MISSING_GROUP_ID) {
+      return segmentGroups;
+    }
+    const scopeGroup = findGroup(segmentGroups, scope.groupId);
+    return scopeGroup != null ? [scopeGroup] : segmentGroups;
+  }, [scope, segmentGroups]);
   const tableRows = useMemo(
     () =>
       groupBy === "group"
-        ? buildGroupedTableRows(rows, segmentGroups, statisticSpecs)
+        ? buildGroupedTableRows(rows, rootGroups, statisticSpecs)
         : toSegmentTableRows(rows),
-    [groupBy, rows, segmentGroups, statisticSpecs],
+    [groupBy, rows, rootGroups, statisticSpecs],
   );
 
   if (!areSegmentStatisticsAvailable && !isAnyStatisticLoading) {

@@ -1,3 +1,4 @@
+import max from "lodash-es/max";
 import type { SegmentGroup } from "viewer/store";
 import type {
   SegmentStatisticsRow,
@@ -38,7 +39,8 @@ export function aggregateNumbers(
     return undefined;
   }
   if (aggregation === "max") {
-    return Math.max(...numbers);
+    // Spreading a large array into Math.max would exceed the maximum number of arguments.
+    return max(numbers);
   }
   const sum = numbers.reduce((a, b) => a + b, 0);
   return aggregation === "mean" ? sum / numbers.length : sum;

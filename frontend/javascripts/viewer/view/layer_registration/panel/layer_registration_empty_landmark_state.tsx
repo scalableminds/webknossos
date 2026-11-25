@@ -90,8 +90,8 @@ export function EmptyLandmarkState({
   onCopyLandmarks: (sourceLayerName: string) => Promise<void>;
 }) {
   const steps = [
-    `Click a clear structure in the left view (${layerNames.fixed}).`,
-    `Click the same structure in the right view (${layerNames.moving}).`,
+    `Select the skeleton tool in the toolbar of the left view (${layerNames.fixed}), then click a clear structure.`,
+    `Select the skeleton tool in the right view (${layerNames.moving}), too, then click the same structure.`,
     `Repeat. From ${MIN_LANDMARK_PAIR_COUNT} pairs on, both views show the other layer transformed onto their own. Spread the pairs out in x, y and z.`,
   ];
   return (

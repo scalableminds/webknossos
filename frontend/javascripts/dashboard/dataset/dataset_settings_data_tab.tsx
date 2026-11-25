@@ -32,6 +32,10 @@ import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants
 import type { RotationAndMirroringSettings } from "viewer/model/helpers/dataset_rotation_helpers";
 import { getSegmentIdRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import {
+  canRegisterLayers,
+  getLayerRegistrationListUrl,
+} from "viewer/view/layer_registration/layer_registration_protocol";
+import {
   AxisRotationSettingForDataset,
   getDatasetBoundingBoxFromLayers,
   getRotationalTransformation,
@@ -165,6 +169,8 @@ function SimpleDatasetForm({
       },
     });
   };
+
+  const showRegisterLayersButton = dataset != null && canRegisterLayers(dataset);
 
   const transformationItems = [
     { value: TransformationsMode.NONE, label: "None" },
@@ -305,11 +311,40 @@ function SimpleDatasetForm({
                   <>
                     You can remove all transformations by selecting "None", add rotational and
                     mirroring transformations in "Simple" mode, or define custom transformations per
-                    layer in "Advanced" mode.
+                    layer in "Advanced" mode. To align layers with each other by placing matching
+                    landmarks, use "Register Layers". Its results are stored as "Advanced"
+                    transformations.
                   </>
                 }
               >
-                <Select options={transformationItems} style={{ width: LEFT_COLUMN_ITEMS_WIDTH }} />
+                {/* The select takes the width that the button leaves free, so that both together
+                    are as wide as the other items of this column. */}
+                <Flex gap={8} style={{ width: LEFT_COLUMN_ITEMS_WIDTH }}>
+                  <Form.Item name={["transformationsMode"]} noStyle>
+                    <Select options={transformationItems} style={{ flex: 1, minWidth: 0 }} />
+                  </Form.Item>
+                  {showRegisterLayersButton ? (
+                    <Tooltip
+                      title={
+                        <>
+                          Opens the layer registration of this dataset in a new tab. There, you
+                          place matching landmarks in two layers, and WEBKNOSSOS calculates the
+                          transformations from them. Applying them changes the transformations of
+                          this dataset, so reload this page afterwards.
+                        </>
+                      }
+                    >
+                      <Button
+                        // A new tab keeps the unsaved changes of this form.
+                        onClick={() =>
+                          window.open(getLayerRegistrationListUrl(dataset), "_blank", "noopener")
+                        }
+                      >
+                        Register Layers
+                      </Button>
+                    </Tooltip>
+                  ) : null}
+                </Flex>
               </FormItemWithInfo>
             </Col>
             <Col span={24} xl={12}>

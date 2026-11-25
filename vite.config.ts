@@ -52,7 +52,10 @@ const viteConfig = {
     }),
     assertCodeSplitting({
       entry: "frontend/javascripts/main.tsx",
-      lazyEntries: ["frontend/javascripts/viewer/viewer_entry.ts"],
+      lazyEntries: [
+        "frontend/javascripts/viewer/viewer_entry.ts",
+        "frontend/javascripts/viewer/view/layer_registration/layer_registration_entry.ts",
+      ],
       // Markers of the viewer that must only load with viewer_entry. Not exhaustive: the budget
       // below catches the rest, these name the culprit.
       forbiddenInInitialPayload: [

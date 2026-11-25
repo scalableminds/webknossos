@@ -2,6 +2,8 @@
 
 The layer registration view registers the layers of a dataset ("moving" layers) to one of its layers (the "fixed" layer). The user places matching landmarks in the fixed layer and in a moving layer. From at least three landmark pairs, the page estimates an affine transform of the moving layer and can write it to the dataset.
 
+The UI calls the fixed layer the *primary* layer and the moving layers *secondary* layers (see `ROLE_NAMES` in `helpers/layer_registration_helpers.ts`), because "fixed" and "moving" are misleading on screen: in the right view, the fixed layer is the one that is drawn transformed. The code, the API and the database keep "fixed" and "moving".
+
 This file explains how the page and its iframes work together. The details are in the comments of the files named below.
 
 ## Why iframes
@@ -46,7 +48,7 @@ Each iframe reads its role from the params of its URL (see `layer_registration_p
 The role is used in two ways:
 
 - `viewer/viewer_capabilities.ts` (`getViewerCapabilities()`) says what the viewer offers in each role: e.g. the reduced UI of the landmark iframes, whether settings are persisted, and whether there is a scene. Generic viewer code asks for a capability, not for the role.
-- The wiring of the feature checks the role directly: e.g. `controller.tsx` (applies the settings of a landmark iframe, reports the save state of the annotation iframe), the navbar and toolbar of the landmark iframes, and the click handler that names new landmarks.
+- The wiring of the feature checks the role directly: e.g. `controller.tsx` (applies the settings of a landmark iframe, reports the save state of the annotation iframe), the navbar, toolbar and viewport layer label of the landmark iframes, and the click handler that names new landmarks.
 
 Sagas never check whether there is a scene. A saga that needs the scene waits with `ensureSceneControllerInitialized`, which never returns in the annotation iframe.
 

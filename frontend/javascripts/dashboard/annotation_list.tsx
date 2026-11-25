@@ -251,7 +251,7 @@ export function AnnotationList({
         />
         {annotation.layerRegistration != null ? (
           <Tag icon={<NodeIndexOutlined />} variant="outlined">
-            {hideLayerRegistrationPrefix ? "Fixed: " : "Layer registration to "}
+            {hideLayerRegistrationPrefix ? "Primary: " : "Layer registration to "}
             {annotation.layerRegistration.fixedLayerName}
           </Tag>
         ) : null}

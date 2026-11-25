@@ -77,5 +77,48 @@
     border-radius: 50%;
     box-shadow: 0 0 0 1px var(--ant-color-border);
     vertical-align: middle;
+
+    // In place of the color of a landmark that the pair doesn't have yet.
+    &.is-missing {
+      box-sizing: border-box;
+      border: 1px dashed var(--ant-color-warning);
+      box-shadow: none;
+    }
+  }
+}
+
+// Landmark iframe (landmark_iframe_layer_label.tsx): names the layer of the view in the top left
+// corner of the viewport. The colors don't depend on the theme, because the label lies on the
+// data.
+.landmark-iframe-layer-label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+
+  .landmark-iframe-layer-label-role {
+    flex: none;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .landmark-iframe-layer-label-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }

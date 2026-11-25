@@ -1,4 +1,4 @@
-import { App } from "antd";
+import { App, Typography } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { useState } from "react";
@@ -63,6 +63,10 @@ function ApplyTransformsDialogContent({
   const fixedLayerTransforms = layerTransformsInDataset[fixedLayerName];
   return (
     <>
+      <p>
+        Applying transforms the secondary layers to match the primary layer "{fixedLayerName}". The
+        primary layer keeps its position.
+      </p>
       <ul>
         {Array.from(estimations, ([layerName, estimation]) => (
           <li key={layerName}>
@@ -75,11 +79,19 @@ function ApplyTransformsDialogContent({
           </li>
         ))}
       </ul>
-      <p>Applying replaces the transforms that a layer currently has in the dataset.</p>
+      <p>
+        This only changes the transforms in the dataset settings. The image data is not copied or
+        changed, so this takes effect right away for everyone who views the dataset. You can change
+        or remove the transforms later in the dataset settings, or apply new ones here.
+      </p>
+      <Typography.Text type="warning">
+        The transforms that these layers currently have in the dataset are replaced, and there is no
+        undo button.
+      </Typography.Text>
       {(fixedLayerTransforms ?? []).length > 0 ? (
         <p>
-          "{fixedLayerName}" has transforms itself. The applied transforms build on them, so
-          changing the transforms of "{fixedLayerName}" later makes them outdated.
+          The primary layer "{fixedLayerName}" has transforms itself. The applied transforms build
+          on them, so changing the transforms of "{fixedLayerName}" later makes them outdated.
         </p>
       ) : null}
     </>

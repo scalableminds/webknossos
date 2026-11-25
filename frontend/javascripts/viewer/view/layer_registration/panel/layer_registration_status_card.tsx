@@ -1,5 +1,6 @@
 import { BulbOutlined, WarningOutlined } from "@ant-design/icons";
 import { Badge, Button, Flex, Typography, theme } from "antd";
+import { AXIS_NAMES } from "libs/estimate_affine";
 import { pluralize } from "libs/utils";
 import type React from "react";
 import type { VoxelSize } from "types/api_types";
@@ -9,11 +10,13 @@ import {
   getLandmarkTreeName,
   isCompletePair,
   type LandmarkPair,
+  type Side,
   VIEW_NAMES,
 } from "../helpers/layer_registration_helpers";
 import type { NextStep } from "../helpers/layer_registration_next_step";
 import {
   MIN_LANDMARK_PAIR_COUNT,
+  type SingleSlice,
   type TransformEstimation,
 } from "../helpers/layer_registration_transform_estimation";
 
@@ -25,7 +28,7 @@ function getNextStepContent(
   switch (nextStep.type) {
     case "placeFirstLandmark":
       return {
-        text: `Click a clear structure in the left view to place ${getLandmarkTreeName(1)}.`,
+        text: `Select the skeleton tool in the toolbar of the left view, then click a clear structure to place ${getLandmarkTreeName(1)}.`,
       };
     case "completePair": {
       const { pair, missingSide } = nextStep;
@@ -73,7 +76,7 @@ function getNextStepContent(
     case "allApplied":
       return {
         text: nextStep.hasSeveralMovingLayers
-          ? "All moving layers are applied."
+          ? "All secondary layers are applied."
           : "The transform is applied to the dataset.",
       };
   }
@@ -87,8 +90,34 @@ function Warning({ children }: { children: React.ReactNode }) {
   );
 }
 
+// What the transform assumes along the axis if the landmarks of a view all lie in one slice
+// along it, and how to avoid that assumption.
+function getSingleSliceNote(
+  { axis, fixedCoordinate, movingCoordinate }: SingleSlice,
+  is2d: boolean,
+): string | null {
+  if (is2d) {
+    // In a 2D dataset, all landmarks always lie in one z slice, so there is nothing to tell.
+    return null;
+  }
+  const axisName = AXIS_NAMES[axis];
+  const advice = `To also fit ${axisName}, add landmarks in other ${axisName} slices.`;
+  if (fixedCoordinate == null || movingCoordinate == null) {
+    const sideInSlice: Side = fixedCoordinate != null ? "fixed" : "moving";
+    return `All landmarks in the ${VIEW_NAMES[sideInSlice]} view lie in one ${axisName} slice. ${advice}`;
+  }
+  const shift = Math.abs(fixedCoordinate - movingCoordinate);
+  return shift === 0
+    ? `All landmarks lie in the same ${axisName} slice, so no shift in ${axisName} is assumed. ${advice}`
+    : `The landmarks of each view lie in one ${axisName} slice, so a constant shift of ${shift} ${pluralize("voxel", shift)} in ${axisName} is assumed. ${advice}`;
+}
+
 // Why landmarks or pairs are not used for the transform, or why it may be wrong.
-function getWarnings(pairs: LandmarkPair[], estimation: TransformEstimation): string[] {
+function getWarnings(
+  pairs: LandmarkPair[],
+  estimation: TransformEstimation,
+  is2d: boolean,
+): string[] {
   const warnings: string[] = [];
   const incompletePairs = pairs.filter((pair) => !isCompletePair(pair));
   const [firstIncompletePair] = incompletePairs;
@@ -109,10 +138,11 @@ function getWarnings(pairs: LandmarkPair[], estimation: TransformEstimation): st
     if (completePairCount >= MIN_LANDMARK_PAIR_COUNT) {
       warnings.push(estimation.errorMessage);
     }
-  } else if (estimation.usedCopiesInNextSlice) {
-    warnings.push(
-      "The landmarks lie in one plane, so the transform assumes that the layers are only shifted against each other along z.",
-    );
+  } else if (estimation.singleSlice != null) {
+    const singleSliceNote = getSingleSliceNote(estimation.singleSlice, is2d);
+    if (singleSliceNote != null) {
+      warnings.push(singleSliceNote);
+    }
   }
   return warnings;
 }
@@ -125,6 +155,7 @@ export function TransformStatusCard({
   estimation,
   meanResidual,
   voxelSize,
+  is2d,
   nextStep,
   onSelectPair,
   onSelectMovingLayer,
@@ -134,6 +165,8 @@ export function TransformStatusCard({
   estimation: TransformEstimation;
   meanResidual: number | null;
   voxelSize: VoxelSize;
+  // Whether the dataset has only one z slice.
+  is2d: boolean;
   nextStep: NextStep | null;
   onSelectPair: (pair: LandmarkPair) => void;
   onSelectMovingLayer: (layerName: string) => void;
@@ -142,7 +175,7 @@ export function TransformStatusCard({
   const completePairCount = pairs.filter(isCompletePair).length;
   const nextStepContent =
     nextStep != null ? getNextStepContent(nextStep, onSelectPair, onSelectMovingLayer) : null;
-  const warnings = getWarnings(pairs, estimation);
+  const warnings = getWarnings(pairs, estimation, is2d);
   const hasTransform = !("errorMessage" in estimation);
 
   return (

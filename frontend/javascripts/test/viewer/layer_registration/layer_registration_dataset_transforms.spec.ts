@@ -154,7 +154,7 @@ describe("Layer registration dataset transforms", () => {
   });
 
   it("tells whether the dataset uses the estimated transform", () => {
-    const estimation = { movingToFixedTransform: transform, usedCopiesInNextSlice: false };
+    const estimation = { movingToFixedTransform: transform, singleSlice: null };
     expect(getAppliedState({ errorMessage: "Too few pairs" }, null, null)).toBe(
       "transformEstimationFailed",
     );

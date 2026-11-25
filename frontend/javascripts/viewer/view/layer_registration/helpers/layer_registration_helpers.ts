@@ -18,6 +18,11 @@ export type Side = "fixed" | "moving";
 export const SIDES: Side[] = ["fixed", "moving"];
 export const OTHER_SIDE: Record<Side, Side> = { fixed: "moving", moving: "fixed" };
 export const VIEW_NAMES: Record<Side, string> = { fixed: "left", moving: "right" };
+// The names that the UI uses for the two sides. "Fixed" and "moving" would be misleading on
+// screen: in the right view, the fixed layer is the one that is drawn transformed.
+export const ROLE_NAMES: Record<Side, string> = { fixed: "primary", moving: "secondary" };
+// Says which layer applying changes. Shown where the user decides or confirms something.
+export const APPLY_EXPLANATION = `Applying transforms the secondary ("moving") layers to match the primary layer. The primary layer keeps its position.`;
 export type LayerNames = Record<Side, string>;
 
 // Each landmark is a tree with one node. The tree and node ids refer to the landmark iframe of the

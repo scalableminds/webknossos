@@ -1,9 +1,11 @@
 import { Button, Flex, Result, Spin, Typography } from "antd";
+import capitalize from "lodash-es/capitalize";
 import type { APIDataset } from "types/api_types";
 import {
   getLandmarkColor,
   getLandmarkTreeName,
   type LayerNames,
+  ROLE_NAMES,
   SIDES,
   type Side,
 } from "../helpers/layer_registration_helpers";
@@ -153,7 +155,7 @@ export function LayerRegistrationIframes({
         <div key={side} className="layer-registration-landmark-iframe">
           <iframe
             ref={(element) => iframes.set(side, element)}
-            title={`${side === "fixed" ? "Fixed" : "Moving"} layer (${layerNames[side]})`}
+            title={`${capitalize(ROLE_NAMES[side])} layer (${layerNames[side]})`}
             src={getLayerRegistrationLandmarkIframeUrl(dataset, side, layerNames[side])}
             onLoad={() => onIframeLoad(side)}
             onMouseEnter={() => focusLandmarkIframe(side)}

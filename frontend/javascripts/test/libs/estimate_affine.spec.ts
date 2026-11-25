@@ -1,4 +1,7 @@
-import estimateAffine, { estimateAffineMatrix4x4 } from "libs/estimate_affine";
+import estimateAffine, {
+  estimateAffineMatrix4x4,
+  estimateAffineMatrixFromLandmarks,
+} from "libs/estimate_affine";
 import { M4x4 } from "libs/mjs";
 import Matrix from "ml-matrix";
 import type { Vector3 } from "viewer/constants";
@@ -63,5 +66,29 @@ describe("Estimate Affine", () => {
     almostEqual(expect, transform2([0, 0, 0]), [10, 10, 10], epsilon);
     almostEqual(expect, transform2([3, 7, 8]), [16, 24, 26], epsilon);
     almostEqual(expect, transform2([34, 28, 9]), [78, 66, 28], epsilon);
+  });
+
+  it("Estimate affine matrix from landmarks in a single slice", () => {
+    // The source points lie in the y slice 2, the target points in the y slice 5.
+    const sourcePoints: Vector3[] = [
+      [0, 2, 0],
+      [10, 2, 0],
+      [0, 2, 10],
+      [10, 2, 10],
+    ];
+    const targetPoints = sourcePoints.map(([x, y, z]): Vector3 => [3 * x + 1, y + 3, z]);
+    const estimation = estimateAffineMatrixFromLandmarks(sourcePoints, targetPoints);
+
+    expect(estimation?.singleSlice).toEqual({ axis: 1, sourceCoordinate: 2, targetCoordinate: 5 });
+    expect(estimation?.meanError).toBeCloseTo(0, 5);
+  });
+
+  it("Estimate no affine matrix from landmarks on one line", () => {
+    const points: Vector3[] = [
+      [0, 0, 0],
+      [10, 0, 0],
+      [20, 0, 0],
+    ];
+    expect(estimateAffineMatrixFromLandmarks(points, points)).toBeNull();
   });
 });

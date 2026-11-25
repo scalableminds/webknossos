@@ -56,8 +56,6 @@ import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metad
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsStorageTab from "dashboard/dataset/dataset_settings_storage_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
-import LayerRegistrationListView from "viewer/view/layer_registration/layer_registration_list_view";
-import LayerRegistrationView from "viewer/view/layer_registration/layer_registration_view";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -76,6 +74,17 @@ import {
   UserDetailsRouteWrapper,
 } from "./route_wrappers";
 
+// Both layer registration pages come from the same chunk (see layer_registration_entry.ts).
+const AsyncLayerRegistrationListView = loadable<EmptyObject>(() =>
+  import("viewer/view/layer_registration/layer_registration_entry").then((module) => ({
+    default: module.LayerRegistrationListView,
+  })),
+);
+const AsyncLayerRegistrationView = loadable<EmptyObject>(() =>
+  import("viewer/view/layer_registration/layer_registration_entry").then((module) => ({
+    default: module.LayerRegistrationView,
+  })),
+);
 const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/workflow_view"));
 const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
@@ -267,7 +276,7 @@ const routes: RouteObject[] = [
         path: "/datasets/:datasetNameAndId/register-layers",
         element: (
           <SecuredRoute>
-            <LayerRegistrationListView />
+            <AsyncLayerRegistrationListView />
           </SecuredRoute>
         ),
       },
@@ -526,7 +535,7 @@ const routes: RouteObject[] = [
         path: "/datasets/:datasetNameAndId/register-layers/:annotationId",
         element: (
           <SecuredRoute>
-            <LayerRegistrationView />
+            <AsyncLayerRegistrationView />
           </SecuredRoute>
         ),
       },

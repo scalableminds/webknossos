@@ -428,7 +428,11 @@ class VolumeTracingController @Inject() (
             annotationId
           ) ?~> Msg.Dataset.voxelSizeFailedToFetch
           voxelSizeInMag = Vec3Double(request.body.mag) * voxelSize.factor
-        } yield Ok(Json.toJson(surfaces.map(SegmentStatisticsMath.sphericity(_, voxelSizeInMag))))
+        } yield Ok(
+          Json.toJson(
+            surfaces.map(surface => SegmentStatisticsMath.sphericity(surface.area, surface.voxelCount, voxelSizeInMag))
+          )
+        )
       }
     }
 

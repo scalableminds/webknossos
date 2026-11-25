@@ -23,8 +23,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   FullMeshHelper,
   FullMeshRequest,
   MappingType,
-  SegmentSurface,
-  SurfaceChunk
+  SegmentSurface
 }
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
@@ -63,9 +62,8 @@ class TSFullMeshService @Inject() (
   private lazy val segmentSurfaceCache: AlfuCache[(String, Long, FullMeshRequest), SegmentSurface] =
     AlfuCache(maxCapacity = 1000)
 
-  /** Measures the surface area and voxel count of a segment in the mag of the request, see NativeSegmentSurface. The
-    * chunks are the buckets of the segment index, some grouped (see SurfaceChunk.forSegmentBuckets). Needs a segment
-    * index. The buckets are read at the version of the given tracing.
+  /** Measures the surface area and voxel count of a segment in the mag of the request, reading the buckets at the
+    * version of the given tracing. Needs a segment index.
     */
   def measureSurface(
       annotationId: ObjectId,
@@ -95,18 +93,15 @@ class TSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest
   )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentSurface] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
-      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+      mag <- adHocMag(fullMeshRequest)
       _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume
         .wrongMag(tracingId, mag.toMagLiteral(allowScalar = true))
       _ <- Fox.fromBool(tracing.hasSegmentIndex.getOrElse(false)) ?~> Msg.Mesh.segmentIndexNeededForSurface
       voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(
         annotationId
       ) ?~> Msg.Dataset.voxelSizeFailedToFetch
-      bucketPositions <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
-      chunks = SurfaceChunk.forSegmentBuckets(bucketPositions)
-      // Keeping several chunks in flight, as each one waits for its buckets to load.
-      surfaces <- Fox.batchCombined(chunks, adHocMeshingBatchSize) { chunk =>
+      segmentBuckets <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
+      surface <- measureSurfaceInChunks(segmentBuckets, adHocMeshingBatchSize) { chunk =>
         val adHocMeshRequest = WebknossosAdHocMeshRequest(
           position = chunk.topLeft * mag,
           mag = mag,
@@ -138,7 +133,7 @@ class TSFullMeshService @Inject() (
             chunk.interiorEnd
           )
       }
-    } yield surfaces.foldLeft(SegmentSurface.empty)(_ + _)
+    } yield surface
 
   private def loadFullMeshFromMeshFile(
       annotationId: ObjectId,
@@ -168,8 +163,7 @@ class TSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
-      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+      mag <- adHocMag(fullMeshRequest)
       _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume
         .wrongMag(tracingId, mag.toMagLiteral(allowScalar = true))
       before = Instant.now

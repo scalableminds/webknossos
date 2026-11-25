@@ -2,30 +2,11 @@ use super::*;
 use crate::ad_hoc_mesh::{Mesh, mesh_cuboid};
 use crate::bucket_scanner::Element;
 use crate::jni_util::NativeError;
+use crate::test_util::{Random, in_ball};
 
 const UNIT: [f64; 3] = [1.0, 1.0, 1.0];
 /// An anisotropic voxel size, like 11.24 × 11.24 × 28 nm.
 const ANISOTROPIC: [f64; 3] = [11.24, 11.24, 28.0];
-
-/// A small deterministic pseudo random generator (xorshift64*), so the tests need no dependency.
-struct Random(u64);
-
-impl Random {
-    fn next(&mut self) -> u64 {
-        self.0 ^= self.0 >> 12;
-        self.0 ^= self.0 << 25;
-        self.0 ^= self.0 >> 27;
-        self.0.wrapping_mul(0x2545_f491_4f6c_dd1d)
-    }
-
-    fn below(&mut self, bound: usize) -> usize {
-        (self.next() % bound as u64) as usize
-    }
-
-    fn chance(&mut self, probability: f64) -> bool {
-        (self.next() >> 11) as f64 / (1u64 << 53) as f64 <= probability
-    }
-}
 
 /// A volume of segment ids, x fastest, as one id per voxel.
 struct Volume {
@@ -248,14 +229,9 @@ fn blobs(dimensions: [usize; 3], seed: u64) -> Volume {
         .collect();
     let [width, height, _] = dimensions;
     Volume::new(dimensions, |x, y, z| {
-        let in_blob = centers.iter().any(|(center, radius)| {
-            let d = [
-                x as f64 - center[0],
-                y as f64 - center[1],
-                z as f64 - center[2],
-            ];
-            d[0] * d[0] + d[1] * d[1] + d[2] * d[2] <= radius * radius
-        });
+        let in_blob = centers
+            .iter()
+            .any(|&(center, radius)| in_ball([x, y, z], center, radius));
         // Some noise voxels, so that there are single voxels and thin structures on bucket borders, too.
         if in_blob ^ noise[x + width * (y + height * z)] {
             7

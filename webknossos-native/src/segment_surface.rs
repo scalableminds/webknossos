@@ -27,7 +27,7 @@ use jni::objects::{JByteArray, JDoubleArray, JIntArray, JObject};
 use jni::sys::{jint, jlong};
 
 use crate::ad_hoc_mesh::triangle_table::{EDGE_MIDPOINTS, TRIANGLES};
-use crate::ad_hoc_mesh::{CUBE_INDEX, Cuboid, mask_row};
+use crate::ad_hoc_mesh::{CUBE_INDEX, Cuboid};
 use crate::jni_util::{self, NativeResult, invalid_argument};
 
 /// The surface area and voxel count of a segment in a chunk.
@@ -125,19 +125,10 @@ impl PaddedMask {
         debug_assert_eq!(cuboid.dimensions, self.dimensions);
         let [width, height, depth] = cuboid.dimensions;
         let [padded_width, padded_height, _] = self.padded_dimensions();
-        let row_bytes = width * cuboid.bytes_per_element;
         for z in 0..depth {
             for y in 0..height {
-                let row_index = y + height * z;
-                let row = &cuboid.data[row_index * row_bytes..(row_index + 1) * row_bytes];
                 let start = 1 + padded_width * ((y + 1) + padded_height * (z + 1));
-                let mask = &mut self.voxels[start..start + width];
-                match cuboid.bytes_per_element {
-                    1 => mask_row::<u8>(row, segment_id, mask),
-                    2 => mask_row::<u16>(row, segment_id, mask),
-                    4 => mask_row::<u32>(row, segment_id, mask),
-                    _ => mask_row::<u64>(row, segment_id, mask),
-                };
+                cuboid.mask_row(y, z, segment_id, &mut self.voxels[start..start + width]);
             }
         }
     }

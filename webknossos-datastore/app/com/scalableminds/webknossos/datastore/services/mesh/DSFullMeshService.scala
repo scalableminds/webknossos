@@ -63,14 +63,14 @@ class DSFullMeshService @Inject() (
     AlfuCache(maxCapacity = 10000)
 
   def clearCache(datasetId: ObjectId, layerNameOpt: Option[String]): Int = {
-    def matches(key: (ObjectId, String, FullMeshRequest)): Boolean =
-      key._1 == datasetId && layerNameOpt.forall(_ == key._2)
+    def matches(key: (ObjectId, String, FullMeshRequest)): Boolean = key match {
+      case (keyDatasetId, keyLayerName, _) => keyDatasetId == datasetId && layerNameOpt.forall(_ == keyLayerName)
+    }
     segmentSurfaceCache.clear(matches) + meshFileSurfaceAreaCache.clear(matches)
   }
 
-  /** Measures the surface area and voxel count of a segment in the mag of the request, see [[NativeSegmentSurface]].
-    * The chunks are the buckets of the segment index, some grouped (see [[SurfaceChunk.forSegmentBuckets]]), measured
-    * on the actor pool like ad-hoc meshes. Needs a segment index.
+  /** Measures the surface area and voxel count of a segment in the mag of the request, on the actor pool like ad-hoc
+    * meshes. Needs a segment index.
     */
   def measureSurface(
       datasetId: ObjectId,
@@ -79,41 +79,40 @@ class DSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest
   )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentSurface] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
-      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+      mag <- adHocMag(fullMeshRequest)
       segmentationLayer <- tryo(
         dataLayer.asInstanceOf[SegmentationLayer]
       ).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
       _ <- Fox.fromBool(
         segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       ) ?~> Msg.Mesh.segmentIndexNeededForSurface
-      bucketPositions <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
-      chunks = SurfaceChunk.forSegmentBuckets(bucketPositions.toIndexedSeq)
-      surfaces <- Fox.batchCombined(chunks, config.Datastore.AdHocMesh.actorPoolSize) { chunk =>
-        val meshRequest = AdHocMeshRequest(
-          Some(datasetId),
-          Some(dataSource.id),
-          segmentationLayer,
-          Cuboid(
-            VoxelPosition(chunk.topLeft.x * mag.x, chunk.topLeft.y * mag.y, chunk.topLeft.z * mag.z, mag),
-            chunk.size.x,
-            chunk.size.y,
-            chunk.size.z
-          ),
-          fullMeshRequest.segmentId.toLong,
-          dataSource.scale.factor,
-          tc,
-          fullMeshRequest.mappingName,
-          fullMeshRequest.mappingType,
-          fullMeshRequest.additionalCoordinates,
-          fullMeshRequest.annotationVersion,
-          findNeighbors = false
-        )
-        adHocMeshService.requestSurfaceViaActor(
-          SegmentSurfaceRequest(meshRequest, chunk.interiorStart, chunk.interiorEnd)
-        )
+      segmentBuckets <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
+      surface <- measureSurfaceInChunks(segmentBuckets.toIndexedSeq, config.Datastore.AdHocMesh.actorPoolSize) {
+        chunk =>
+          val meshRequest = AdHocMeshRequest(
+            Some(datasetId),
+            Some(dataSource.id),
+            segmentationLayer,
+            Cuboid(
+              VoxelPosition(chunk.topLeft.x * mag.x, chunk.topLeft.y * mag.y, chunk.topLeft.z * mag.z, mag),
+              chunk.size.x,
+              chunk.size.y,
+              chunk.size.z
+            ),
+            fullMeshRequest.segmentId.toLong,
+            dataSource.scale.factor,
+            tc,
+            fullMeshRequest.mappingName,
+            fullMeshRequest.mappingType,
+            fullMeshRequest.additionalCoordinates,
+            fullMeshRequest.annotationVersion,
+            findNeighbors = false
+          )
+          adHocMeshService.requestSurfaceViaActor(
+            SegmentSurfaceRequest(meshRequest, chunk.interiorStart, chunk.interiorEnd)
+          )
       }
-    } yield surfaces.foldLeft(SegmentSurface.empty)(_ + _)
+    } yield surface
 
   /** The surface area of the segment's mesh in the mesh file of the request. */
   def surfaceAreaFromMeshFile(
@@ -157,8 +156,7 @@ class DSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
-      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+      mag <- adHocMag(fullMeshRequest)
       segmentationLayer <- tryo(
         dataLayer.asInstanceOf[SegmentationLayer]
       ).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation

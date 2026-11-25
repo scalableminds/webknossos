@@ -13,4 +13,6 @@ mod compresso;
 mod draco;
 mod jni_util;
 mod segment_surface;
+#[cfg(test)]
+mod test_util;
 mod voxel_runs;

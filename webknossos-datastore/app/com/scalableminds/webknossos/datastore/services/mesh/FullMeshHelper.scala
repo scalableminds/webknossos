@@ -1,61 +1,16 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.{ByteBuffer, ByteOrder}
-
-/** A chunk to measure the surface of a segment in, see [[NativeSegmentSurface]]: the cuboid at topLeft (in voxels of
-  * the mag) of the given size, of which the voxels from interiorStart (inclusive) to interiorEnd (exclusive) are the
-  * interior.
-  */
-case class SurfaceChunk(topLeft: Vec3Int, size: Vec3Int, interiorStart: Vec3Int, interiorEnd: Vec3Int)
-
-object SurfaceChunk {
-
-  // Buckets per axis of a group of buckets that may be measured as one chunk, see forSegmentBuckets.
-  private val groupLength = 2
-
-  // A group is measured as one chunk if it has at least this many buckets of the segment, see forSegmentBuckets.
-  private val minSegmentBucketsPerGroup = 4
-
-  /** The chunks to measure a segment in, given the buckets (in buckets of the mag) that contain it (from the segment
-    * index). A chunk loads every bucket its cuboid touches, including the neighbors for its one-voxel border: 27 for
-    * the chunk of one bucket, 64 for the chunk of a group of 2×2×2 buckets. A group with at least
-    * minSegmentBucketsPerGroup buckets of the segment (at most 16 loads per bucket, for 1.8 times the voxels to scan)
-    * is one chunk, which saves loads in the bulky parts of a segment. Every other bucket of the segment is its own
-    * chunk, so that thin parts like axons and spines, which fill few buckets of a group, cost the same as with one
-    * chunk per bucket. The interiors of the chunks never overlap, and every voxel of the segment lies in one, as
-    * NativeSegmentSurface requires.
-    */
-  def forSegmentBuckets(segmentBuckets: Seq[Vec3Int]): Seq[SurfaceChunk] =
-    segmentBuckets.groupBy(_ / Vec3Int.full(groupLength)).toSeq.flatMap { case (group, buckets) =>
-      if (buckets.length >= minSegmentBucketsPerGroup) Seq(forBuckets(group * groupLength, groupLength))
-      else buckets.map(forBucket)
-    }
-
-  /** The chunk whose interior is the bucket at bucketPosition (in buckets of the mag). */
-  def forBucket(bucketPosition: Vec3Int): SurfaceChunk = forBuckets(bucketPosition, 1)
-
-  /** The chunk whose interior is the cube of bucketsPerAxis³ buckets starting at firstBucket (in buckets of the mag).
-    * Its cuboid extends the interior by one voxel on each side, except below 0, where the dataset has no voxels.
-    */
-  private def forBuckets(firstBucket: Vec3Int, bucketsPerAxis: Int): SurfaceChunk = {
-    val interiorTopLeft = firstBucket * DataLayer.bucketLength
-    val topLeft = Vec3Int(
-      Math.max(interiorTopLeft.x - 1, 0),
-      Math.max(interiorTopLeft.y - 1, 0),
-      Math.max(interiorTopLeft.z - 1, 0)
-    )
-    val interiorStart = interiorTopLeft - topLeft
-    val interiorEnd = interiorStart + Vec3Int.full(DataLayer.bucketLength * bucketsPerAxis)
-    SurfaceChunk(topLeft, interiorEnd + Vec3Int.ones, interiorStart, interiorEnd)
-  }
-}
+import scala.concurrent.ExecutionContext
 
 trait FullMeshHelper extends LazyLogging {
   protected lazy val dracoToStlConverter = new NativeDracoToStlConverter()
@@ -70,12 +25,10 @@ trait FullMeshHelper extends LazyLogging {
   // of the segment. Compact segments add few buckets, sparse ones up to seven per bucket, which this bounds.
   protected lazy val maxAdHocFullMeshChunksWithNeighbors: Int = 2 * maxAdHocFullMeshChunks
 
-  /** The buckets (in buckets of the mag) to mesh a segment in, given the buckets that contain it (from the segment
-    * index): those and the buckets below them in x, y and z, also diagonally. A bucket's cuboid spans the bucket plus
-    * one voxel at its high end, so it meshes the cubes whose origin lies in the bucket. A cube touching a voxel of the
-    * segment may have its origin in a bucket below, which need not contain the segment itself; without those buckets,
-    * the mesh has holes where the segment touches a bucket's lower faces. Buckets below 0 are left out, as the dataset
-    * has no voxels there.
+  /** The buckets (in buckets of the mag) to mesh a segment in: the segment's buckets and the ones below them in x, y
+    * and z, also diagonally. A bucket meshes the cubes whose origin lies in it, and a cube touching the segment can
+    * have its origin in a lower bucket without the segment. Without those, the mesh has holes at the lower bucket
+    * faces.
     */
   protected def bucketsToMesh(segmentBuckets: Seq[Vec3Int]): Seq[Vec3Int] = {
     val offsets = for {
@@ -85,6 +38,23 @@ trait FullMeshHelper extends LazyLogging {
     } yield Vec3Int(dx, dy, dz)
     segmentBuckets.flatMap(bucket => offsets.map(bucket - _)).filter(p => p.x >= 0 && p.y >= 0 && p.z >= 0).distinct
   }
+
+  // The mag of an ad-hoc meshing or surface request, which must not be for segment 0.
+  protected def adHocMag(fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext): Fox[Vec3Int] =
+    for {
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+    } yield mag
+
+  /** Measures a segment in the chunks of [[SurfaceChunk.forSegmentBuckets]] and sums them, keeping up to parallelism
+    * chunks in flight, as each one waits for its buckets to load.
+    */
+  protected def measureSurfaceInChunks(segmentBuckets: Seq[Vec3Int], parallelism: Int)(
+      measureChunk: SurfaceChunk => Fox[SegmentSurface]
+  )(using ec: ExecutionContext): Fox[SegmentSurface] =
+    for {
+      surfaces <- Fox.batchCombined(SurfaceChunk.forSegmentBuckets(segmentBuckets), parallelism)(measureChunk)
+    } yield surfaces.foldLeft(SegmentSurface.empty)(_ + _)
 
   protected def generateNextTopLeftsFromNeighbors(
       oldTopLeft: VoxelPosition,

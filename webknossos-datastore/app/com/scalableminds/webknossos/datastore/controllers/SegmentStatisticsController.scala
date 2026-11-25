@@ -558,7 +558,7 @@ class SegmentStatisticsController @Inject() (
                   request.body.mag,
                   request.body.mappingName,
                   request.body.additionalCoordinates
-                ).map(SegmentStatisticsMath.sphericity(_, voxelSize))
+                ).map(surface => SegmentStatisticsMath.sphericity(surface.area, surface.voxelCount, voxelSize))
               }
           }
         } yield Ok(Json.toJson(sphericities))

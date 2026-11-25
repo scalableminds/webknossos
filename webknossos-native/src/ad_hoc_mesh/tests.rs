@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::*;
 use crate::jni_util::NativeError;
+use crate::test_util::{Random, in_ball};
 
 const ORIGIN: [f32; 3] = [0.0, 0.0, 0.0];
 const UNIT: [f32; 3] = [1.0, 1.0, 1.0];
@@ -159,22 +160,6 @@ fn reference_mesh(
         }
     }
     (vertices, neighbors)
-}
-
-/// A small deterministic pseudo random generator (xorshift64*), so the tests need no dependency.
-struct Random(u64);
-
-impl Random {
-    fn next(&mut self) -> u64 {
-        self.0 ^= self.0 >> 12;
-        self.0 ^= self.0 << 25;
-        self.0 ^= self.0 >> 27;
-        self.0.wrapping_mul(0x2545_f491_4f6c_dd1d)
-    }
-
-    fn chance(&mut self, probability: f64) -> bool {
-        (self.next() >> 11) as f64 / (1u64 << 53) as f64 <= probability
-    }
 }
 
 fn triangles(vertices: &[f32]) -> Vec<[[u32; 3]; 3]> {
@@ -480,8 +465,8 @@ fn meshing_the_segment_buckets_and_their_lower_neighbors_gives_the_whole_mesh() 
     let mut random = Random(23);
     let balls: Vec<([f64; 3], f64)> = (0..7)
         .map(|_| {
-            let center = dimensions.map(|d| 4.0 + (random.next() % (d as u64 - 8)) as f64);
-            (center, 1.5 + (random.next() % 5) as f64)
+            let center = dimensions.map(|d| 4.0 + random.below(d - 8) as f64);
+            (center, 1.5 + random.below(5) as f64)
         })
         .collect();
     let data = volume::<u8>(dimensions, 1, 0, |x, y, z| {
@@ -493,14 +478,9 @@ fn meshing_the_segment_buckets_and_their_lower_neighbors_gives_the_whole_mesh() 
         // A cube filling exactly bucket (2, 2, 2): none of the buckets below it contains the segment.
         let in_bucket = [x, y, z].iter().all(|c| (16..24).contains(c));
         in_bucket
-            || balls.iter().any(|(center, radius)| {
-                let d = [
-                    x as f64 - center[0],
-                    y as f64 - center[1],
-                    z as f64 - center[2],
-                ];
-                d[0] * d[0] + d[1] * d[1] + d[2] * d[2] <= radius * radius
-            })
+            || balls
+                .iter()
+                .any(|&(center, radius)| in_ball([x, y, z], center, radius))
     });
     let whole = triangle_soup(&mesh_of(&data, 1, dimensions, 1));
     assert_watertight(&whole);

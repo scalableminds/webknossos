@@ -109,6 +109,20 @@ impl<'a> Cuboid<'a> {
         }
         Ok((bytes_per_element as usize, checked))
     }
+
+    /// Writes the mask of the row at `(y, z)` into `mask`, see [mask_row]. Returns whether any element matched.
+    pub(crate) fn mask_row(&self, y: usize, z: usize, segment_id: i64, mask: &mut [u8]) -> bool {
+        let [width, height, _] = self.dimensions;
+        let row_bytes = width * self.bytes_per_element;
+        let start = (y + height * z) * row_bytes;
+        let row = &self.data[start..start + row_bytes];
+        match self.bytes_per_element {
+            1 => mask_row::<u8>(row, segment_id, mask),
+            2 => mask_row::<u16>(row, segment_id, mask),
+            4 => mask_row::<u32>(row, segment_id, mask),
+            _ => mask_row::<u64>(row, segment_id, mask),
+        }
+    }
 }
 
 /// A 0/1 mask of the voxels of the segment, together with the blocks and faces that contain one.
@@ -136,7 +150,7 @@ fn blocks_containing(coordinate: usize) -> (usize, usize) {
 
 /// Writes `mask[i] = 1` if element `i` of `row` equals the low `T::SIZE` bytes of `segment_id`, else 0. Returns
 /// whether any element matched.
-pub(crate) fn mask_row<T: Element>(row: &[u8], segment_id: i64, mask: &mut [u8]) -> bool {
+fn mask_row<T: Element>(row: &[u8], segment_id: i64, mask: &mut [u8]) -> bool {
     let segment = T::read(&segment_id.to_le_bytes()[..T::SIZE]);
     let mut any = 0;
     for (out, element) in mask.iter_mut().zip(row.chunks_exact(T::SIZE)) {
@@ -176,20 +190,12 @@ impl SegmentMask {
         let voxels = &mut self.voxels;
         let occupied_blocks = &mut self.occupied_blocks;
         let mut neighbors: Neighbors = 0;
-        let row_bytes = width * cuboid.bytes_per_element;
 
         for z in 0..depth {
             for y in 0..height {
                 let row_index = y + height * z;
-                let row = &cuboid.data[row_index * row_bytes..(row_index + 1) * row_bytes];
                 let mask = &mut voxels[row_index * width..(row_index + 1) * width];
-                let any = match cuboid.bytes_per_element {
-                    1 => mask_row::<u8>(row, segment_id, mask),
-                    2 => mask_row::<u16>(row, segment_id, mask),
-                    4 => mask_row::<u32>(row, segment_id, mask),
-                    _ => mask_row::<u64>(row, segment_id, mask),
-                };
-                if !any {
+                if !cuboid.mask_row(y, z, segment_id, mask) {
                     continue;
                 }
 

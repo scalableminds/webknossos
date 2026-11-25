@@ -76,16 +76,13 @@ class AdHocMeshService(
   private val actor: ActorRef =
     actorSystem.actorOf(RoundRobinPool(adHocMeshActorPoolSize).props(Props(new AdHocMeshActor(this, timeout.duration))))
 
-  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[AdHocMesh] =
-    Fox.fromFutureBox {
-      actor.ask(request).mapTo[Box[AdHocMesh]].recover { case e: Exception =>
-        Failure(e.getMessage)
-      }
-    }
+  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[AdHocMesh] = askActor[AdHocMesh](request)
 
-  def requestSurfaceViaActor(request: SegmentSurfaceRequest): Fox[SegmentSurface] =
+  def requestSurfaceViaActor(request: SegmentSurfaceRequest): Fox[SegmentSurface] = askActor[SegmentSurface](request)
+
+  private def askActor[T](request: AdHocMeshRequest | SegmentSurfaceRequest): Fox[T] =
     Fox.fromFutureBox {
-      actor.ask(request).mapTo[Box[SegmentSurface]].recover { case e: Exception =>
+      actor.ask(request).mapTo[Box[T]].recover { case e: Exception =>
         Failure(e.getMessage)
       }
     }

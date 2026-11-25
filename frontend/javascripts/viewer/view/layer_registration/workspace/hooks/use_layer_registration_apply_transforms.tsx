@@ -63,6 +63,10 @@ function ApplyTransformsDialogContent({
   const fixedLayerTransforms = layerTransformsInDataset[fixedLayerName];
   return (
     <>
+      <p>
+        Applying transforms the secondary layers to match the primary layer "{fixedLayerName}". The
+        primary layer keeps its position.
+      </p>
       <ul>
         {Array.from(estimations, ([layerName, estimation]) => (
           <li key={layerName}>
@@ -86,8 +90,8 @@ function ApplyTransformsDialogContent({
       </Typography.Text>
       {(fixedLayerTransforms ?? []).length > 0 ? (
         <p>
-          "{fixedLayerName}" has transforms itself. The applied transforms build on them, so
-          changing the transforms of "{fixedLayerName}" later makes them outdated.
+          The primary layer "{fixedLayerName}" has transforms itself. The applied transforms build
+          on them, so changing the transforms of "{fixedLayerName}" later makes them outdated.
         </p>
       ) : null}
     </>

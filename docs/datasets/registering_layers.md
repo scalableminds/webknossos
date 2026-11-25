@@ -1,8 +1,10 @@
 # Registering Layers
 
-If the layers of a dataset don't line up, you can register them to one of them (the *fixed* layer) by placing matching landmarks.
-The layers that get registered are called *moving* layers.
-WEBKNOSSOS fits an affine transform to the landmark pairs of each moving layer, shows the result right away and can apply it to the dataset.
+If the layers of a dataset don't line up, you can register them to one of them (the *primary* layer) by placing matching landmarks.
+The layers that get registered are called *secondary* layers.
+WEBKNOSSOS fits an affine transform to the landmark pairs of each secondary layer, shows the result right away and can apply it to the dataset.
+Applying transforms the secondary layers to match the primary layer. The primary layer keeps its position.
+Tools like elastix and BigWarp call the primary layer *fixed* and the secondary layers *moving*.
 The workflow is similar to the [BigWarp](https://imagej.net/plugins/bigwarp) plugin of Fiji.
 
 ## Opening the Layer Registration Page
@@ -17,10 +19,10 @@ There are several ways to open it. The dataset needs at least two layers.
 If the layers come from different datasets, [compose](./composing.md) them into one dataset without any transforms first and register the layers afterwards.
 
 The layer registration page lists all layer registrations of the dataset, so you can continue an earlier one instead of starting over.
-Each layer registration is stored in its own *layer registration annotation*, which belongs to one fixed layer (e.g., "Layer registration to color_1").
-It holds the landmarks of all moving layers, so usually one layer registration per dataset is enough.
+Each layer registration is stored in its own *layer registration annotation*, which belongs to one primary layer (e.g., "Layer registration to color_1").
+It holds the landmarks of all secondary layers, so usually one layer registration per dataset is enough.
 
-- Click **New layer registration** and select the fixed layer to start a new one. We recommend the layer that overlaps with the most other layers. The fixed layer can't be changed later. If there already is a layer registration to that layer, the dialog offers to continue it instead.
+- Click **New layer registration** and select the primary layer to start a new one. We recommend the layer that overlaps with the most other layers. The primary layer can't be changed later. If there already is a layer registration to that layer, the dialog offers to continue it instead.
 - Click **Open** to continue one of your layer registrations.
 - Layer registrations of other users (e.g., shared with your team) can't be edited directly. Use **Copy to my account** to continue working on your own copy.
 
@@ -30,7 +32,7 @@ Other users who open a shared layer registration annotation see it in the normal
 
 ## Placing Landmarks
 
-The layer registration view shows the fixed layer on the left and one moving layer on the right.
+The layer registration view shows the primary layer on the left and one secondary layer on the right.
 A label in the top left corner of each view names its layer.
 Each side shows only its own layer at first.
 As soon as a transform is estimated (see below), both views also show the other layer. Press ++x++ to hide it again.
@@ -62,7 +64,7 @@ The landmarks are saved automatically. The top of the side panel shows whether t
 ## Estimating the Transform
 
 The transform is estimated automatically when you open a layer registration and after every new, moved or deleted landmark.
-The moving layer is then shown transformed in the left view, and the fixed layer inversely transformed in the right view.
+The secondary layer is then shown transformed in the left view, and the primary layer inversely transformed in the right view.
 Each view always shows its own layer untransformed. The transform only moves the other layer.
 
 To check the transform, switch a view between showing the other layer transformed and untransformed: press ++t++ in that view, or use the transform button in its toolbar.
@@ -71,7 +73,7 @@ To show or hide the other layer, press ++x++ in that view, or use the eye button
 
 The **View** button at the bottom of the side panel on the right has the same switches for both views.
 If both layers are color layers, you can also switch on **Green / magenta** there.
-In a view that shows both layers, the fixed layer is then shown in green and the moving layer in magenta.
+In a view that shows both layers, the primary layer is then shown in green and the secondary layer in magenta.
 Where the layers match, they add up to gray. Structures that don't match show green or magenta edges.
 This is especially helpful for grayscale layers.
 
@@ -90,7 +92,7 @@ The side panel on the right is open when the layer registration view starts. The
 From top to bottom, the panel shows:
 
 - The name of the layer registration and whether it is saved. The arrow leads back to the list of layer registrations. The **⋯** menu renames the layer registration, edits its description, and downloads the complete landmark pairs as a BigWarp CSV file or as two NML files, which you can use in the [dataset composition](./composing.md).
-- Which moving layer is registered to the fixed layer, and whether the dataset already uses its transform.
+- Which secondary layer is registered to the primary layer, and whether the dataset already uses its transform.
 - Whether a transform could be estimated, with the number of pairs and their mean error. A **Next** line suggests what to do next, e.g., which landmark still needs a partner, or which pair has a much higher error than the others. **Show it** moves both views there. Warnings explain why landmarks are not used.
 - The list of landmark pairs. For each pair, it shows the color of the pair, and how far apart its two landmarks still are after the transform, as a length in the unit of the dataset (e.g., nm). A pair whose error is much higher than that of the others is highlighted, because it was probably placed imprecisely. Use **Sort** to sort the pairs by their error, largest first. Landmarks without a partner are highlighted. Hover over a color to see the coordinates; in a wide panel, the coordinates are shown directly.
 - At the bottom: the **View** settings, the keyboard shortcuts, and **Apply to dataset…**.
@@ -99,26 +101,26 @@ Click a pair to select its landmarks in both views and move both views to them.
 
 ## Registering More Than Two Layers
 
-If the dataset has more than two layers, the moving layer at the top of the side panel is a selection.
-Its list shows, for each moving layer, how many landmark pairs it has, their mean error, and whether the dataset already uses its transform.
+If the dataset has more than two layers, the secondary layer at the top of the side panel is a selection.
+Its list shows, for each secondary layer, how many landmark pairs it has, their mean error, and whether the dataset already uses its transform.
 Choose a layer to show it in the right view. The landmarks are saved first, and both views are loaded again.
 When the transform of a layer is applied, the **Next** line points to the next layer that still needs landmarks.
-Each moving layer has its own landmarks, also in the left view, so a structure that you can't see in one moving layer doesn't get in the way of another.
+Each secondary layer has its own landmarks, also in the left view, so a structure that you can't see in one secondary layer doesn't get in the way of another.
 
-To see all layers transformed at once, show the other moving layers in the layer settings of the left view (left sidebar).
+To see all layers transformed at once, show the other secondary layers in the layer settings of the left view (left sidebar).
 They are shown with the transforms estimated from their landmarks.
 
-If a moving layer has no landmarks yet, the side panel offers to start with the landmarks that the fixed layer has for another moving layer.
+If a secondary layer has no landmarks yet, the side panel offers to start with the landmarks that the primary layer has for another secondary layer.
 After copying them, the right view asks for the matching spot of each landmark, one after the other.
-Delete the landmarks that you can't find in the new moving layer.
+Delete the landmarks that you can't find in the new secondary layer.
 
 ## Applying the Transforms to the Dataset
 
-Click **Apply to dataset…** in the side panel to store the estimated transforms as the transforms of the moving layers.
-The dialog lists what happens to each moving layer: layers with enough landmark pairs get their new transform, the others stay unchanged.
+Click **Apply to dataset…** in the side panel to store the estimated transforms as the transforms of the secondary layers.
+The dialog lists what happens to each secondary layer: layers with enough landmark pairs get their new transform, the others stay unchanged.
 Applying only changes the transforms in the dataset settings. The image data is not copied or changed, so this takes effect right away for everyone who views the dataset.
 You can change or remove the transforms later in the dataset settings, or apply new ones here.
-Applying replaces the transforms that the moving layers had before, and there is no undo button. It requires the right to edit the dataset.
-If the fixed layer already has transforms, the applied transforms build on them, and changing them later makes the applied transforms outdated.
+Applying replaces the transforms that the secondary layers had before, and there is no undo button. It requires the right to edit the dataset.
+If the primary layer already has transforms, the applied transforms build on them, and changing them later makes the applied transforms outdated.
 
 The layer registration view itself ignores the transforms that the dataset stores, so the landmarks and the preview don't depend on transforms that were applied before.

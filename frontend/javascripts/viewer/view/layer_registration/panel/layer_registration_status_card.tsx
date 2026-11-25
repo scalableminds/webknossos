@@ -76,7 +76,7 @@ function getNextStepContent(
     case "allApplied":
       return {
         text: nextStep.hasSeveralMovingLayers
-          ? "All moving layers are applied."
+          ? "All secondary layers are applied."
           : "The transform is applied to the dataset.",
       };
   }

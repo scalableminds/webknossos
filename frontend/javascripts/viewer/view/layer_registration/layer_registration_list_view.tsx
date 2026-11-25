@@ -29,6 +29,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import type { APIAnnotationInfo, APIDataset, APIUser } from "types/api_types";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { APPLY_EXPLANATION } from "./helpers/layer_registration_helpers";
 import {
   EDIT_BLOCKER_ACTION_LABELS,
   getLayerRegistrationEditBlocker,
@@ -92,12 +93,13 @@ function CreateLayerRegistrationModal({
     >
       <Space orientation="vertical" style={{ width: "100%" }}>
         <Typography.Text>
-          Select the fixed layer. It stays where it is, and the other layers of the dataset are
-          registered to it, one after the other. We recommend the layer that overlaps with the most
-          other layers. The fixed layer can't be changed later.
+          Select the primary layer. The other layers of the dataset become secondary layers and are
+          registered to it, one after the other. {APPLY_EXPLANATION} We recommend the layer that
+          overlaps with the most other layers. The primary layer can't be changed later.
         </Typography.Text>
+        <Typography.Text strong>Primary layer (fixed)</Typography.Text>
         <Select
-          placeholder="Fixed layer"
+          placeholder="Primary layer"
           style={{ width: "100%" }}
           value={fixedLayerName ?? undefined}
           onChange={(value) => setFixedLayerName(value ?? null)}
@@ -337,8 +339,8 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
     <div className="container">
       <Typography.Title level={3}>Register layers of “{dataset.name}”</Typography.Title>
       <Typography.Paragraph style={{ maxWidth: 720 }}>
-        A layer registration holds the landmarks of all layers that are registered to one fixed
-        layer. The fixed layer stays where it is, and the other layers are moved to match it.
+        A layer registration holds the landmarks of all layers that are registered to one primary
+        layer. {APPLY_EXPLANATION}
         Usually, one layer registration per dataset is enough.{" "}
         <a
           href="https://docs.webknossos.org/webknossos/datasets/registering_layers.html"

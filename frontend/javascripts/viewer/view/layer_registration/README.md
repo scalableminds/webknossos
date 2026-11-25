@@ -2,6 +2,8 @@
 
 The layer registration view registers the layers of a dataset ("moving" layers) to one of its layers (the "fixed" layer). The user places matching landmarks in the fixed layer and in a moving layer. From at least three landmark pairs, the page estimates an affine transform of the moving layer and can write it to the dataset.
 
+The UI calls the fixed layer the *primary* layer and the moving layers *secondary* layers (see `ROLE_NAMES` in `helpers/layer_registration_helpers.ts`), because "fixed" and "moving" are misleading on screen: in the right view, the fixed layer is the one that is drawn transformed. The code, the API and the database keep "fixed" and "moving".
+
 This file explains how the page and its iframes work together. The details are in the comments of the files named below.
 
 ## Why iframes

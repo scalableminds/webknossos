@@ -118,7 +118,7 @@ export function MovingLayerSelect({
                   type="secondary"
                   style={{ display: "block", fontSize: 12, padding: "4px 12px" }}
                 >
-                  Moving layers, registered to {fixedLayerName}
+                  Secondary layers, registered to {fixedLayerName}
                 </Typography.Text>
                 {menu}
                 <Divider style={{ margin: `${token.marginXXS}px 0` }} />

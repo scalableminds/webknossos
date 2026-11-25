@@ -107,7 +107,7 @@ function LayerRegistrationView() {
   );
   if (movingLayerName == null) {
     return (
-      <LayerRegistrationPageError text="The dataset has no other layer that could be registered to the fixed layer." />
+      <LayerRegistrationPageError text="The dataset has no other layer that could be registered to the primary layer." />
     );
   }
   const layerNames: LayerNames = { fixed: fixedLayerName, moving: movingLayerName };

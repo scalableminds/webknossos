@@ -1,14 +1,15 @@
-import type { ShaderModule } from "./shader_module_system";
-import { getColorForCoords } from "./texture_access.glsl";
+import { forEachLayerKind, type ShaderModule } from "./shader_module_system";
+import { getColorForCoords, getColorForCoords64 } from "./texture_access.glsl";
 
 const getBilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
-  code: `
+  code: forEachLayerKind(
+    "colorLayerKinds",
+    `
 
-    vec4 getBilinearColorFor(
+    vec4 getBilinearColorFor_KIND(
       float layerIndex,
       float d_texture_width,
-      float packingDegree,
       vec3 coordsUVW
     ) {
       coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
@@ -23,17 +24,17 @@ const getBilinearColorFor: ShaderModule = {
       vec4 samples[4];
 
       <% if (isWindows) { %>
-       samples[0] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
-       samples[1] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
-       samples[2] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
-       samples[3] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
+       samples[0] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW, supportsPrecomputedBucketAddress);
+       samples[1] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
+       samples[2] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
+       samples[3] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
       <% } else { %>
         int idx = 0;
         for (int y = 0; y <= 1; y++) {
             for (int x = 0; x <= 1; x++) {
                 vec3 offset = vec3(x, y, 0);
-                samples[idx] = getColorForCoords(
-                    layerIndex, d_texture_width, packingDegree,
+                samples[idx] = getColorForCoords_KIND(
+                    layerIndex, d_texture_width,
                     coordsUVW + offset,
                     supportsPrecomputedBucketAddress
                 );
@@ -54,14 +55,16 @@ const getBilinearColorFor: ShaderModule = {
       return mix(ab, cd, bifilteringParams.y);
     }
   `,
+  ),
 };
 const getTrilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
-  code: `
-    vec4 getTrilinearColorFor(
+  code: forEachLayerKind(
+    "colorLayerKinds",
+    `
+    vec4 getTrilinearColorFor_KIND(
       float layerIndex,
       float d_texture_width,
-      float packingDegree,
       vec3 coordsUVW
     ) {
       coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
@@ -76,22 +79,22 @@ const getTrilinearColorFor: ShaderModule = {
       vec4 samples[8];
 
       <% if (isWindows) { %>
-        samples[0] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
-        samples[1] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
-        samples[2] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
-        samples[3] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
-        samples[4] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 0, 1), supportsPrecomputedBucketAddress);
-        samples[5] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 1), supportsPrecomputedBucketAddress);
-        samples[6] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 1), supportsPrecomputedBucketAddress);
-        samples[7] = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 1), supportsPrecomputedBucketAddress);
+        samples[0] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW, supportsPrecomputedBucketAddress);
+        samples[1] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
+        samples[2] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
+        samples[3] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
+        samples[4] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(0, 0, 1), supportsPrecomputedBucketAddress);
+        samples[5] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(1, 0, 1), supportsPrecomputedBucketAddress);
+        samples[6] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(0, 1, 1), supportsPrecomputedBucketAddress);
+        samples[7] = getColorForCoords_KIND(layerIndex, d_texture_width, coordsUVW + vec3(1, 1, 1), supportsPrecomputedBucketAddress);
       <% } else { %>
         int idx = 0;
         for (int z = 0; z <= 1; z++) {
             for (int y = 0; y <= 1; y++) {
                 for (int x = 0; x <= 1; x++) {
                     vec3 offset = vec3(x, y, z);
-                    samples[idx] = getColorForCoords(
-                        layerIndex, d_texture_width, packingDegree,
+                    samples[idx] = getColorForCoords_KIND(
+                        layerIndex, d_texture_width,
                         coordsUVW + offset,
                         supportsPrecomputedBucketAddress
                     );
@@ -120,14 +123,16 @@ const getTrilinearColorFor: ShaderModule = {
       return mix(abcd, abcd2, bifilteringParams.z);
     }
   `,
+  ),
 };
 const getMaybeFilteredColor: ShaderModule = {
   requirements: [getColorForCoords, getBilinearColorFor, getTrilinearColorFor],
-  code: `
-    vec4 getMaybeFilteredColor(
+  code: forEachLayerKind(
+    "colorLayerKinds",
+    `
+    vec4 getMaybeFilteredColor_KIND(
       float layerIndex,
       float d_texture_width,
-      float packingDegree,
       vec3 worldPositionUVW,
       bool supportsPrecomputedBucketAddress
     ) {
@@ -135,39 +140,41 @@ const getMaybeFilteredColor: ShaderModule = {
       <% if (useInterpolation) { %>
         <% if (isOrthogonal) { %>
           if(isFlycamRotated){
-            color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+            color = getTrilinearColorFor_KIND(layerIndex, d_texture_width, worldPositionUVW);
           } else {
-            color = getBilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+            color = getBilinearColorFor_KIND(layerIndex, d_texture_width, worldPositionUVW);
           }
         <% } else { %>
-          color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+          color = getTrilinearColorFor_KIND(layerIndex, d_texture_width, worldPositionUVW);
         <% } %>
       <% } else { %>
-        color = getColorForCoords(layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
+        color = getColorForCoords_KIND(layerIndex, d_texture_width, worldPositionUVW, supportsPrecomputedBucketAddress);
       <% } %>
       return color;
     }
   `,
+  ),
 };
 export const getMaybeFilteredColorOrFallback: ShaderModule = {
-  requirements: [getMaybeFilteredColor],
+  requirements: [getMaybeFilteredColor, getColorForCoords64],
   code: `
     struct MaybeFilteredColor {
       vec4 color;
       bool used_fallback_color;
     };
-
-    MaybeFilteredColor getMaybeFilteredColorOrFallback(
+  ${forEachLayerKind(
+    "colorLayerKinds",
+    `
+    MaybeFilteredColor getMaybeFilteredColorOrFallback_KIND(
       float layerIndex,
       float d_texture_width,
-      float packingDegree,
       vec3 worldPositionUVW,
       vec4 fallbackColor,
       bool supportsPrecomputedBucketAddress
     ) {
       MaybeFilteredColor maybe_filtered_color;
       maybe_filtered_color.used_fallback_color = false;
-      maybe_filtered_color.color = getMaybeFilteredColor(layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
+      maybe_filtered_color.color = getMaybeFilteredColor_KIND(layerIndex, d_texture_width, worldPositionUVW, supportsPrecomputedBucketAddress);
 
       if (maybe_filtered_color.color.a < 0.0) {
         // Render gray for not-yet-existing data
@@ -176,16 +183,19 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
       }
       return maybe_filtered_color;
     }
-
-    vec4[2] getSegmentIdOrFallback(
+  `,
+  )}
+  ${forEachLayerKind(
+    "segmentationLayerKinds",
+    `
+    vec4[2] getSegmentIdOrFallback_KIND(
       float layerIndex,
       float d_texture_width,
-      float packingDegree,
       vec3 worldPositionUVW,
       vec4 fallbackColor,
       bool supportsPrecomputedBucketAddress
     ) {
-      vec4[2] color = getColorForCoords64(layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
+      vec4[2] color = getColorForCoords64_KIND(layerIndex, d_texture_width, worldPositionUVW, supportsPrecomputedBucketAddress);
 
       // Segment ids are always handled as two vec4s (8 byte). On some hardware, floating point
       // accuracies can lead to bytes that are stored incorrectly (e.g., as 0.99999 instead of 1).
@@ -202,4 +212,6 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
       return color;
     }
   `,
+  )}
+`,
 };

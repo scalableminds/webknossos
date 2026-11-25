@@ -319,16 +319,11 @@ export const setHideUnmappedIdsAction = (layerName: string, hideUnmappedIds: boo
     layerName,
   }) as const;
 
-export const initializeGpuSetupAction = (
-  bucketCapacity: number,
-  gpuFactor: number,
-  maximumLayerCountToRender: number,
-) =>
+export const initializeGpuSetupAction = (bucketCapacity: number, gpuFactor: number) =>
   ({
     type: "INITIALIZE_GPU_SETUP",
     bucketCapacity,
     gpuFactor,
-    maximumLayerCountToRender,
   }) as const;
 
 export const setKeyboardShortcutsConfigAction = (shortcuts: KeyboardShortcutsMap) =>

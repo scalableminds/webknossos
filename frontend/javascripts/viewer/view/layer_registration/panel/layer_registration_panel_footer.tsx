@@ -162,7 +162,12 @@ export function LayerRegistrationPanelFooter({
           </Tooltip>
         </Popover>
       </Flex>
-      <Tooltip title={applyDisabledReason}>
+      <Tooltip
+        title={
+          applyDisabledReason ??
+          "Writes the transforms into the dataset settings. This takes effect right away, and the image data is not changed."
+        }
+      >
         <Button
           type="primary"
           onClick={onApplyTransformToDataset}

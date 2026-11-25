@@ -20,7 +20,7 @@ import {
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import ErrorHandling from "libs/error_handling";
-import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
+import { estimateAffineMatrixFromLandmarks } from "libs/estimate_affine";
 import { formatNumber } from "libs/format_utils";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -40,6 +40,14 @@ import {
 import type { WizardComponentProps } from "./common";
 
 const FormItem = Form.Item;
+
+class AffineEstimationError extends Error {
+  constructor() {
+    super(
+      "The landmarks don't allow calculating an affine transformation, e.g. because they all lie on one line or in one tilted plane. Please spread them out in all directions.",
+    );
+  }
+}
 
 async function guardedWithErrorToast(fn: () => Promise<any>) {
   try {
@@ -107,6 +115,17 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
     const affineMeanError = { meanError: 0 };
 
+    // Landmarks that all lie in one slice (e.g., one z slice) are supported, see
+    // estimateAffineMatrixFromLandmarks.
+    function getAffineTransformation(sourcePoints: Vector3[], targetPoints: Vector3[]) {
+      const estimation = estimateAffineMatrixFromLandmarks(sourcePoints, targetPoints);
+      if (estimation == null) {
+        throw new AffineEstimationError();
+      }
+      affineMeanError.meanError = estimation.meanError;
+      return { type: "affine" as const, matrix: flatToNestedMatrix(estimation.matrix) };
+    }
+
     function withTransforms(layers: LayerLink[], sourcePoints: Vector3[], targetPoints: Vector3[]) {
       if (sourcePoints.length + targetPoints.length === 0) {
         return layers;
@@ -118,12 +137,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
               type: "thin_plate_spline" as const,
               correspondences: { source: sourcePoints, target: targetPoints },
             }
-          : {
-              type: "affine" as const,
-              matrix: flatToNestedMatrix(
-                estimateAffineMatrix4x4(sourcePoints, targetPoints, affineMeanError),
-              ),
-            },
+          : getAffineTransformation(sourcePoints, targetPoints),
       ];
       if (useThinPlateSplines) {
         checkLandmarksForThinPlateSpline(sourcePoints, targetPoints);
@@ -150,6 +164,11 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     try {
       layersWithTransforms = withTransforms(layersWithoutTransforms, sourcePoints, targetPoints);
     } catch (exception) {
+      if (exception instanceof AffineEstimationError) {
+        Toast.error(exception.message);
+        return;
+      }
+      // Thin plate splines need landmarks that span all three dimensions.
       const tryAugmentation = await new Promise((resolve) => {
         modal.confirm({
           title: "Augment landmarks?",

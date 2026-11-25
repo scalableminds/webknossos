@@ -1,4 +1,4 @@
-import { PlayCircleOutlined, SearchOutlined } from "@ant-design/icons";
+import { PlayCircleOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { unwrapOrThrow } from "admin/api/api_result";
 import {
@@ -9,7 +9,7 @@ import {
   getDataset,
   getLayerRegistrations,
 } from "admin/rest_api";
-import { Divider, Flex, Input, Select, Space, Typography } from "antd";
+import { Alert, Button, Flex, Input, Modal, Select, Space, Typography } from "antd";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import { AnnotationDetailsSidebar } from "dashboard/annotation_details_sidebar";
 import {
@@ -40,71 +40,99 @@ import {
 } from "./layer_registration_page_status_views";
 import { getLayerRegistrationViewUrl } from "./layer_registration_protocol";
 
-type FixedLayerPickerProps = {
-  dataset: APIDataset;
-  fixedLayerName: string | null;
-  onChange: (fixedLayerName: string | null) => void;
-  // The number of existing layer registration annotations for the selected fixed layer.
-  existingLayerRegistrationCount: number;
-  onCreate: (fixedLayerName: string) => Promise<void>;
-};
-
-// Selects the fixed layer of a new layer registration annotation. The selection also filters the
-// list of existing layer registration annotations, so that the user sees them before creating a new
-// one.
-function FixedLayerPicker({
+// Creates a new layer registration annotation after the user selected its fixed layer. If there
+// are layer registrations to that layer already, the modal offers to continue one of them.
+function CreateLayerRegistrationModal({
   dataset,
-  fixedLayerName,
-  onChange,
-  existingLayerRegistrationCount,
+  layerRegistrations,
+  activeUserId,
+  onOpen,
   onCreate,
-}: FixedLayerPickerProps) {
-  const hasExistingLayerRegistrations =
-    fixedLayerName != null && existingLayerRegistrationCount > 0;
+  onClose,
+}: {
+  dataset: APIDataset;
+  layerRegistrations: APIAnnotationInfo[];
+  activeUserId: string;
+  onOpen: (annotationId: string) => void;
+  onCreate: (fixedLayerName: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  // The first layer is preselected, so that a new layer registration needs only one click.
+  const [fixedLayerName, setFixedLayerName] = useState<string | null>(
+    dataset.dataSource.dataLayers[0]?.name ?? null,
+  );
+  const existingLayerRegistrations = layerRegistrations.filter(
+    (annotation) =>
+      annotation.state === "Active" &&
+      annotation.layerRegistration?.fixedLayerName === fixedLayerName,
+  );
+  const hasExistingLayerRegistrations = existingLayerRegistrations.length > 0;
 
   return (
-    <Space orientation="vertical" style={{ width: "100%", maxWidth: 480 }}>
-      <Typography.Text>
-        Pick the fixed (reference) layer, which stays put. All other layers can then be registered
-        to it, one after the other.
-      </Typography.Text>
-      <Select
-        placeholder="Fixed layer (does not move)"
-        style={{ width: "100%" }}
-        allowClear
-        value={fixedLayerName ?? undefined}
-        onChange={(value) => onChange(value ?? null)}
-        options={dataset.dataSource.dataLayers.map(({ name }) => ({ value: name, label: name }))}
-      />
-      {hasExistingLayerRegistrations ? (
-        <Typography.Text type="secondary">
-          {existingLayerRegistrationCount}{" "}
-          {pluralize("layer registration", existingLayerRegistrationCount)} to this layer already{" "}
-          {existingLayerRegistrationCount === 1 ? "exists" : "exist"} below. Consider continuing{" "}
-          {existingLayerRegistrationCount === 1 ? "it" : "one of them"} instead of starting a new
-          one.
+    <Modal
+      open
+      title="New layer registration"
+      onCancel={onClose}
+      footer={
+        <Flex justify="end" gap={8}>
+          <Button onClick={onClose}>Cancel</Button>
+          <AsyncButton
+            type={hasExistingLayerRegistrations ? "default" : "primary"}
+            disabled={fixedLayerName == null}
+            onClick={async () => {
+              if (fixedLayerName != null) {
+                await onCreate(fixedLayerName);
+              }
+            }}
+          >
+            Create and open
+          </AsyncButton>
+        </Flex>
+      }
+    >
+      <Space orientation="vertical" style={{ width: "100%" }}>
+        <Typography.Text>
+          Select the fixed layer. It stays where it is, and the other layers of the dataset are
+          registered to it, one after the other. We recommend the layer that overlaps with the most
+          other layers. The fixed layer can't be changed later.
         </Typography.Text>
-      ) : null}
-      <AsyncButton
-        type={hasExistingLayerRegistrations ? "default" : "primary"}
-        disabled={fixedLayerName == null}
-        onClick={async () => {
-          if (fixedLayerName != null) {
-            await onCreate(fixedLayerName);
-          }
-        }}
-        // A long layer name is cut off with "…" instead of making the button wider than the
-        // picker. The tooltip shows the full name.
-        style={{ maxWidth: "100%" }}
-        title={fixedLayerName ?? undefined}
-      >
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
-          {fixedLayerName != null
-            ? `Create new layer registration to ${fixedLayerName}`
-            : "Create new layer registration"}
-        </span>
-      </AsyncButton>
-    </Space>
+        <Select
+          placeholder="Fixed layer"
+          style={{ width: "100%" }}
+          value={fixedLayerName ?? undefined}
+          onChange={(value) => setFixedLayerName(value ?? null)}
+          options={dataset.dataSource.dataLayers.map(({ name }) => ({ value: name, label: name }))}
+        />
+        {hasExistingLayerRegistrations ? (
+          <Alert
+            type="info"
+            showIcon
+            title={
+              existingLayerRegistrations.length === 1
+                ? "A layer registration to this layer already exists. Usually one is enough, so consider continuing it instead."
+                : `${existingLayerRegistrations.length} layer registrations to this layer already exist. Usually one is enough, so consider continuing one of them instead.`
+            }
+            description={
+              <Flex vertical gap={4}>
+                {existingLayerRegistrations.map((annotation) => (
+                  <Flex key={annotation.id} justify="space-between" gap={12}>
+                    <Typography.Text ellipsis>
+                      {annotation.name || "Unnamed annotation"}
+                    </Typography.Text>
+                    <LayerRegistrationOpenAction
+                      annotation={annotation}
+                      dataset={dataset}
+                      activeUserId={activeUserId}
+                      onOpen={onOpen}
+                    />
+                  </Flex>
+                ))}
+              </Flex>
+            }
+          />
+        ) : null}
+      </Space>
+    </Modal>
   );
 }
 
@@ -113,7 +141,7 @@ function FixedLayerPicker({
 type ChangeAnnotation = (change: () => Promise<unknown>, successMessage: string) => Promise<void>;
 
 // Opens the layer registration, or first removes what keeps the user from working on it.
-function RowActions({
+function LayerRegistrationOpenAction({
   annotation,
   dataset,
   activeUserId,
@@ -127,12 +155,10 @@ function RowActions({
   const editBlocker = getLayerRegistrationEditBlocker(annotation, activeUserId);
   if (editBlocker == null) {
     return (
-      <div className="annotation-row-actions">
-        <Link to={getLayerRegistrationViewUrl(dataset, annotation.id)}>
-          <PlayCircleOutlined className="icon-margin-right" />
-          Open
-        </Link>
-      </div>
+      <Link to={getLayerRegistrationViewUrl(dataset, annotation.id)}>
+        <PlayCircleOutlined className="icon-margin-right" />
+        Open
+      </Link>
     );
   }
   const resolveEditBlockerAndOpen = async () => {
@@ -143,14 +169,12 @@ function RowActions({
     }
   };
   return (
-    <div className="annotation-row-actions">
-      <AsyncLink
-        onClick={resolveEditBlockerAndOpen}
-        icon={<PlayCircleOutlined className="icon-margin-right" />}
-      >
-        {EDIT_BLOCKER_ACTION_LABELS[editBlocker]}
-      </AsyncLink>
-    </div>
+    <AsyncLink
+      onClick={resolveEditBlockerAndOpen}
+      icon={<PlayCircleOutlined className="icon-margin-right" />}
+    >
+      {EDIT_BLOCKER_ACTION_LABELS[editBlocker]}
+    </AsyncLink>
   );
 }
 
@@ -266,11 +290,7 @@ function LayerRegistrationListView() {
 function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  // The first layer is preselected, so that a new layer registration needs only one click. The
-  // selection also filters the list, and clearing it shows the layer registrations to all layers.
-  const [fixedLayerName, setFixedLayerName] = useState<string | null>(
-    dataset.dataSource.dataLayers[0]?.name ?? null,
-  );
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
@@ -285,11 +305,7 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
   const layerRegistrations = layerRegistrationsQuery.data ?? [];
   const refetchLayerRegistrations = () => layerRegistrationsQuery.refetch();
 
-  const layerRegistrationsOfSelectedLayer = layerRegistrations.filter(
-    ({ layerRegistration }) =>
-      fixedLayerName == null || layerRegistration?.fixedLayerName === fixedLayerName,
-  );
-  const shownLayerRegistrations = layerRegistrationsOfSelectedLayer.filter(
+  const shownLayerRegistrations = layerRegistrations.filter(
     (annotation) => (annotation.state === "Finished") === showArchived,
   );
   const selectedAnnotation =
@@ -319,40 +335,42 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
 
   return (
     <div className="container">
-      <Flex vertical align="center">
-        <Typography.Title level={3}>Register layers of “{dataset.name}”</Typography.Title>
-        <FixedLayerPicker
-          dataset={dataset}
-          fixedLayerName={fixedLayerName}
-          onChange={setFixedLayerName}
-          existingLayerRegistrationCount={
-            layerRegistrationsOfSelectedLayer.filter((annotation) => annotation.state === "Active")
-              .length
-          }
-          onCreate={createAndOpenLayerRegistration}
-        />
-      </Flex>
-      <Divider
-        plain
-        // The default divider color is barely visible in the light theme.
-        style={{ marginBlock: 40, borderBlockStartColor: "var(--ant-color-border)" }}
-      >
-        or continue an existing layer registration
-      </Divider>
+      <Typography.Title level={3}>Register layers of “{dataset.name}”</Typography.Title>
+      <Typography.Paragraph style={{ maxWidth: 720 }}>
+        A layer registration holds the landmarks of all layers that are registered to one fixed
+        layer. The fixed layer stays where it is, and the other layers are moved to match it.
+        Usually, one layer registration per dataset is enough.{" "}
+        <a
+          href="https://docs.webknossos.org/webknossos/datasets/registering_layers.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Learn more
+        </a>
+      </Typography.Paragraph>
       <div className="dashboard-list-with-sidebar">
         <div>
           <Flex justify="space-between" align="center" gap={16} style={{ marginBottom: 8 }}>
             <Typography.Title level={4} style={{ margin: 0 }}>
-              Existing layer registrations
+              Layer registrations
             </Typography.Title>
-            <Input
-              prefix={<SearchOutlined />}
-              placeholder="Search layer registrations"
-              allowClear
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              style={{ width: 240 }}
-            />
+            <Flex gap={8}>
+              <Input
+                prefix={<SearchOutlined />}
+                placeholder="Search layer registrations"
+                allowClear
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                style={{ width: 240 }}
+              />
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                New layer registration
+              </Button>
+            </Flex>
           </Flex>
           {layerRegistrationLoadingError ? (
             <Typography.Text type="warning">
@@ -373,18 +391,18 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
               selectedAnnotationId={selectedAnnotationId}
               onSelectAnnotation={setSelectedAnnotationId}
               renderActions={(annotation) => (
-                <RowActions
-                  annotation={annotation}
-                  dataset={dataset}
-                  activeUserId={activeUser.id}
-                  onOpen={openLayerRegistration}
-                />
+                <div className="annotation-row-actions">
+                  <LayerRegistrationOpenAction
+                    annotation={annotation}
+                    dataset={dataset}
+                    activeUserId={activeUser.id}
+                    onOpen={openLayerRegistration}
+                  />
+                </div>
               )}
               emptyPlaceholder={
                 <Typography.Text type="secondary">
-                  {fixedLayerName != null
-                    ? "There are no layer registrations to the selected layer yet."
-                    : "There are no layer registrations for this dataset yet."}
+                  There are no layer registrations for this dataset yet.
                 </Typography.Text>
               }
               onClearFilters={() => {
@@ -405,6 +423,16 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
           }
         />
       </div>
+      {isCreateModalOpen ? (
+        <CreateLayerRegistrationModal
+          dataset={dataset}
+          layerRegistrations={layerRegistrations}
+          activeUserId={activeUser.id}
+          onOpen={openLayerRegistration}
+          onCreate={createAndOpenLayerRegistration}
+          onClose={() => setIsCreateModalOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

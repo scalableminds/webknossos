@@ -46,7 +46,7 @@ Each iframe reads its role from the params of its URL (see `layer_registration_p
 The role is used in two ways:
 
 - `viewer/viewer_capabilities.ts` (`getViewerCapabilities()`) says what the viewer offers in each role: e.g. the reduced UI of the landmark iframes, whether settings are persisted, and whether there is a scene. Generic viewer code asks for a capability, not for the role.
-- The wiring of the feature checks the role directly: e.g. `controller.tsx` (applies the settings of a landmark iframe, reports the save state of the annotation iframe), the navbar and toolbar of the landmark iframes, and the click handler that names new landmarks.
+- The wiring of the feature checks the role directly: e.g. `controller.tsx` (applies the settings of a landmark iframe, reports the save state of the annotation iframe), the navbar, toolbar and viewport layer label of the landmark iframes, and the click handler that names new landmarks.
 
 Sagas never check whether there is a scene. A saga that needs the scene waits with `ensureSceneControllerInitialized`, which never returns in the annotation iframe.
 

@@ -22,7 +22,7 @@ function OtherLayerToggleButton({
       active={isOtherLayerVisible}
       onClick={() => sendCommandToLayerRegistrationPage("toggleOtherLayer")}
       style={NARROW_BUTTON_STYLE}
-      title={`${isOtherLayerVisible ? "Hide" : "Show"} ${otherLayerName} in this view (X)`}
+      title={`${isOtherLayerVisible ? "Hide" : "Show"} the other layer (${otherLayerName}) in this view (X)`}
       icon={isOtherLayerVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
     />
   );

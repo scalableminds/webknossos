@@ -4,6 +4,7 @@ import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { useMemo, useState } from "react";
 import type { APIAnnotation, APIDataset } from "types/api_types";
+import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import {
   getTransformPointUnscaledFn,
   invertTransform,
@@ -369,6 +370,7 @@ export function LayerRegistrationWorkspace({
           <LayerRegistrationLandmarkPanel
             layerRegistrationListUrl={getLayerRegistrationListUrl(dataset)}
             voxelSize={dataset.dataSource.scale}
+            is2d={is2dDataset(dataset)}
             layerNames={layerNames}
             estimate={activePairEstimate}
             annotationName={annotationName}

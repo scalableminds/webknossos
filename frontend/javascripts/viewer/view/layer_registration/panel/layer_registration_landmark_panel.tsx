@@ -31,6 +31,8 @@ type Props = {
   layerNames: LayerNames;
   // The voxel size of the dataset, to show the errors of the pairs as lengths.
   voxelSize: VoxelSize;
+  // Whether the dataset has only one z slice.
+  is2d: boolean;
   // The landmark pairs and the transform estimation of the active moving layer.
   estimate: LayerPairTransformEstimate;
   viewSettings: ViewSettings;
@@ -78,6 +80,7 @@ export function LayerRegistrationLandmarkPanel({
   onChangeAnnotationDescription,
   layerNames,
   voxelSize,
+  is2d,
   estimate,
   viewSettings,
   canApplyTransformToDataset,
@@ -135,6 +138,7 @@ export function LayerRegistrationLandmarkPanel({
         estimation={estimation}
         meanResidual={meanResidual}
         voxelSize={voxelSize}
+        is2d={is2d}
         nextStep={nextStep}
         onSelectPair={selectPair}
         onSelectMovingLayer={onSelectMovingLayer}

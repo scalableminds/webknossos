@@ -36,7 +36,7 @@ type SortKey = "pair" | "error";
 const TABLE_HEADER_HEIGHT = 39;
 // From this table width on, the landmark columns show the coordinates next to the colors.
 const WIDE_TABLE_MIN_WIDTH = 456;
-// Below this table width, the z column and the error bars are left out.
+// Below this table width, the error bars are left out.
 const NARROW_TABLE_MAX_WIDTH = 300;
 // Used to estimate the width that the pair column needs: the horizontal padding of a cell of
 // antd's small table, and the width of a character in the table's font.
@@ -64,15 +64,13 @@ export function LandmarkColorDot({ color, hasGap = true }: { color: Vector3; has
 }
 
 type ColumnLayout = {
-  // Wide tables show the coordinates of the landmarks, narrow ones leave out the z column and
-  // the error bars.
+  // Wide tables show the coordinates of the landmarks, narrow ones leave out the error bars.
   isWide: boolean;
   isNarrow: boolean;
-  showZ: boolean;
   // Whether the pair column shows "Landmark 12" or only the number. A cut-off name would hide
   // the number.
   showFullLabel: boolean;
-  widths: Record<"pair" | "landmark" | "z" | "residual" | "delete", number>;
+  widths: Record<"pair" | "landmark" | "residual" | "delete", number>;
 };
 
 // The virtualized table needs fixed column widths. The landmark columns are wide enough for
@@ -80,10 +78,8 @@ type ColumnLayout = {
 function getColumnLayout(tableWidth: number, maxPairId: number): ColumnLayout {
   const isWide = tableWidth >= WIDE_TABLE_MIN_WIDTH;
   const isNarrow = tableWidth < NARROW_TABLE_MAX_WIDTH;
-  const showZ = !isWide && !isNarrow;
   const fullLabelWidth = getLabelWidth(getLandmarkTreeName(maxPairId));
   const widths = {
-    z: 52,
     residual: isNarrow ? 64 : isWide ? 116 : 108,
     delete: isNarrow ? 32 : 36,
   };
@@ -96,20 +92,17 @@ function getColumnLayout(tableWidth: number, maxPairId: number): ColumnLayout {
     return {
       isWide,
       isNarrow,
-      showZ,
       showFullLabel: true,
       widths: { ...widths, pair: pairWidth, landmark: landmarkWidth },
     };
   }
   // Without coordinates, the pair column takes the width that the other columns leave free.
   const landmarkWidth = isNarrow ? 36 : 52;
-  const otherColumnsWidth =
-    2 * landmarkWidth + (showZ ? widths.z : 0) + widths.residual + widths.delete;
+  const otherColumnsWidth = 2 * landmarkWidth + widths.residual + widths.delete;
   const pairWidth = Math.max(getLabelWidth(String(maxPairId)), 36, tableWidth - otherColumnsWidth);
   return {
     isWide,
     isNarrow,
-    showZ,
     showFullLabel: pairWidth >= fullLabelWidth,
     widths: { ...widths, pair: pairWidth, landmark: landmarkWidth },
   };
@@ -129,12 +122,22 @@ function sortPairs(pairs: LandmarkPair[], sortKey: SortKey): LandmarkPair[] {
   });
 }
 
-function MissingLandmarkMarker({ side }: { side: Side }) {
+// An empty dashed circle in place of the color dot. Only wide tables have room for the word
+// "missing" next to it.
+function MissingLandmarkMarker({ side, showLabel }: { side: Side; showLabel: boolean }) {
   return (
     <Tooltip title={`No landmark in the ${VIEW_NAMES[side]} view yet.`}>
-      <Typography.Text type="warning" style={{ fontSize: 12 }}>
-        missing
-      </Typography.Text>
+      <span style={{ whiteSpace: "nowrap" }}>
+        <span
+          className="landmark-color is-missing"
+          style={{ marginRight: showLabel ? undefined : 0 }}
+        />
+        {showLabel ? (
+          <Typography.Text type="warning" style={{ fontSize: 12 }}>
+            missing
+          </Typography.Text>
+        ) : null}
+      </span>
     </Tooltip>
   );
 }
@@ -192,7 +195,7 @@ function ResidualCell({
 
 function getPairColumn({ widths, showFullLabel }: ColumnLayout): ColumnType<LandmarkPair> {
   return {
-    title: showFullLabel ? "Pair" : "#",
+    title: showFullLabel ? "Pair" : <Tooltip title="Pair number">#</Tooltip>,
     key: "pair",
     width: widths.pair,
     render: (_value, { pairId }) =>
@@ -226,7 +229,7 @@ function getLandmarkColumn(
     render: (_value, pair) => {
       const landmark = pair.landmarks[side];
       if (landmark == null) {
-        return <MissingLandmarkMarker side={side} />;
+        return <MissingLandmarkMarker side={side} showLabel={isWide} />;
       }
       const coordinates = landmark.position.join(", ");
       return isWide ? (
@@ -236,23 +239,12 @@ function getLandmarkColumn(
         </span>
       ) : (
         <Tooltip title={`Position: ${coordinates}`}>
-          <LandmarkColorDot color={landmark.color} hasGap={false} />
+          <span>
+            <LandmarkColorDot color={landmark.color} hasGap={false} />
+          </span>
         </Tooltip>
       );
     },
-  };
-}
-
-function getZColumn({ widths }: ColumnLayout): ColumnType<LandmarkPair> {
-  return {
-    title: "z",
-    key: "z",
-    width: widths.z,
-    render: (_value, pair) => (
-      <Typography.Text type="secondary" style={SMALL_NUMBER_STYLE}>
-        {(pair.landmarks.fixed ?? pair.landmarks.moving)?.position[2]}
-      </Typography.Text>
-    ),
   };
 }
 
@@ -332,7 +324,6 @@ function getPairColumns({
   return [
     getPairColumn(layout),
     ...SIDES.map((side) => getLandmarkColumn(side, layout, layerNames)),
-    ...(layout.showZ ? [getZColumn(layout)] : []),
     getResidualColumn(layout, voxelSize, meanResidual, maxResidual),
     getDeleteColumn(layout, onDeletePair),
   ];
@@ -373,8 +364,11 @@ function PairSectionHeader({
             value={sortKey}
             onChange={onSortKeyChange}
             options={[
-              { value: "pair", label: "#" },
-              { value: "error", label: "Error" },
+              { value: "pair", label: <Tooltip title="Sort by pair number">#</Tooltip> },
+              {
+                value: "error",
+                label: <Tooltip title="Sort by error, largest first">Error</Tooltip>,
+              },
             ]}
           />
         </Flex>

@@ -19,6 +19,7 @@ import {
 } from "viewer/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "viewer/model/actions/view_mode_actions";
 import Store from "viewer/store";
+import { LandmarkIframeLayerLabel } from "viewer/view/layer_registration/landmark_iframe_layer_label";
 import makeRectRelativeToCanvas from "viewer/view/layouting/layout_canvas_adapter";
 import Scalebar from "viewer/view/scalebar";
 import ViewportStatusIndicator from "viewer/view/viewport_status_indicator";
@@ -202,6 +203,7 @@ function InputCatcher({
           }}
         >
           <ViewportStatusIndicator />
+          <LandmarkIframeLayerLabel viewportID={viewportID} />
           {displayScalebars && viewportID !== FlightViewport ? (
             <Scalebar viewportID={viewportID} />
           ) : null}

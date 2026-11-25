@@ -11,17 +11,16 @@ There are several ways to open it. The dataset needs at least two layers.
 
 - In the **Datasets** tab of your dashboard, open the context menu of a dataset (right-click or "…") and choose **Register Layers…**.
 - While viewing the dataset, open the "…" menu of a layer in the **Layers** tab of the left sidebar and choose **Register Layers…**. The layer registration page opens in a new tab.
-- Use the **Register Layers…** button next to the **Transformation Mode** field in the **Data Source** tab of the [dataset settings](./settings.md). The layer registration page opens in a new tab.
+- Use the **Register Layers** button next to the **Transformation Mode** field in the **Data Source** tab of the [dataset settings](./settings.md). The layer registration page opens in a new tab.
 - After uploading, adding or composing a dataset with at least two layers, the confirmation dialog links to the layer registration page.
 
 If the layers come from different datasets, [compose](./composing.md) them into one dataset without any transforms first and register the layers afterwards.
 
-The layer registration page lists the existing layer registrations of the dataset, so you can continue an earlier one instead of starting over.
+The layer registration page lists all layer registrations of the dataset, so you can continue an earlier one instead of starting over.
 Each layer registration is stored in its own *layer registration annotation*, which belongs to one fixed layer (e.g., "Layer registration to color_1").
-It holds the landmarks of all moving layers.
+It holds the landmarks of all moving layers, so usually one layer registration per dataset is enough.
 
-- Select a fixed layer to see only the layer registrations to that layer. The first layer of the dataset is selected when the page opens. Clear the selection to see the layer registrations to all layers.
-- Click **Create new layer registration** to start a new one for the selected layer.
+- Click **New layer registration** and select the fixed layer to start a new one. We recommend the layer that overlaps with the most other layers. The fixed layer can't be changed later. If there already is a layer registration to that layer, the dialog offers to continue it instead.
 - Click **Open** to continue one of your layer registrations.
 - Layer registrations of other users (e.g., shared with your team) can't be edited directly. Use **Copy to my account** to continue working on your own copy.
 
@@ -32,6 +31,7 @@ Other users who open a shared layer registration annotation see it in the normal
 ## Placing Landmarks
 
 The layer registration view shows the fixed layer on the left and one moving layer on the right.
+A label in the top left corner of each view names its layer.
 Each side shows only its own layer at first.
 As soon as a transform is estimated (see below), both views also show the other layer. Press ++x++ to hide it again.
 
@@ -76,7 +76,10 @@ Where the layers match, they add up to gray. Structures that don't match show gr
 This is especially helpful for grayscale layers.
 
 A transform needs at least four landmark pairs that don't all lie in one plane.
-If all landmarks lie in a single z slice, three pairs are enough, as long as they do not lie on one line. WEBKNOSSOS then assumes that the two layers are only shifted against each other along z.  
+If all landmarks of a view lie in a single slice (e.g., a single z slice, because you placed them all in the XY viewport), three pairs are enough, as long as they do not lie on one line.
+The transform is then fitted within that slice. Along the axis of the slice, it scales nothing: if the landmarks of both views lie in one slice, it only shifts the layer by the distance between the two slices, or not at all if they are the same.
+The side panel shows a note about this, except for 2D datasets, where all landmarks always lie in one z slice.
+To also fit that axis, add landmarks in other slices.
 
 More shortcuts, which work in the view under the mouse pointer (the keyboard button at the bottom of the side panel lists them, too):
 
@@ -113,7 +116,9 @@ Delete the landmarks that you can't find in the new moving layer.
 
 Click **Apply to dataset…** in the side panel to store the estimated transforms as the transforms of the moving layers.
 The dialog lists what happens to each moving layer: layers with enough landmark pairs get their new transform, the others stay unchanged.
-This replaces the transforms that the moving layers had before. It requires the right to edit the dataset.
+Applying only changes the transforms in the dataset settings. The image data is not copied or changed, so this takes effect right away for everyone who views the dataset.
+You can change or remove the transforms later in the dataset settings, or apply new ones here.
+Applying replaces the transforms that the moving layers had before, and there is no undo button. It requires the right to edit the dataset.
 If the fixed layer already has transforms, the applied transforms build on them, and changing them later makes the applied transforms outdated.
 
 The layer registration view itself ignores the transforms that the dataset stores, so the landmarks and the preview don't depend on transforms that were applied before.

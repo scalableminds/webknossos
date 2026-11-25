@@ -117,14 +117,14 @@ export function useSegmentStatistics({
   const isSegmentIndexAvailable =
     useWkSelector((state) => getMaybeSegmentIndexAvailability(state.dataset, layer?.name)) === true;
   // The datastore measures ad-hoc surfaces only with agglomerate mappings, it cannot apply a JSON
-  // mapping.
-  const isJsonMappingActive = useWkSelector(
+  // mapping. Without a mapping, the mapping info also says JSON, so only a requested mapping counts.
+  const mappingType = useWkSelector(
     (state) =>
-      getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layer?.name).mappingType ===
-      "JSON",
+      getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layer?.name).mappingType,
   );
+  const isJsonMappingRequested = mappingName != null && mappingType === "JSON";
   const canMeasureAdHocSurface =
-    isSegmentIndexAvailable && !(isJsonMappingActive && layer?.tracingId == null);
+    isSegmentIndexAvailable && !(isJsonMappingRequested && layer?.tracingId == null);
 
   const { fileInfo, isLoading: isLoadingFileInfo } = useSegmentStatisticsFile(layer);
   const availableFileMetrics = useMemo(

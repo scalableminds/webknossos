@@ -180,6 +180,11 @@ export const BorderTabs: Record<string, BorderTabType> = {
     name: "BBoxes",
     description: "Bounding Boxes - Add and organize bounding boxes",
   },
+  BookmarksTab: {
+    id: "BookmarksTab",
+    name: "Bookmarks",
+    description: "Bookmarks - Save views of the annotation and jump back to them",
+  },
   LayerSettingsTab: {
     id: "LayerSettingsTab",
     name: "Layers",
@@ -559,3 +564,5 @@ export enum PerformanceMarkEnum {
   TRACING_VIEW_LOAD = "tracing_view_load_start",
   SHADER_COMPILE = "shader_compile_start",
 }
+
+export const BOOKMARK_THUMBNAIL_MIME_TYPE = "image/jpeg";

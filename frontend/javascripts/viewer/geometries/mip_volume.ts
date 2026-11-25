@@ -2,6 +2,7 @@ import Toast from "libs/toast";
 import {
   BackSide,
   BoxGeometry,
+  Color,
   Data3DTexture,
   FloatType,
   GLSL3,
@@ -118,6 +119,7 @@ uniform vec3 uLayerColors[MAX_LAYERS];
 uniform float uLayerMins[MAX_LAYERS];
 uniform float uLayerMaxs[MAX_LAYERS];
 uniform float uLayerIsInverted[MAX_LAYERS];
+uniform float uLayerGammas[MAX_LAYERS];
 uniform float uLayerAlphas[MAX_LAYERS];
 uniform mat4 uInvModelMatrix;
 uniform mat4 uModelViewMatrix;
@@ -148,6 +150,19 @@ float sampleVolume(int j, vec3 uvw) {
   if (j == 1) return texture(uVolumes[1], uvw).r;
   if (j == 2) return texture(uVolumes[2], uvw).r;
   return texture(uVolumes[3], uvw).r;
+}
+
+// Maps a raw sample to its displayed intensity in [0, 1], mirroring the XY plane shader:
+// intensity window -> gamma correction -> inversion. Must be kept in sync with
+// computeDisplayValue (CPU picking) below.
+float displayValue(int j, float raw) {
+  float layerMin = uLayerMins[j];
+  float layerMax = uLayerMaxs[j];
+  // The XY shader falls back to black when min == max (also for inverted layers).
+  if (layerMax == layerMin) return 0.0;
+  float scaled = (clamp(raw, layerMin, layerMax) - layerMin) / (layerMax - layerMin);
+  scaled = pow(scaled, 1.0 / uLayerGammas[j]);
+  return abs(scaled - uLayerIsInverted[j]);
 }
 `;
 
@@ -187,8 +202,16 @@ void main() {
   float tEnd   = t.y;
   float stepSize = (tEnd - tStart) / float(uNumSteps);
 
-  float maxVals[MAX_LAYERS];
-  for (int j = 0; j < MAX_LAYERS; j++) maxVals[j] = 0.0;
+  // displayValue is monotonic in the raw value: non-decreasing for normal layers and
+  // non-increasing for inverted ones. Therefore, the maximum displayed intensity along a ray
+  // belongs to the maximum raw value (normal) or the minimum raw value (inverted). Track
+  // max(sign * raw) with sign = -1 for inverted layers to avoid evaluating displayValue per sample.
+  float projectionSigns[MAX_LAYERS];
+  float extremeVals[MAX_LAYERS];
+  for (int j = 0; j < MAX_LAYERS; j++) {
+    projectionSigns[j] = 1.0 - 2.0 * uLayerIsInverted[j];
+    extremeVals[j] = -1e30;
+  }
   ${
     writeDepth
       ? `
@@ -212,8 +235,8 @@ void main() {
     }
     for (int j = 0; j < uNumLayers; j++) {
       float val = sampleVolume(j, uvw);
-      maxVals[j] = max(maxVals[j], val);
-      ${writeDepth ? "combined += val * uLayerAlphas[j];" : ""}
+      extremeVals[j] = max(extremeVals[j], projectionSigns[j] * val);
+      ${writeDepth ? "combined += displayValue(j, val) * uLayerAlphas[j];" : ""}
     }
     ${
       writeDepth
@@ -224,21 +247,20 @@ void main() {
     }
   }
 
-  // Apply intensity window and layer color; blend additively across layers.
+  // Apply intensity window, gamma, inversion and layer color; blend additively across layers.
   vec3 color = vec3(0.0);
   float alpha = 0.0;
   for (int j = 0; j < uNumLayers; j++) {
-    float layerMin = uLayerMins[j];
-    float layerMax = uLayerMaxs[j];
-    float scaled = clamp(maxVals[j], layerMin, layerMax);
-    scaled = (layerMax == layerMin) ? 0.0 : (scaled - layerMin) / (layerMax - layerMin);
-    // Inversion: abs(val - isInverted). When isInverted=1.0 → 1-val, when 0.0 → val.
-    scaled = abs(scaled - uLayerIsInverted[j]);
-    color += uLayerColors[j] * scaled * uLayerAlphas[j];
-    alpha = max(alpha, scaled * uLayerAlphas[j]);
+    float value = displayValue(j, projectionSigns[j] * extremeVals[j]);
+    color += uLayerColors[j] * value * uLayerAlphas[j];
+    alpha = max(alpha, value * uLayerAlphas[j]);
   }
 
   if (alpha < 0.001) discard;
+  // color is already weighted by intensity and alpha. Over a black background, it is blended
+  // as premultiplied (see onBeforeRender), which yields exactly the additive color of the XY
+  // viewports. Over a non-black background, straight-alpha blending is used instead so that
+  // the projection darkens the background and stays visible (e.g. a white layer on white).
   fragColor = vec4(color, alpha);
   ${
     writeDepth
@@ -266,9 +288,19 @@ type LayerState = {
   displayMin: number;
   displayMax: number;
   isInverted: number;
+  gamma: number;
   alpha: number;
   color: ThreeVector3;
 };
+
+// CPU counterpart of the GLSL displayValue function. Must be kept in sync.
+function computeDisplayValue(layer: LayerState, raw: number): number {
+  const { displayMin, displayMax } = layer;
+  if (displayMax === displayMin) return 0;
+  const clamped = Math.min(Math.max(raw, displayMin), displayMax);
+  const scaled = ((clamped - displayMin) / (displayMax - displayMin)) ** (1 / layer.gamma);
+  return Math.abs(scaled - layer.isInverted);
+}
 
 export class MipVolume {
   mesh: Mesh;
@@ -300,6 +332,7 @@ export class MipVolume {
         uLayerMins: { value: zeros.slice() },
         uLayerMaxs: { value: ones.slice() },
         uLayerIsInverted: { value: zeros.slice() },
+        uLayerGammas: { value: ones.slice() },
         uLayerAlphas: { value: ones.slice() },
         uInvModelMatrix: { value: new Matrix4() },
         uModelViewMatrix: { value: new Matrix4() },
@@ -315,6 +348,8 @@ export class MipVolume {
       glslVersion: GLSL3,
       side: BackSide,
       transparent: true,
+      // Toggled per render depending on the background color (see onBeforeRender).
+      premultipliedAlpha: true,
       depthTest: true,
       depthWrite: false,
     });
@@ -322,7 +357,13 @@ export class MipVolume {
     const geometry = new BoxGeometry(dx, dy, dz);
     this.mesh = new Mesh(geometry, this.material);
     this.mesh.position.copy(meshCenter);
-    this.mesh.onBeforeRender = (_renderer, _scene, camera) => {
+    const clearColor = new Color();
+    this.mesh.onBeforeRender = (renderer, _scene, camera) => {
+      // Premultiplied (additive) blending only matches the XY viewports over a black background
+      // (dark theme). Over a light background it would render a white layer as plain white,
+      // making the projection invisible, so fall back to straight-alpha blending there.
+      renderer.getClearColor(clearColor);
+      this.material.premultipliedAlpha = clearColor.getHex() === 0x000000;
       this.material.uniforms.uInvModelMatrix.value.copy(this.mesh.matrixWorld).invert();
       // Store the world direction into uCameraForward
       camera.getWorldDirection(this.material.uniforms.uCameraForward.value);
@@ -345,11 +386,12 @@ export class MipVolume {
     const index = this.layers.findIndex((l) => l.layerName === layerName);
     if (index === -1) return;
     const layer = this.layers[index];
-    const { alpha, intensityRange, isDisabled, isInverted, color } = settings;
+    const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue, color } = settings;
     const [rawMin, rawMax] = intensityRange ?? [0, layer.normalizationFactor];
     layer.displayMin = rawMin / layer.normalizationFactor;
     layer.displayMax = rawMax / layer.normalizationFactor;
     layer.isInverted = isInverted ? 1.0 : 0.0;
+    layer.gamma = gammaCorrectionValue;
     layer.alpha = isDisabled ? 0 : alpha / 100;
     if (color != null) {
       layer.color.set(color[0] / 255, color[1] / 255, color[2] / 255);
@@ -357,8 +399,15 @@ export class MipVolume {
     (this.material.uniforms.uLayerMins.value as number[])[index] = layer.displayMin;
     (this.material.uniforms.uLayerMaxs.value as number[])[index] = layer.displayMax;
     (this.material.uniforms.uLayerIsInverted.value as number[])[index] = layer.isInverted;
-    (this.material.uniforms.uLayerAlphas.value as number[])[index] = layer.alpha;
+    (this.material.uniforms.uLayerGammas.value as number[])[index] = layer.gamma;
+    (this.material.uniforms.uLayerAlphas.value as number[])[index] = this.getEffectiveAlpha(layer);
     (this.material.uniforms.uLayerColors.value as ThreeVector3[])[index].copy(layer.color);
+  }
+
+  // A layer whose data has not been downloaded yet only has the 1x1x1 zero placeholder texture.
+  // Hide it so that inverted layers don't render as a solid white box while loading.
+  private getEffectiveAlpha(layer: LayerState): number {
+    return layer.texture === this.placeholderTexture ? 0 : layer.alpha;
   }
 
   private rebuildUniforms(): void {
@@ -367,6 +416,7 @@ export class MipVolume {
     const mins = this.material.uniforms.uLayerMins.value as number[];
     const maxs = this.material.uniforms.uLayerMaxs.value as number[];
     const inverted = this.material.uniforms.uLayerIsInverted.value as number[];
+    const gammas = this.material.uniforms.uLayerGammas.value as number[];
     const alphas = this.material.uniforms.uLayerAlphas.value as number[];
 
     for (let i = 0; i < MAX_LAYERS; i++) {
@@ -377,7 +427,8 @@ export class MipVolume {
         mins[i] = l.displayMin;
         maxs[i] = l.displayMax;
         inverted[i] = l.isInverted;
-        alphas[i] = l.alpha;
+        gammas[i] = l.gamma;
+        alphas[i] = this.getEffectiveAlpha(l);
       } else {
         textures[i] = this.placeholderTexture;
       }
@@ -441,6 +492,7 @@ export class MipVolume {
       displayMin: 0,
       displayMax: 1,
       isInverted: 0,
+      gamma: 1,
       alpha: 1,
       color: new ThreeVector3(1, 1, 1),
     };
@@ -501,6 +553,8 @@ export class MipVolume {
     }
     layerState.texture = realTexture;
     (this.material.uniforms.uVolumes.value as Data3DTexture[])[index] = realTexture;
+    (this.material.uniforms.uLayerAlphas.value as number[])[index] =
+      this.getEffectiveAlpha(layerState);
   }
 
   removeLayer(layerName: string): void {
@@ -516,7 +570,8 @@ export class MipVolume {
   }
 
   // CPU ray march matching the GLSL fragment shader logic.
-  // Returns the world-space position of the max-intensity voxel across all layers, or null.
+  // Returns the world-space position of the voxel with the highest combined displayed intensity
+  // (the same criterion the shader uses for gl_FragDepth), or null.
   findMaxIntensityPosition(ray: Ray): ThreeVector3 | null {
     if (this.layers.length === 0) return null;
 
@@ -557,30 +612,38 @@ export class MipVolume {
     let maxVal = 0;
     let maxT = tStart;
 
-    // Gather texture images for all layers
-    const images = this.layers.map((l) => {
-      const img = l.texture.image as {
-        data: ArrayLike<number> | null;
-        width: number;
-        height: number;
-        depth: number;
-      };
-      return img;
-    });
+    // Gather texture images of all loaded and visible layers
+    const sources = this.layers
+      .filter((l) => this.getEffectiveAlpha(l) > 0)
+      .map((layer) => {
+        const image = layer.texture.image as {
+          data: ArrayLike<number> | null;
+          width: number;
+          height: number;
+          depth: number;
+        };
+        // UnsignedByteType textures are sampled as normalized [0, 1] values on the GPU,
+        // but their CPU-side data still holds raw bytes.
+        const sampleScale = layer.texture.type === UnsignedByteType ? 1 / 255 : 1;
+        return { layer, image, sampleScale };
+      });
 
     for (let i = 0; i < numSteps; i++) {
       const t = tStart + (i + 0.5) * stepSize;
       const p = normOrigin.clone().addScaledVector(normDir, t);
-      for (const { data, width, height, depth } of images) {
+      let combined = 0;
+      for (const { layer, image, sampleScale } of sources) {
+        const { data, width, height, depth } = image;
         if (data == null || width === 0) continue;
         const xi = Math.max(0, Math.min(Math.floor((p.x + 0.5) * width), width - 1));
         const yi = Math.max(0, Math.min(Math.floor((p.y + 0.5) * height), height - 1));
         const zi = Math.max(0, Math.min(Math.floor((p.z + 0.5) * depth), depth - 1));
-        const val = data[xi + yi * width + zi * width * height];
-        if (val > maxVal) {
-          maxVal = val;
-          maxT = t;
-        }
+        const raw = data[xi + yi * width + zi * width * height] * sampleScale;
+        combined += computeDisplayValue(layer, raw) * layer.alpha;
+      }
+      if (combined > maxVal) {
+        maxVal = combined;
+        maxT = t;
       }
     }
 

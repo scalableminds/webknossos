@@ -1,17 +1,26 @@
 import { Button } from "antd";
 import Toast from "libs/toast";
+import { getUid } from "libs/uid_generator";
 import { addToNestedMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
-import type { APIUpdateActionBatch } from "types/api_types";
+import type { APIUpdateActionBatch, APIViewport } from "types/api_types";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   getAllLoadedMeshes,
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
+  addBookmarkAction,
+  type BookmarkThumbnail,
+  deleteBookmarkAction,
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
+  setBookmarkDescriptionAction,
+  setBookmarkNameAction,
+  setBookmarkStateAction,
+  setBookmarkThumbnailAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
+  updateBookmarkMetadataAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -59,6 +68,28 @@ function* lockAnnotationAndShowReloadToast(toastKey: string, message: string) {
       </Button>
     ),
   });
+}
+
+// Stored update actions don't carry thumbnail data, only their thumbnailSavedAtVersion (unset if the
+// bookmark has no thumbnails). Unsaved actions of the user still carry the local thumbnails
+// (or reference saved ones).
+function getIncorporatedBookmarkThumbnail(value: {
+  smallThumbnailDataBase64?: string | null;
+  largeThumbnailDataBase64?: string | null;
+  thumbnailSavedAtVersion?: number | null;
+  thumbnailViewport?: APIViewport | null;
+}): BookmarkThumbnail {
+  const largeThumbnailDataBase64 = value.largeThumbnailDataBase64 ?? null;
+  const thumbnailSavedAtVersion = value.thumbnailSavedAtVersion ?? null;
+  return {
+    smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
+    largeThumbnailDataBase64,
+    thumbnailSavedAtVersion,
+    thumbnailViewport: value.thumbnailViewport ?? null,
+    // The diffing baseline is reset after incorporating, so a new id does not cause a change.
+    thumbnailId:
+      largeThumbnailDataBase64 != null || thumbnailSavedAtVersion != null ? getUid() : null,
+  };
 }
 
 function failed(failure: RebasingFailure): ApplyingUpdatesResult {
@@ -368,6 +399,58 @@ export function* tryToIncorporateActions(
         }
         case "updateMetadataOfAnnotation": {
           yield* put(setAnnotationDescriptionAction(action.value.description));
+          break;
+        }
+        case "addBookmark": {
+          // Server-side update actions also carry metadata such as actionTimestamp.
+          const { id, created, name, description, state, metadata } = action.value;
+          yield* put(
+            addBookmarkAction({
+              id,
+              created,
+              name: name ?? null,
+              description: description ?? null,
+              state,
+              // Unsaved bookmarks of the user get their version once they are saved.
+              createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
+              // Optional in the backend, e.g. for actions sent by other clients.
+              metadata: metadata ?? [],
+              ...getIncorporatedBookmarkThumbnail(action.value),
+            }),
+          );
+          break;
+        }
+        case "updateBookmark": {
+          // Properties that are not part of the action were not changed.
+          const { id, name, description } = action.value;
+          if (name !== undefined) {
+            yield* put(setBookmarkNameAction(id, name));
+          }
+          if (description !== undefined) {
+            yield* put(setBookmarkDescriptionAction(id, description));
+          }
+          break;
+        }
+        case "updateMetadataOfBookmark": {
+          const { id, upsertEntriesByKey, removeEntriesByKey } = action.value;
+          yield* put(updateBookmarkMetadataAction(id, upsertEntriesByKey, removeEntriesByKey));
+          break;
+        }
+        case "updateBookmarkState": {
+          yield* put(setBookmarkStateAction(action.value.id, action.value.state, null));
+          break;
+        }
+        case "updateBookmarkThumbnail": {
+          yield* put(
+            setBookmarkThumbnailAction(
+              action.value.id,
+              getIncorporatedBookmarkThumbnail(action.value),
+            ),
+          );
+          break;
+        }
+        case "deleteBookmark": {
+          yield* put(deleteBookmarkAction(action.value.id));
           break;
         }
         case "addSegmentIndex": {

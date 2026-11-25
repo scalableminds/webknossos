@@ -21,6 +21,7 @@ import {
   isVolumeAnnotationDisallowedForZoom,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
+import { sanitizeMetadata } from "viewer/model/helpers/metadata_helpers";
 import { setDirectionReducer } from "viewer/model/reducers/flycam_reducer";
 import type {
   LabelAction,
@@ -59,7 +60,6 @@ import {
   type VolumeTracingAction,
 } from "../actions/volumetracing_actions";
 import type { TreeGroup } from "../types/tree_types";
-import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
 
 export type VolumeTracingReducerAction =

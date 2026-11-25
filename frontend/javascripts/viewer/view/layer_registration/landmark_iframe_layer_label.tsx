@@ -1,4 +1,4 @@
-import FastTooltip from "components/fast_tooltip";
+import { Tooltip } from "antd";
 import { OrthoViews, type Viewport } from "viewer/constants";
 import { APPLY_EXPLANATION, ROLE_NAMES, type Side } from "./helpers/layer_registration_helpers";
 import {
@@ -22,14 +22,17 @@ export function LandmarkIframeLayerLabel({ viewportID }: { viewportID: Viewport 
   const layerName = getLandmarkIframeLayerName();
   const side: Side = isLayerRegistrationFixedLandmarkIframe() ? "fixed" : "moving";
   const role = ROLE_NAMES[side];
+  // Not a FastTooltip: react-tooltip only finds anchors that are added after its first scan of the
+  // page through a MutationObserver, and it sometimes misses this label, which is added late.
   return (
-    <FastTooltip
-      title={`This view shows the ${role} (${TECHNICAL_ROLE_NAMES[side]}) layer ${layerName}. ${APPLY_EXPLANATION}`}
-      wrapper="div"
-      className="landmark-iframe-layer-label"
+    <Tooltip
+      title={`This view shows the ${role} ("${TECHNICAL_ROLE_NAMES[side]}") layer ${layerName}. ${APPLY_EXPLANATION}`}
+      placement="bottomLeft"
     >
-      <span className="landmark-iframe-layer-label-role">{role}</span>
-      <span className="landmark-iframe-layer-label-name">{layerName}</span>
-    </FastTooltip>
+      <div className="landmark-iframe-layer-label">
+        <span className="landmark-iframe-layer-label-role">{role}</span>
+        <span className="landmark-iframe-layer-label-name">{layerName}</span>
+      </div>
+    </Tooltip>
   );
 }

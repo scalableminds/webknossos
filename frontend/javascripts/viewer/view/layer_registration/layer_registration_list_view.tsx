@@ -93,11 +93,12 @@ function CreateLayerRegistrationModal({
     >
       <Space orientation="vertical" style={{ width: "100%" }}>
         <Typography.Text>
-          Select the primary layer. The other layers of the dataset become secondary layers and are
-          registered to it, one after the other. {APPLY_EXPLANATION} We recommend the layer that
-          overlaps with the most other layers. The primary layer can't be changed later.
+          Select the primary ("fixed") layer. The other layers of the dataset become secondary
+          ("moving") layers and are registered to it, one after the other. {APPLY_EXPLANATION} We
+          recommend the layer that overlaps with the most other layers. The primary layer can't be
+          changed later.
         </Typography.Text>
-        <Typography.Text strong>Primary layer (fixed)</Typography.Text>
+        <Typography.Text strong>Primary ("fixed") layer</Typography.Text>
         <Select
           placeholder="Primary layer"
           style={{ width: "100%" }}
@@ -340,8 +341,7 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
       <Typography.Title level={3}>Register layers of “{dataset.name}”</Typography.Title>
       <Typography.Paragraph style={{ maxWidth: 720 }}>
         A layer registration holds the landmarks of all layers that are registered to one primary
-        layer. {APPLY_EXPLANATION}
-        Usually, one layer registration per dataset is enough.{" "}
+        ("fixed") layer. {APPLY_EXPLANATION} Usually, one layer registration per dataset is enough.{" "}
         <a
           href="https://docs.webknossos.org/webknossos/datasets/registering_layers.html"
           target="_blank"

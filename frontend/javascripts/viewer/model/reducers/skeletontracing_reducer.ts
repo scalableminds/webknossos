@@ -7,6 +7,7 @@ import identity from "lodash-es/identity";
 import orderBy from "lodash-es/orderBy";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { TreeTypeEnum } from "viewer/constants";
+import { createEmptyAgglomerateDiffOverlay } from "viewer/model/accessors/agglomerate_diff_accessor";
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,
@@ -240,6 +241,8 @@ function SkeletonTracingReducer(
             activeIndex: -1,
           },
           showSkeletons: true,
+          // Diffs are derived from the agglomerate skeletons of the new tracing again
+          agglomerateDiffOverlay: createEmptyAgglomerateDiffOverlay(),
         },
       },
     });

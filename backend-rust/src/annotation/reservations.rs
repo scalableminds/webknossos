@@ -49,6 +49,7 @@ pub enum AnnotationIdDomain {
     Node,
     TreeGroup,
     BoundingBox,
+    Bookmark,
 }
 
 impl AnnotationIdDomain {
@@ -60,6 +61,7 @@ impl AnnotationIdDomain {
             Self::Node => "Node",
             Self::TreeGroup => "TreeGroup",
             Self::BoundingBox => "BoundingBox",
+            Self::Bookmark => "Bookmark",
         }
     }
 
@@ -72,9 +74,30 @@ impl AnnotationIdDomain {
             Self::Node,
             Self::TreeGroup,
             Self::BoundingBox,
+            Self::Bookmark,
         ]
         .into_iter()
         .find(|domain| domain.as_str() == name)
+    }
+}
+
+/// Msg.Annotation.reservedIdsTracingIdMismatch.
+pub fn reserved_ids_tracing_id_mismatch(domain: &str) -> String {
+    format!(
+        "The tracingId must be empty for annotation-scoped id domains and set for all others \
+         (domain {domain})."
+    )
+}
+
+/// `AnnotationReservedIdsService.assertTracingIdFitsDomain` (~> 400): bookmarks belong to the
+/// annotation rather than a tracing, so their ids are stored with an empty tracingId.
+fn assert_tracing_id_fits_domain(tracing_id: &str, domain: AnnotationIdDomain) -> ApiResult<()> {
+    if tracing_id.is_empty() == (domain == AnnotationIdDomain::Bookmark) {
+        Ok(())
+    } else {
+        Err(ApiError::bad_request(reserved_ids_tracing_id_mismatch(
+            domain.as_str(),
+        )))
     }
 }
 
@@ -172,6 +195,7 @@ async fn reserved_ids(
     // AnnotationIdDomain.fromString(domain).toFox: Empty -> 404 Msg.notFound.
     let domain = AnnotationIdDomain::from_name(&domain)
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    assert_tracing_id_fits_domain(&tracing_id, domain)?;
     let mut transaction = state.pool.begin().await?;
     lock_reservations(&mut transaction, &id).await?;
     let ids = annotation_reservations_dao::find_all_reserved_ids(
@@ -201,6 +225,7 @@ async fn reserve_ids(
             NUMBER_OF_IDS_TO_RESERVE_PER_REQUEST,
         )));
     }
+    assert_tracing_id_fits_domain(&body.tracing_id, body.domain)?;
     let domain = body.domain.as_str();
     let mut transaction = state.pool.begin().await?;
     lock_reservations(&mut transaction, &id).await?;

@@ -75,6 +75,8 @@ async fn mock_handler(State(mock): State<Mock>, request: Request) -> Response {
         skeleton_may_have_pending_updates: None,
         editable_mappings_may_have_pending_updates: None,
         user_states: Vec::new(),
+        bookmark_ids: Vec::new(),
+        largest_bookmark_id: None,
     };
     (
         StatusCode::OK,

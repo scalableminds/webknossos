@@ -11,6 +11,7 @@ const PROTO_FILES: &[&str] = &[
     "VolumeTracing.proto",
     "AgglomerateGraph.proto",
     "ListOfLong.proto",
+    "AnnotationBookmark.proto",
 ];
 
 fn main() -> Result<(), Box<dyn Error>> {

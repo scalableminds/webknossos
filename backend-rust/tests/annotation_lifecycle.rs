@@ -560,6 +560,8 @@ async fn mock(State(mock): State<Mock>, request: Request) -> Response {
         skeleton_may_have_pending_updates: None,
         editable_mappings_may_have_pending_updates: None,
         user_states: vec![],
+        bookmark_ids: Vec::new(),
+        largest_bookmark_id: None,
     };
     (
         [(header::CONTENT_TYPE, "application/x-protobuf")],

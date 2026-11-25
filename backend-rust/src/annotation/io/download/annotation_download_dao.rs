@@ -27,6 +27,17 @@ pub(crate) async fn find_all_layers(
     .await
 }
 
+/// DatasetLayerDAO.findAllForDataset, names only.
+pub(crate) async fn find_dataset_layer_names(
+    pool: &PgPool,
+    dataset_id: &ObjectId,
+) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar("SELECT name FROM webknossos.dataset_layers WHERE _dataset=$1")
+        .bind(dataset_id)
+        .fetch_all(pool)
+        .await
+}
+
 /// DatasetDAO.findOne under GlobalAccessContext (live datasets).
 pub(crate) async fn find_dataset(
     pool: &PgPool,

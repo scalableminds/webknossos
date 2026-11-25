@@ -45,8 +45,7 @@ pub const FETCH_VOLUME_LAYER_FAILED: &str = "Could not fetch volume annotation l
 pub const FETCH_SKELETON_LAYER_FAILED: &str = "Could not fetch skeleton annotation layer.";
 pub const FIND_USER_FAILED: &str = "Could not find or access annotation user.";
 pub const ZIP_NML_FAILED: &str = "Could not add NML file to zip archive.";
-pub const SKELETON_TO_FILE_FAILED: &str = "Could not write skeleton-only annotation to file.";
-pub const HYBRID_TO_FILE_FAILED: &str = "Could not write annotation with volume layer to file.";
+pub const FETCH_BOOKMARKS_FAILED: &str = "Could not fetch the bookmarks of the annotation.";
 pub const DOWNLOAD_NOT_ALLOWED: &str = "You do not have permission to download this annotation.";
 pub const WRITE_TO_FILE_FAILED: &str = "Could not write annotation to temporary file for download.";
 /// Msg.Annotation.nameNotAvailable.
@@ -59,7 +58,6 @@ pub const MISMATCHING_VOLUME: &str = "Annotation has mismatching volume ids and 
 pub const NEEDS_SKELETON_OR_VOLUME: &str =
     "Annotation needs at least one skeleton or volume layer.";
 
-const XML_MIME_TYPE: &str = "application/xml";
 const ZIP_MIME_TYPE: &str = "application/zip";
 
 pub fn router() -> Router<AppState> {

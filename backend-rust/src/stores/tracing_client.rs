@@ -12,14 +12,16 @@ use serde_json::Value;
 use sqlx::{Executor, Postgres};
 
 use crate::{
+    annotation::nml::bookmarks::BookmarkThumbnailSize,
     annotation::nml::writer::{NmlVoxelSize, VolumeDataZipFormat, java_double},
     annotation::provider::AnnotationDataSourceStore,
     error::{ApiError, ApiResult},
     proto::{
         AnnotationProto,
         datastore::{
-            SkeletonTracing, SkeletonTracingOpt, SkeletonTracings, SkeletonTracingsWithIds,
-            VolumeTracing, VolumeTracingOpt, VolumeTracings,
+            AnnotationBookmarkProto, AnnotationBookmarksProto, SkeletonTracing, SkeletonTracingOpt,
+            SkeletonTracings, SkeletonTracingsWithIds, UploadedAnnotationBookmarkProto,
+            UploadedAnnotationBookmarksProto, VolumeTracing, VolumeTracingOpt, VolumeTracings,
         },
     },
     stores::client::{PROTOBUF_CONTENT_TYPE, ServiceClientConfig, ServiceClients, ServiceError},
@@ -172,6 +174,105 @@ impl TracingStoreClient {
             )
             .await?;
         decode_annotation_proto(&response.bytes)
+    }
+
+    /// `GET /tracings/annotation/:annotationId/bookmarks?version=` (getBookmarks).
+    pub async fn get_bookmarks(
+        &self,
+        tracing_store_url: &str,
+        annotation_id: &ObjectId,
+        version: Option<i64>,
+    ) -> Result<Vec<AnnotationBookmarkProto>, TracingStoreError> {
+        let query: Vec<(&str, String)> = version
+            .map(|version| ("version", version.to_string()))
+            .into_iter()
+            .collect();
+        let response = self
+            .clients
+            .request(
+                Method::GET,
+                tracing_store_url,
+                &[
+                    "tracings",
+                    "annotation",
+                    annotation_id.as_str(),
+                    "bookmarks",
+                ],
+                &query,
+                None,
+            )
+            .await?;
+        // prost defaults missing proto2 required fields instead of rejecting them like ScalaPB;
+        // the bookmarks are only written back into an NML, so that difference is harmless.
+        let bookmarks = AnnotationBookmarksProto::decode(response.bytes.as_slice())
+            .map_err(|_| TracingStoreError::InvalidProtobuf)?;
+        Ok(bookmarks.bookmarks)
+    }
+
+    /// `GET /tracings/annotation/:annotationId/bookmarks/:bookmarkId/thumbnail?size=&v=`
+    /// (getBookmarkThumbnail). `None` if the bookmark has no thumbnail of this size. Thumbnails are
+    /// optional, so this never fails (Scala `silentEvenOnFailure` + `shiftBox`).
+    pub async fn get_bookmark_thumbnail(
+        &self,
+        tracing_store_url: &str,
+        annotation_id: &ObjectId,
+        bookmark: &AnnotationBookmarkProto,
+        size: BookmarkThumbnailSize,
+    ) -> Option<Vec<u8>> {
+        let thumbnail_saved_at_version = bookmark.thumbnail_saved_at_version?;
+        let bookmark_id = bookmark.id.to_string();
+        self.clients
+            .request(
+                Method::GET,
+                tracing_store_url,
+                &[
+                    "tracings",
+                    "annotation",
+                    annotation_id.as_str(),
+                    "bookmarks",
+                    &bookmark_id,
+                    "thumbnail",
+                ],
+                &[
+                    ("size", size.as_str().to_owned()),
+                    ("v", thumbnail_saved_at_version.to_string()),
+                ],
+                None,
+            )
+            .await
+            .ok()
+            .map(|response| response.bytes)
+    }
+
+    /// `POST /tracings/annotation/:annotationId/bookmarks/saveUploaded` with the
+    /// UploadedAnnotationBookmarksProto body (saveUploadedBookmarks). Response ignored.
+    pub async fn save_uploaded_bookmarks(
+        &self,
+        tracing_store_url: &str,
+        annotation_id: &ObjectId,
+        bookmarks: Vec<UploadedAnnotationBookmarkProto>,
+    ) -> Result<(), ServiceError> {
+        tracing::info!(
+            "Called to save {} uploaded bookmarks for annotation {annotation_id}.",
+            bookmarks.len()
+        );
+        self.clients
+            .request_bytes(
+                Method::POST,
+                tracing_store_url,
+                &[
+                    "tracings",
+                    "annotation",
+                    annotation_id.as_str(),
+                    "bookmarks",
+                    "saveUploaded",
+                ],
+                &[],
+                PROTOBUF_CONTENT_TYPE,
+                UploadedAnnotationBookmarksProto { bookmarks }.encode_to_vec(),
+            )
+            .await?;
+        Ok(())
     }
 
     /// The long-timeout (2 h) transport, for RPCs Scala sends `withLongTimeout`

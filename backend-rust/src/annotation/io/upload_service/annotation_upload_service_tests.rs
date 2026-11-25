@@ -343,6 +343,7 @@ fn success_result(file_name: &str, trees: Vec<Tree>, groups: Vec<TreeGroup>) -> 
             dataset_id: ObjectId::parse(DATASET_ID).unwrap(),
             description: String::new(),
             wk_url: None,
+            bookmarks: Vec::new(),
         }),
     }
 }

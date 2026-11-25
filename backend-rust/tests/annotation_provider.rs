@@ -149,6 +149,8 @@ fn compound_annotations_are_built_from_the_merge_result() {
         skeleton_may_have_pending_updates: None,
         editable_mappings_may_have_pending_updates: None,
         user_states: Vec::new(),
+        bookmark_ids: Vec::new(),
+        largest_bookmark_id: None,
     };
     let compound =
         CompoundAnnotation::from_merge(&identifier, dataset.clone(), owner.clone(), &merged);
@@ -693,6 +695,8 @@ fn merged_proto() -> AnnotationProto {
         skeleton_may_have_pending_updates: None,
         editable_mappings_may_have_pending_updates: None,
         user_states: Vec::new(),
+        bookmark_ids: Vec::new(),
+        largest_bookmark_id: None,
     }
 }
 

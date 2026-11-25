@@ -1,10 +1,16 @@
-//! Saved annotations: the NML, plus volume data and edited-mapping zips.
+//! Saved annotations: a zip with the NML, volume data and edited-mapping zips, and bookmark
+//! thumbnails.
+
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use axum::{http::StatusCode, response::Response};
-use sqlx::PgPool;
+use futures_util::{StreamExt, stream};
 
 use crate::{
     annotation::access::AnnotationMetadata,
+    annotation::nml::bookmarks::{
+        BookmarkThumbnailSize, NmlAnnotationBookmarkToWrite, thumbnail_location,
+    },
     annotation::nml::writer::{
         NmlAnnotation, NmlLayer, NmlLayerTracing, NmlVoxelSize, NmlWriteInput,
         edited_mapping_edges_zip_name, volume_data_zip_name, write_nml,
@@ -23,10 +29,9 @@ use super::{
     naming::{java_url_encode_path, name_for},
     params::{Context, DownloadParams},
     {
-        DOWNLOAD_NOT_ALLOWED, FETCH_SKELETON_LAYER_FAILED, FETCH_VOLUME_LAYER_FAILED,
-        FIND_USER_FAILED, HYBRID_TO_FILE_FAILED, SKELETON_TO_FILE_FAILED, TASK_NOT_FOUND,
-        WRITE_TO_FILE_FAILED, XML_MIME_TYPE, ZIP_MIME_TYPE, ZIP_NML_FAILED,
-        annotation_download_dao,
+        DOWNLOAD_NOT_ALLOWED, FETCH_BOOKMARKS_FAILED, FETCH_SKELETON_LAYER_FAILED,
+        FETCH_VOLUME_LAYER_FAILED, FIND_USER_FAILED, TASK_NOT_FOUND, WRITE_TO_FILE_FAILED,
+        ZIP_MIME_TYPE, ZIP_NML_FAILED, annotation_download_dao,
     },
 };
 
@@ -75,8 +80,6 @@ pub(super) async fn download_saved(
         .map_err(|error| provider_failure(error).wrap(RESTRICTIONS_NOT_FOUND))?;
     let name = name_for(context, annotation).await?;
     let layers = annotation_download_dao::find_all_layers(context.pool(), &annotation.id).await?;
-    let skeleton_only = layers.iter().any(|layer| layer.typ == "Skeleton")
-        && !layers.iter().any(|layer| layer.typ == "Volume");
     // Fox.assertTrue(restrictions.allowDownload(user)) ?~> notAllowed ~> FORBIDDEN.
     if !restrictions.allow_download {
         return Err(Failure::with_status(DOWNLOAD_NOT_ALLOWED, StatusCode::FORBIDDEN).into());
@@ -100,12 +103,7 @@ pub(super) async fn download_saved(
         )
         .into());
     }
-    let (extension, mime_type) = if skeleton_only {
-        (".nml", XML_MIME_TYPE)
-    } else {
-        (".zip", ZIP_MIME_TYPE)
-    };
-    let file_name = java_url_encode_path(&format!("{name}{extension}"));
+    let file_name = java_url_encode_path(&format!("{name}.zip"));
     let download = SavedDownload {
         annotation,
         layers,
@@ -120,7 +118,7 @@ pub(super) async fn download_saved(
         .map_err(|error| error.wrap(WRITE_TO_FILE_FAILED))?;
     Ok(file_response(
         bytes,
-        mime_type,
+        ZIP_MIME_TYPE,
         format!("attachment; filename=\"{file_name}\""),
     ))
 }
@@ -130,29 +128,72 @@ async fn annotation_to_file(
     context: &Context<'_>,
     mut download: SavedDownload<'_>,
 ) -> RunResult<Vec<u8>> {
-    let skeleton_only = download.layers.iter().any(|layer| layer.typ == "Skeleton")
-        && !download.layers.iter().any(|layer| layer.typ == "Volume");
     // tracingStoreService.clientFor(dataset)
-    let url = find_first_tracing_store_url(context.pool()).await?;
-    if skeleton_only {
-        let result = match url {
-            Some(url) => {
-                download.tracing_store_url = url;
-                skeleton_to_file(context, &download).await
+    let url = find_first_tracing_store_url(context.pool())
+        .await?
+        .ok_or_else(|| fail(crate::msg::tracing_store::NOT_FOUND))?;
+    download.tracing_store_url = url;
+    write_zip(context, &download).await
+}
+
+/// fetchBookmarksWithThumbnails: bookmark thumbnails are optional, missing ones are skipped. One
+/// request per thumbnail, so several are made at once (`Fox.batchCombined`, parallelity 8).
+async fn fetch_bookmarks_with_thumbnails(
+    context: &Context<'_>,
+    download: &SavedDownload<'_>,
+) -> RunResult<Vec<NmlAnnotationBookmarkToWrite>> {
+    let tracing_store = &context.services.tracing_store;
+    let annotation_id = &download.annotation.id;
+    let bookmarks = tracing_store
+        .get_bookmarks(
+            &download.tracing_store_url,
+            annotation_id,
+            download.params.version,
+        )
+        .await
+        .map_err(rpc_failure)?;
+    let requests: Vec<(usize, BookmarkThumbnailSize)> = (0..bookmarks.len())
+        .flat_map(|index| BookmarkThumbnailSize::VALUES.map(|size| (index, size)))
+        .collect();
+    let fetched: Vec<(usize, BookmarkThumbnailSize, Option<Vec<u8>>)> = stream::iter(requests)
+        .map(|(index, size)| {
+            let bookmark = &bookmarks[index];
+            async move {
+                let thumbnail = tracing_store
+                    .get_bookmark_thumbnail(
+                        &download.tracing_store_url,
+                        annotation_id,
+                        bookmark,
+                        size,
+                    )
+                    .await;
+                (index, size, thumbnail)
             }
-            None => Err(fail(crate::msg::tracing_store::NOT_FOUND)),
-        };
-        result.map_err(|error| error.wrap(SKELETON_TO_FILE_FAILED))
-    } else {
-        let result = match url {
-            Some(url) => {
-                download.tracing_store_url = url;
-                volume_or_hybrid_to_file(context, &download).await
-            }
-            None => Err(fail(crate::msg::tracing_store::NOT_FOUND)),
-        };
-        result.map_err(|error| error.wrap(HYBRID_TO_FILE_FAILED))
+        })
+        .buffered(8)
+        .collect()
+        .await;
+    // Grouped by bookmark id, like Scala, so bookmarks with equal ids share their thumbnails.
+    let mut thumbnails_by_id: HashMap<i32, BTreeMap<BookmarkThumbnailSize, Vec<u8>>> =
+        HashMap::new();
+    for (index, size, thumbnail) in fetched {
+        if let Some(thumbnail) = thumbnail {
+            thumbnails_by_id
+                .entry(bookmarks[index].id)
+                .or_default()
+                .insert(size, thumbnail);
+        }
     }
+    Ok(bookmarks
+        .into_iter()
+        .map(|bookmark| NmlAnnotationBookmarkToWrite {
+            thumbnails: thumbnails_by_id
+                .get(&bookmark.id)
+                .cloned()
+                .unwrap_or_default(),
+            bookmark,
+        })
+        .collect())
 }
 
 async fn fetch_skeleton_layers(
@@ -181,20 +222,12 @@ async fn fetch_skeleton_layers(
     Ok(fetched)
 }
 
-/// The owner's MultiUser fullName (global lookups); `None` is Fox.empty.
-async fn owner_full_name(pool: &PgPool, owner_id: &ObjectId) -> RunResult<Option<String>> {
-    let Some(multi_user) = find_user_multi_user(pool, owner_id).await? else {
-        return Ok(None);
-    };
-    Ok(find_multi_user(pool, &multi_user, true)
-        .await?
-        .map(|(first, last)| format!("{first} {last}")))
-}
-
 struct NmlContext<'a> {
     user_states: &'a [AnnotationUserStateProto],
     owner_name: &'a str,
     task_id: Option<&'a ObjectId>,
+    bookmarks: &'a [NmlAnnotationBookmarkToWrite],
+    dataset_layer_names: &'a HashSet<String>,
 }
 
 fn nml_input<'a>(
@@ -226,67 +259,15 @@ fn nml_input<'a>(
         volume_data_zip_format: download.params.volume_data_zip_format,
         writer_git_commit: &config.build_info.commit_hash,
         timestamp_millis: chrono::Utc::now().timestamp_millis(),
+        bookmarks: nml.bookmarks,
+        dataset_layer_names: Some(nml.dataset_layer_names),
     }
 }
 
-/// skeletonToTemporaryFile: plain NML (no `?~>` inside).
-async fn skeleton_to_file(
-    context: &Context<'_>,
-    download: &SavedDownload<'_>,
-) -> RunResult<Vec<u8>> {
-    let skeletons = fetch_skeleton_layers(context, download).await?;
-    let proto = context
-        .services
-        .tracing_store
-        .get_annotation_proto(
-            &download.tracing_store_url,
-            &download.annotation.id,
-            download.params.version,
-        )
-        .await
-        .map_err(rpc_failure)?;
-    let owner_name = owner_full_name(context.pool(), &download.annotation.owner_id)
-        .await?
-        .ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
-    // Fox.runOptional(annotation._task)(taskDAO.findOne) under the requester's
-    // access context; an unreadable task is Fox.empty.
-    let task_id = match &download.annotation.task_id {
-        Some(task_id) => {
-            if !annotation_download_dao::task_exists(context.pool(), task_id, Some(context.user))
-                .await?
-            {
-                return Err(fail(TASK_NOT_FOUND));
-            }
-            Some(task_id)
-        }
-        None => None,
-    };
-    let layers = skeletons
-        .iter()
-        .map(|(layer, tracing)| NmlLayer {
-            tracing_id: &layer.tracing_id,
-            name: &layer.name,
-            tracing: NmlLayerTracing::Skeleton(tracing),
-            has_edited_mapping_edges: false,
-            base_mapping_name: None,
-        })
-        .collect();
-    let nml = NmlContext {
-        user_states: &proto.user_states,
-        owner_name: &owner_name,
-        task_id,
-    };
-    let document = write_nml(&nml_input(context, download, layers, &nml))
-        .map_err(|error| fail(error.to_string()))?;
-    Ok(document.into_bytes())
-}
-
-/// volumeOrHybridToTemporaryFile: zip with `<name>.nml` (default deflate),
-/// then per volume layer its data zip and edited-edges zip (BEST_SPEED).
-async fn volume_or_hybrid_to_file(
-    context: &Context<'_>,
-    download: &SavedDownload<'_>,
-) -> RunResult<Vec<u8>> {
+/// The zip of annotationToTemporaryFile: `<name>.nml` (default deflate), then per volume layer
+/// its data zip and edited-edges zip (BEST_SPEED), then the bookmark thumbnails (at the level
+/// the zipper was left at).
+async fn write_zip(context: &Context<'_>, download: &SavedDownload<'_>) -> RunResult<Vec<u8>> {
     let annotation_id = &download.annotation.id;
     let tracing_store = &context.services.tracing_store;
     let mut volumes: Vec<(LayerRow, FetchedVolumeLayer)> = Vec::new();
@@ -339,6 +320,14 @@ async fn volume_or_hybrid_to_file(
         )
         .await
         .map_err(rpc_failure)?;
+    let bookmarks = fetch_bookmarks_with_thumbnails(context, download)
+        .await
+        .map_err(|error| error.wrap(FETCH_BOOKMARKS_FAILED))?;
+    let dataset_layer_names: HashSet<String> =
+        annotation_download_dao::find_dataset_layer_names(context.pool(), &download.dataset.id)
+            .await?
+            .into_iter()
+            .collect();
     let mut layers: Vec<NmlLayer<'_>> = skeletons
         .iter()
         .map(|(layer, tracing)| NmlLayer {
@@ -360,6 +349,8 @@ async fn volume_or_hybrid_to_file(
         user_states: &proto.user_states,
         owner_name: &owner_name,
         task_id,
+        bookmarks: &bookmarks,
+        dataset_layer_names: &dataset_layer_names,
     };
     let document = write_nml(&nml_input(context, download, layers, &nml))
         .map_err(|error| fail(error.to_string()).wrap(ZIP_NML_FAILED))?;
@@ -385,5 +376,26 @@ async fn volume_or_hybrid_to_file(
             });
         }
     }
+    // Scala sets BEST_SPEED before each volume entry and never resets it.
+    let fast = entries.len() > 1;
+    let thumbnails: Vec<(String, &[u8])> = bookmarks
+        .iter()
+        .flat_map(|bookmark_to_write| {
+            bookmark_to_write
+                .thumbnails
+                .iter()
+                .map(|(size, thumbnail)| {
+                    (
+                        thumbnail_location(bookmark_to_write.bookmark.id, *size),
+                        thumbnail.as_slice(),
+                    )
+                })
+        })
+        .collect();
+    entries.extend(
+        thumbnails
+            .into_iter()
+            .map(|(name, bytes)| ZipEntry { name, bytes, fast }),
+    );
     zip_entries(&entries).map_err(|_| fail(ZIP_NML_FAILED))
 }

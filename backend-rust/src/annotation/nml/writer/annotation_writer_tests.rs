@@ -77,6 +77,8 @@ fn base_input<'a>(layers: Vec<NmlLayer<'a>>) -> NmlWriteInput<'a> {
         volume_data_zip_format: VolumeDataZipFormat::Wkw,
         writer_git_commit: "",
         timestamp_millis: 0,
+        bookmarks: &[],
+        dataset_layer_names: None,
     }
 }
 
@@ -366,6 +368,8 @@ fn skeleton_document_matches_golden() {
         dataset_id: &dataset_id,
         writer_git_commit: "abc123",
         timestamp_millis: 1_700_000_000_000,
+        bookmarks: &[],
+        dataset_layer_names: None,
         ..base_input(vec![skeleton_layer("skeleton-id", &skeleton)])
     };
     assert_eq!(write_nml(&input).unwrap(), GOLDEN_SKELETON);
@@ -515,6 +519,8 @@ fn volume_document_matches_golden() {
         volume_data_zip_format: VolumeDataZipFormat::Zarr3,
         writer_git_commit: "abc123",
         timestamp_millis: 42,
+        bookmarks: &[],
+        dataset_layer_names: None,
         // Parameters come from the smallest tracing id ("t-1").
         ..base_input(vec![editable_layer, volume_layer("t-1", "Seg Ids", &data)])
     };

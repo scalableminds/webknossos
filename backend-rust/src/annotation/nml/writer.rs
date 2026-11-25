@@ -21,14 +21,19 @@
 //! and pass them unmodified; per-user state (`renderUserState` in
 //! `AnnotationUserStateUtils.scala`) is applied here while rendering.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
+use crate::annotation::nml::bookmarks::{
+    NmlAnnotationBookmarkToWrite, NmlAnnotationLayerRef, rewrite_layer_references,
+    thumbnail_location, thumbnail_viewport_to_string,
+};
+use crate::proto::datastore::annotation_bookmark_state_proto::{MappingTypeProto, ViewModeProto};
 use crate::proto::datastore::{
-    AdditionalCoordinateProto, AnnotationUserStateProto, BoundingBoxProto, ColorProto,
-    MetadataEntryProto, NamedBoundingBoxProto, Segment, SegmentGroup, SkeletonTracing,
-    SkeletonUserStateProto, Tree, TreeGroup, Vec3DoubleProto, Vec3IntProto, VolumeTracing,
-    VolumeUserStateProto,
+    AdditionalCoordinateProto, AnnotationBookmarkStateProto, AnnotationUserStateProto,
+    BookmarkLayerStateProto, BoundingBoxProto, ColorProto, MetadataEntryProto,
+    NamedBoundingBoxProto, Segment, SegmentGroup, SkeletonTracing, SkeletonUserStateProto, Tree,
+    TreeGroup, Vec3DoubleProto, Vec3IntProto, VolumeTracing, VolumeUserStateProto,
 };
 use crate::util::id::ObjectId;
 
@@ -137,6 +142,11 @@ pub struct NmlWriteInput<'a> {
     pub writer_git_commit: &'a str,
     /// `Instant.now.epochMillis` for the `timestamp` meta tag.
     pub timestamp_millis: i64,
+    /// Bookmarks with the thumbnails written next to the NML; layer references are tracingIds
+    /// and dataset layer names, as stored.
+    pub bookmarks: &'a [NmlAnnotationBookmarkToWrite],
+    /// If set, bookmark settings for other dataset layers are dropped.
+    pub dataset_layer_names: Option<&'a HashSet<String>>,
 }
 
 /// Failures Scala reports (as Fox failures or Woodstox exceptions).
@@ -229,8 +239,261 @@ pub fn write_nml(input: &NmlWriteInput<'_>) -> Result<String, NmlWriteError> {
     for (index, (layer, volume)) in volumes.iter().enumerate() {
         write_volume(&mut w, input, &user_state, layer, volume, index, is_single)?;
     }
+    let bookmarks: Vec<NmlAnnotationBookmarkToWrite> = input
+        .bookmarks
+        .iter()
+        .map(|bookmark| encode_layer_references(bookmark, &input.layers, input.dataset_layer_names))
+        .collect();
+    write_bookmarks(&mut w, &bookmarks)?;
     w.end();
     Ok(w.finish())
+}
+
+// ---------------------------------------------------------------------------
+// Bookmarks
+
+/// Replaces the tracingIds in the bookmark state with references to the NML layers, see
+/// [`NmlAnnotationLayerRef`]. References to layers that no longer exist are dropped.
+fn encode_layer_references(
+    bookmark_to_write: &NmlAnnotationBookmarkToWrite,
+    layers: &[NmlLayer<'_>],
+    dataset_layer_names: Option<&HashSet<String>>,
+) -> NmlAnnotationBookmarkToWrite {
+    // `toMap`: the last layer wins for duplicate tracingIds.
+    let refs_by_tracing_id: HashMap<&str, NmlAnnotationLayerRef> = layers
+        .iter()
+        .map(|layer| {
+            let layer_ref = match layer.tracing {
+                NmlLayerTracing::Skeleton(_) => NmlAnnotationLayerRef::Skeleton,
+                NmlLayerTracing::Volume(_) => NmlAnnotationLayerRef::Volume(layer.name.to_owned()),
+            };
+            (layer.tracing_id, layer_ref)
+        })
+        .collect();
+    let bookmark = rewrite_layer_references(
+        bookmark_to_write.bookmark.clone(),
+        |name| match refs_by_tracing_id.get(name) {
+            Some(layer_ref) => Some(layer_ref.encode()),
+            None => dataset_layer_names
+                .is_none_or(|names| names.contains(name))
+                .then(|| name.to_owned()),
+        },
+        // Editable mappings are named after the tracingId of their volume layer.
+        |name| match refs_by_tracing_id.get(name) {
+            Some(layer_ref @ NmlAnnotationLayerRef::Volume(_)) => Some(layer_ref.encode()),
+            _ => Some(name.to_owned()),
+        },
+    );
+    NmlAnnotationBookmarkToWrite {
+        bookmark,
+        thumbnails: bookmark_to_write.thumbnails.clone(),
+    }
+}
+
+fn write_bookmarks(
+    w: &mut XmlWriter,
+    bookmarks: &[NmlAnnotationBookmarkToWrite],
+) -> Result<(), NmlWriteError> {
+    if bookmarks.is_empty() {
+        return Ok(());
+    }
+    let mut sorted: Vec<&NmlAnnotationBookmarkToWrite> = bookmarks.iter().collect();
+    sorted.sort_by_key(|b| b.bookmark.id);
+    w.start("bookmarks");
+    for bookmark_to_write in sorted {
+        let bookmark = &bookmark_to_write.bookmark;
+        w.start("bookmark");
+        w.attr("id", &bookmark.id.to_string())?;
+        if let Some(name) = &bookmark.name {
+            w.attr("name", name)?;
+        }
+        if let Some(description) = &bookmark.description {
+            w.attr("description", description)?;
+        }
+        w.attr("created", &bookmark.created.to_string())?;
+        // BTreeMap keys are ordered like the ExtendedEnumeration ids.
+        for size in bookmark_to_write.thumbnails.keys() {
+            w.start("thumbnail");
+            w.attr("size", size.as_str())?;
+            if let Some(viewport) = bookmark
+                .thumbnail_viewport
+                .and_then(thumbnail_viewport_to_string)
+            {
+                w.attr("viewport", viewport)?;
+            }
+            w.attr("location", &thumbnail_location(bookmark.id, *size))?;
+            w.end();
+        }
+        write_metadata(w, &bookmark.metadata)?;
+        write_bookmark_state(w, &bookmark.state)?;
+        w.end();
+    }
+    w.end();
+    Ok(())
+}
+
+/// ScalaPB names enum values it does not know `UNRECOGNIZED`.
+fn view_mode_name(value: i32) -> &'static str {
+    ViewModeProto::try_from(value).map_or("UNRECOGNIZED", |mode| mode.as_str_name())
+}
+
+fn mapping_type_name(value: i32) -> &'static str {
+    MappingTypeProto::try_from(value)
+        .map_or("UNRECOGNIZED", |mapping_type| mapping_type.as_str_name())
+}
+
+fn write_bookmark_state(
+    w: &mut XmlWriter,
+    state: &AnnotationBookmarkStateProto,
+) -> Result<(), NmlWriteError> {
+    w.start("state");
+    w.attr("mode", view_mode_name(state.mode))?;
+    w.attr("zoomStep", &java_double(state.zoom_step))?;
+    w.attr("clippingDistance", &java_double(state.clipping_distance))?;
+    w.attr(
+        "clipSkeletonToCurrentSection",
+        bool_str(state.clip_skeleton_to_current_section),
+    )?;
+    if let Some(id) = state.active_node_id {
+        w.attr("activeNodeId", &id.to_string())?;
+    }
+    if let Some(show) = state.show_skeletons {
+        w.attr("showSkeletons", bool_str(show))?;
+    }
+    w.start("position");
+    write_vec3_int_attributes(w, &state.position)?;
+    write_additional_coordinates(w, &state.additional_coordinates)?;
+    w.end();
+    w.start("rotation");
+    w.attr("xRot", &java_double(state.rotation.x))?;
+    w.attr("yRot", &java_double(state.rotation.y))?;
+    w.attr("zRot", &java_double(state.rotation.z))?;
+    w.end();
+    if let Some(layer_name) = &state.natively_rendered_layer_name {
+        w.start("nativelyRenderedLayer");
+        write_bookmark_layer_ref(w, layer_name)?;
+        w.end();
+    }
+    if let Some(camera) = &state.td_camera {
+        w.start("tdCamera");
+        w.attr("left", &java_double(camera.left))?;
+        w.attr("right", &java_double(camera.right))?;
+        w.attr("top", &java_double(camera.top))?;
+        w.attr("bottom", &java_double(camera.bottom))?;
+        w.start("position");
+        write_vec3_double_attributes(w, &camera.position)?;
+        w.end();
+        w.start("up");
+        write_vec3_double_attributes(w, &camera.up)?;
+        w.end();
+        w.end();
+    }
+    for layer in &state.layers {
+        write_bookmark_layer(w, layer)?;
+    }
+    w.end();
+    Ok(())
+}
+
+fn write_bookmark_layer(
+    w: &mut XmlWriter,
+    layer: &BookmarkLayerStateProto,
+) -> Result<(), NmlWriteError> {
+    w.start("layer");
+    write_bookmark_layer_ref(w, &layer.layer_name)?;
+    if let Some(is_disabled) = layer.is_disabled {
+        w.attr("isDisabled", bool_str(is_disabled))?;
+    }
+    if let Some(is_inverted) = layer.is_inverted {
+        w.attr("isInverted", bool_str(is_inverted))?;
+    }
+    if let Some(gamma) = layer.gamma_correction_value {
+        w.attr("gammaCorrectionValue", &java_double(gamma))?;
+    }
+    if let Some(mesh_file_name) = &layer.mesh_file_name {
+        w.attr("meshFileName", mesh_file_name)?;
+    }
+    if let Some(range) = &layer.intensity_range {
+        w.start("intensityRange");
+        w.attr("min", &java_double(range.x))?;
+        w.attr("max", &java_double(range.y))?;
+        w.end();
+    }
+    if let Some(color) = &layer.color {
+        w.start("color");
+        w.attr("r", &java_double(color.x))?;
+        w.attr("g", &java_double(color.y))?;
+        w.attr("b", &java_double(color.z))?;
+        w.end();
+    }
+    if let Some(mapping) = &layer.mapping {
+        w.start("mapping");
+        write_bookmark_mapping_ref(w, &mapping.mapping_name)?;
+        w.attr("mappingType", mapping_type_name(mapping.mapping_type))?;
+        w.end();
+    }
+    for mesh in &layer.meshes {
+        w.start("mesh");
+        w.attr("segmentId", &mesh.segment_id.to_string())?;
+        w.attr("isPrecomputed", bool_str(mesh.is_precomputed))?;
+        if let Some(mesh_file_name) = &mesh.mesh_file_name {
+            w.attr("meshFileName", mesh_file_name)?;
+        }
+        if let Some(mapping_name) = &mesh.mapping_name {
+            write_bookmark_mapping_ref(w, mapping_name)?;
+        }
+        if let Some(mapping_type) = mesh.mapping_type {
+            w.attr("mappingType", mapping_type_name(mapping_type))?;
+        }
+        w.start("seedPosition");
+        write_vec3_int_attributes(w, &mesh.seed_position)?;
+        w.end();
+        w.end();
+    }
+    w.end();
+    Ok(())
+}
+
+fn write_bookmark_layer_ref(
+    w: &mut XmlWriter,
+    encoded_layer_name: &str,
+) -> Result<(), NmlWriteError> {
+    match NmlAnnotationLayerRef::decode(encoded_layer_name) {
+        Some(NmlAnnotationLayerRef::Volume(volume_layer_name)) => {
+            w.attr("volumeLayer", &volume_layer_name)
+        }
+        Some(NmlAnnotationLayerRef::Skeleton) => w.attr("skeletonLayer", "true"),
+        None => w.attr("datasetLayer", encoded_layer_name),
+    }
+}
+
+fn write_bookmark_mapping_ref(
+    w: &mut XmlWriter,
+    encoded_mapping_name: &str,
+) -> Result<(), NmlWriteError> {
+    match NmlAnnotationLayerRef::decode(encoded_mapping_name) {
+        Some(NmlAnnotationLayerRef::Volume(volume_layer_name)) => {
+            w.attr("editableMappingOfVolumeLayer", &volume_layer_name)
+        }
+        _ => w.attr("mappingName", encoded_mapping_name),
+    }
+}
+
+fn write_vec3_int_attributes(w: &mut XmlWriter, vec: &Vec3IntProto) -> Result<(), NmlWriteError> {
+    w.attr("x", &vec.x.to_string())?;
+    w.attr("y", &vec.y.to_string())?;
+    w.attr("z", &vec.z.to_string())?;
+    Ok(())
+}
+
+fn write_vec3_double_attributes(
+    w: &mut XmlWriter,
+    vec: &Vec3DoubleProto,
+) -> Result<(), NmlWriteError> {
+    w.attr("x", &java_double(vec.x))?;
+    w.attr("y", &java_double(vec.y))?;
+    w.attr("z", &java_double(vec.z))?;
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

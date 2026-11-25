@@ -276,6 +276,37 @@ async fn permissions_validation_and_limit_are_checked_before_any_reservation() {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+    // Bookmarks are annotation-scoped: their tracingId must be empty, all others need one (400).
+    let mismatch = |domain: &str| {
+        (
+            StatusCode::BAD_REQUEST,
+            error(
+                &webknossos_backend::annotation::reservations::reserved_ids_tracing_id_mismatch(
+                    domain,
+                ),
+            ),
+        )
+    };
+    assert_eq!(
+        reserved(&app, owner, &owner_only, "t", "Bookmark").await,
+        mismatch("Bookmark")
+    );
+    assert_eq!(
+        reserved(&app, owner, &owner_only, "", "Segment").await,
+        mismatch("Segment")
+    );
+    assert_eq!(
+        reserve(&app, owner, &owner_only, "t", "Bookmark", 1, &[]).await,
+        mismatch("Bookmark")
+    );
+    assert_eq!(
+        reserve(&app, owner, &owner_only, "", "Node", 1, &[]).await,
+        mismatch("Node")
+    );
+    assert_eq!(
+        reserved(&app, owner, &owner_only, "", "Bookmark").await,
+        (StatusCode::OK, json!([]))
+    );
     // Per-request limit (10), checked after the update permission.
     assert_eq!(
         reserve(&app, owner, &owner_only, "t", "Segment", 11, &[]).await,
@@ -343,6 +374,19 @@ async fn first_reservation_uses_tracingstore_maximum_then_continues_and_releases
         (StatusCode::OK, json!([]))
     );
     assert_eq!(mock.calls().len(), 3);
+    // Bookmark ids are stored with an empty tracingId.
+    assert_eq!(
+        reserve(&app, owner, &id, "", "Bookmark", 2, &[]).await,
+        (StatusCode::OK, json!([42, 43]))
+    );
+    assert_eq!(mock.calls().len(), 4);
+    let query: Vec<(String, String)> = serde_urlencoded::from_str(&mock.calls()[3].1).unwrap();
+    assert!(query.contains(&("tracingId".into(), String::new())));
+    assert!(query.contains(&("domain".into(), "Bookmark".into())));
+    assert_eq!(
+        reserve(&app, owner, &id, "", "Bookmark", 0, &[42, 43]).await,
+        (StatusCode::OK, json!([]))
+    );
     // Reads are per user, tracing and domain.
     assert_eq!(
         reserved(&app, owner, &id, "vol", "Segment").await,
@@ -387,7 +431,7 @@ async fn first_reservation_uses_tracingstore_maximum_then_continues_and_releases
         reserve(&app, collaborator, &id, "vol", "Segment", 1, &[]).await,
         (StatusCode::OK, json!([45]))
     );
-    assert_eq!(mock.calls().len(), 3);
+    assert_eq!(mock.calls().len(), 4);
 
     // Upstream failure keeps its status and reserves nothing.
     let before = rows(&db, &id).await;

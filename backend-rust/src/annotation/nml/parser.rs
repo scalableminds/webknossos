@@ -21,18 +21,27 @@ use quick_xml::XmlVersion;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::reader::Reader;
 
+use std::collections::BTreeMap;
+
+use crate::annotation::nml::bookmarks::{
+    BookmarkThumbnailSize, NmlAnnotationLayerRef, NmlParsedAnnotationBookmark,
+    thumbnail_viewport_from_string,
+};
+use crate::proto::datastore::annotation_bookmark_state_proto::{MappingTypeProto, ViewModeProto};
 use crate::proto::datastore::volume_tracing::ElementClassProto;
 use crate::proto::datastore::{
-    AdditionalAxisProto, AdditionalCoordinateProto, BoundingBoxProto, BranchPoint, ColorProto,
-    Comment, Edge, MetadataEntryProto, NamedBoundingBoxProto, Node, Segment, SegmentGroup,
-    SkeletonTracing, Tree, TreeGroup, Vec2IntProto, Vec3DoubleProto, Vec3IntProto, VolumeTracing,
+    AdditionalAxisProto, AdditionalCoordinateProto, AnnotationBookmarkProto,
+    AnnotationBookmarkStateProto, BookmarkLayerStateProto, BookmarkMappingProto, BookmarkMeshProto,
+    BookmarkTdCameraProto, BoundingBoxProto, BranchPoint, ColorProto, Comment, Edge,
+    MetadataEntryProto, NamedBoundingBoxProto, Node, Segment, SegmentGroup, SkeletonTracing, Tree,
+    TreeGroup, Vec2DoubleProto, Vec2IntProto, Vec3DoubleProto, Vec3IntProto, VolumeTracing,
 };
 use crate::util::id::ObjectId;
 mod java_numbers;
 
 use java_numbers::{
     java_round_float, to_bool, to_double, to_float, to_int, to_int_or_throw, to_long,
-    to_long_or_throw,
+    to_long_or_throw, to_unsigned_long,
 };
 
 // ---------------------------------------------------------------------------
@@ -68,6 +77,16 @@ fn msg_invalid_node_id_in_comment(id: &str) -> String {
 }
 fn msg_invalid_edge(src: &str, dst: &str) -> String {
     format!("Invalid edge “{src}-{dst}”.")
+}
+fn msg_invalid_bookmark_id(id: &str) -> String {
+    format!("Invalid bookmark id “{id}”.")
+}
+fn msg_invalid_bookmark_field(name: &str, id: i32) -> String {
+    format!("Invalid {name} of bookmark {id}.")
+}
+const MSG_DUPLICATE_BOOKMARK_IDS: &str = "Bookmark ids must be unique.";
+fn msg_missing_or_invalid(name: &str) -> String {
+    format!("Missing or invalid {name}.")
 }
 fn msg_invalid_node_attribute(name: &str, id: i32) -> String {
     format!("Invalid node {name} for node id {id}.")
@@ -185,6 +204,8 @@ pub struct NmlParsedParameters {
     pub active_node_id: Option<i32>,
     /// Tree groups after splitting multi-component trees.
     pub tree_groups: Vec<TreeGroup>,
+    /// Thumbnail locations are relative to the NML until [`Self::into_success`].
+    pub bookmarks: Vec<NmlParsedAnnotationBookmark>,
 }
 
 /// Dataset found by the caller's lookup (`Dataset._id`, `name`, `_organization`).
@@ -214,6 +235,8 @@ pub struct NmlParseSuccessWithoutFile {
     pub dataset_id: ObjectId,
     pub description: String,
     pub wk_url: Option<String>,
+    /// Thumbnail locations are keys into the upload's other (non-NML) files.
+    pub bookmarks: Vec<NmlParsedAnnotationBookmark>,
 }
 
 /// Outcome of [`parse_nml`] (Scala `Box[NmlParsedParameters]`).
@@ -380,12 +403,23 @@ impl NmlParsedParameters {
             additional_axes: self.additional_axes,
             ..Default::default()
         };
+        let bookmarks = self
+            .bookmarks
+            .into_iter()
+            .map(|mut parsed| {
+                for location in parsed.thumbnail_locations.values_mut() {
+                    *location = format!("{base}{location}");
+                }
+                parsed
+            })
+            .collect();
         NmlParseSuccessWithoutFile {
             skeleton_tracing,
             volume_layers,
             dataset_id: dataset.id.clone(),
             description: self.description,
             wk_url: self.wk_url,
+            bookmarks,
         }
     }
 }
@@ -905,6 +939,7 @@ fn parameters_from_document(
     } else {
         None
     };
+    let bookmarks = parse_bookmarks(root)?;
     let mut user_bounding_boxes =
         parse_user_bounding_boxes(parameters.children_named("userBoundingBox").collect());
     if !params.is_task_upload
@@ -943,7 +978,235 @@ fn parameters_from_document(
         trees,
         active_node_id,
         tree_groups,
+        bookmarks,
     })
+}
+
+// ---------------------------------------------------------------------------
+// Bookmarks
+// ---------------------------------------------------------------------------
+
+fn parse_bookmarks(root: &XmlElement) -> PResult<Vec<NmlParsedAnnotationBookmark>> {
+    let bookmarks = combined(root.grandchildren("bookmarks", "bookmark"), parse_bookmark)
+        .chain_msg(|| msg_invalid_elements("bookmark"))?;
+    let mut seen_ids = HashSet::new();
+    if !bookmarks.iter().all(|b| seen_ids.insert(b.bookmark.id)) {
+        return Err(fail(MSG_DUPLICATE_BOOKMARK_IDS));
+    }
+    Ok(bookmarks)
+}
+
+/// `createdAtVersion` and `thumbnailSavedAtVersion` are set when the annotation is created from
+/// the NML.
+fn parse_bookmark(node: &XmlElement) -> PResult<NmlParsedAnnotationBookmark> {
+    let id_text = node.attr("id");
+    let id = to_int(id_text).ok_or_else(|| fail(msg_invalid_bookmark_id(id_text)))?;
+    let created = to_long(node.attr("created"))
+        .ok_or_else(|| fail(msg_invalid_bookmark_field("created", id)))?;
+    let state_node = node
+        .first_child("state")
+        .ok_or_else(|| fail(msg_invalid_bookmark_field("state", id)))?;
+    let state =
+        parse_bookmark_state(state_node).chain_msg(|| msg_invalid_bookmark_field("state", id))?;
+    // Thumbnails are optional, invalid ones are ignored.
+    let thumbnail_locations: BTreeMap<BookmarkThumbnailSize, String> = node
+        .children_named("thumbnail")
+        .filter_map(|thumbnail| {
+            let size = BookmarkThumbnailSize::from_name(thumbnail.attr_opt("size")?)?;
+            Some((size, thumbnail.attr_opt("location")?.to_owned()))
+        })
+        .collect();
+    // All thumbnails of a bookmark show the same viewport. An unknown or ambiguous one is
+    // ignored, too.
+    let mut viewport_names: Vec<&str> = Vec::new();
+    for name in node
+        .children_named("thumbnail")
+        .filter_map(|thumbnail| thumbnail.attr_opt("viewport"))
+    {
+        if !viewport_names.contains(&name) {
+            viewport_names.push(name);
+        }
+    }
+    let thumbnail_viewport = match viewport_names.as_slice() {
+        [name] => thumbnail_viewport_from_string(name).map(|viewport| viewport as i32),
+        _ => None,
+    };
+    Ok(NmlParsedAnnotationBookmark {
+        bookmark: AnnotationBookmarkProto {
+            id,
+            created,
+            name: node.attr_opt("name").map(str::to_owned),
+            description: node.attr_opt("description").map(str::to_owned),
+            state,
+            created_at_version: 0,
+            metadata: parse_metadata(node.grandchildren("metadata", "metadataEntry")),
+            thumbnail_saved_at_version: None,
+            thumbnail_viewport,
+        },
+        thumbnail_locations,
+    })
+}
+
+/// `requiredField`: `Box.fromOption(value) ?~> Msg.Nml.missingOrInvalid(name)`.
+fn required<T>(value: Option<T>, name: &str) -> PResult<T> {
+    value.ok_or_else(|| fail(msg_missing_or_invalid(name)))
+}
+
+fn parse_bookmark_state(node: &XmlElement) -> PResult<AnnotationBookmarkStateProto> {
+    let mode = required(
+        node.attr_opt("mode").and_then(ViewModeProto::from_str_name),
+        "mode",
+    )?;
+    let zoom_step = required(to_double(node.attr("zoomStep")), "zoomStep")?;
+    let clipping_distance = required(to_double(node.attr("clippingDistance")), "clippingDistance")?;
+    let clip_skeleton_to_current_section = required(
+        to_bool(node.attr("clipSkeletonToCurrentSection")),
+        "clipSkeletonToCurrentSection",
+    )?;
+    let position_node = required(node.first_child("position"), "position")?;
+    let position = required(parse_vec3_int(position_node), "position")?;
+    let rotation_node = required(node.first_child("rotation"), "rotation")?;
+    let rotation = required(
+        parse_rotation(rotation_node, "xRot", "yRot", "zRot"),
+        "rotation",
+    )?;
+    let natively_rendered_layer_name = node
+        .first_child("nativelyRenderedLayer")
+        .map(parse_bookmark_layer_ref)
+        .transpose()?;
+    let td_camera = node
+        .first_child("tdCamera")
+        .map(parse_bookmark_td_camera)
+        .transpose()?;
+    let layers = combined(node.children_named("layer"), parse_bookmark_layer)?;
+    // Scala converts the additional coordinates in the `yield`, after all of the above.
+    let additional_coordinates = parse_additional_coordinate_values(position_node)?;
+    Ok(AnnotationBookmarkStateProto {
+        position,
+        mode: mode as i32,
+        zoom_step,
+        rotation,
+        active_node_id: to_int(node.attr("activeNodeId")),
+        additional_coordinates,
+        natively_rendered_layer_name,
+        clipping_distance,
+        clip_skeleton_to_current_section,
+        td_camera,
+        show_skeletons: to_bool(node.attr("showSkeletons")),
+        layers,
+    })
+}
+
+fn parse_vec3_double(node: &XmlElement) -> Option<Vec3DoubleProto> {
+    parse_rotation(node, "x", "y", "z")
+}
+
+fn parse_bookmark_td_camera(node: &XmlElement) -> PResult<BookmarkTdCameraProto> {
+    let left = required(to_double(node.attr("left")), "tdCamera left")?;
+    let right = required(to_double(node.attr("right")), "tdCamera right")?;
+    let top = required(to_double(node.attr("top")), "tdCamera top")?;
+    let bottom = required(to_double(node.attr("bottom")), "tdCamera bottom")?;
+    let position = required(
+        node.first_child("position").and_then(parse_vec3_double),
+        "tdCamera position",
+    )?;
+    let up = required(
+        node.first_child("up").and_then(parse_vec3_double),
+        "tdCamera up",
+    )?;
+    Ok(BookmarkTdCameraProto {
+        position,
+        up,
+        left,
+        right,
+        top,
+        bottom,
+    })
+}
+
+fn parse_bookmark_layer(node: &XmlElement) -> PResult<BookmarkLayerStateProto> {
+    let layer_name = parse_bookmark_layer_ref(node)?;
+    let intensity_range = node
+        .first_child("intensityRange")
+        .map(|range| {
+            required(
+                to_double(range.attr("min"))
+                    .zip(to_double(range.attr("max")))
+                    .map(|(x, y)| Vec2DoubleProto { x, y }),
+                "intensityRange",
+            )
+        })
+        .transpose()?;
+    let color = node
+        .first_child("color")
+        .map(|color| required(parse_rotation(color, "r", "g", "b"), "color"))
+        .transpose()?;
+    let mapping = node
+        .first_child("mapping")
+        .map(|mapping| {
+            let mapping_name = required(parse_bookmark_mapping_ref(mapping), "mapping name")?;
+            let mapping_type = required(parse_mapping_type(mapping), "mappingType")?;
+            Ok(BookmarkMappingProto {
+                mapping_name,
+                mapping_type: mapping_type as i32,
+            })
+        })
+        .transpose()?;
+    let meshes = combined(node.children_named("mesh"), parse_bookmark_mesh)?;
+    Ok(BookmarkLayerStateProto {
+        layer_name,
+        is_disabled: to_bool(node.attr("isDisabled")),
+        intensity_range,
+        color,
+        is_inverted: to_bool(node.attr("isInverted")),
+        gamma_correction_value: to_double(node.attr("gammaCorrectionValue")),
+        mapping,
+        mesh_file_name: node.attr_opt("meshFileName").map(str::to_owned),
+        meshes,
+    })
+}
+
+fn parse_bookmark_mesh(node: &XmlElement) -> PResult<BookmarkMeshProto> {
+    let segment_id = required(to_unsigned_long(node.attr("segmentId")), "mesh segmentId")?;
+    let is_precomputed = required(to_bool(node.attr("isPrecomputed")), "mesh isPrecomputed")?;
+    let seed_position = required(
+        node.first_child("seedPosition").and_then(parse_vec3_int),
+        "mesh seedPosition",
+    )?;
+    Ok(BookmarkMeshProto {
+        segment_id,
+        seed_position,
+        is_precomputed,
+        mesh_file_name: node.attr_opt("meshFileName").map(str::to_owned),
+        mapping_name: parse_bookmark_mapping_ref(node),
+        mapping_type: parse_mapping_type(node).map(|mapping_type| mapping_type as i32),
+    })
+}
+
+/// Encodes references to annotation layers, see [`NmlAnnotationLayerRef`].
+fn parse_bookmark_layer_ref(node: &XmlElement) -> PResult<String> {
+    if let Some(volume_layer_name) = node.attr_opt("volumeLayer") {
+        Ok(NmlAnnotationLayerRef::Volume(volume_layer_name.to_owned()).encode())
+    } else if to_bool(node.attr("skeletonLayer")) == Some(true) {
+        Ok(NmlAnnotationLayerRef::Skeleton.encode())
+    } else if let Some(dataset_layer_name) = node.attr_opt("datasetLayer") {
+        Ok(dataset_layer_name.to_owned())
+    } else {
+        Err(fail(msg_missing_or_invalid("layer reference")))
+    }
+}
+
+fn parse_bookmark_mapping_ref(node: &XmlElement) -> Option<String> {
+    node.attr_opt("editableMappingOfVolumeLayer")
+        .map(|volume_layer_name| {
+            NmlAnnotationLayerRef::Volume(volume_layer_name.to_owned()).encode()
+        })
+        .or_else(|| node.attr_opt("mappingName").map(str::to_owned))
+}
+
+fn parse_mapping_type(node: &XmlElement) -> Option<MappingTypeProto> {
+    node.attr_opt("mappingType")
+        .and_then(MappingTypeProto::from_str_name)
 }
 
 /// `buildBranchPointMap` / `buildCommentMap`: entries are prepended, so each

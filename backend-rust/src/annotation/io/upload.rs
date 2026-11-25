@@ -26,6 +26,7 @@
 //! (application.conf); this router raises the crate-wide default to 1 GiB for
 //! this route only. Unlike Play, the parts are held in memory.
 use axum::extract::FromRef;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::{Cursor, Write};
 
 use axum::{
@@ -50,7 +51,12 @@ use crate::{
         extract_from_files, find_dataset_for_uploaded_annotations, return_error, upload_metadata,
         wrap_or_prefix_groups,
     },
-    annotation::nml::parser::{NmlParseResult, SharedParsingParameters, UploadedVolumeLayer},
+    annotation::nml::bookmarks::{
+        BookmarkThumbnailSize, NmlAnnotationLayerRef, is_jpeg, rewrite_layer_references,
+    },
+    annotation::nml::parser::{
+        NmlParseResult, NmlParseSuccessWithoutFile, SharedParsingParameters, UploadedVolumeLayer,
+    },
     annotation::provider::{
         AnnotationLayer, AnnotationLayerType, AnnotationProvider, ProviderError,
     },
@@ -66,6 +72,7 @@ use crate::{
     proto::{
         AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto, BoundingBoxProto,
         SkeletonTracing, Vec3DoubleProto, Vec3IntProto, VolumeTracing,
+        datastore::UploadedAnnotationBookmarkProto,
     },
     stores::client::ServiceClients,
     stores::tracing_client::{TracingStoreClient, VolumeSaveDataSource},
@@ -530,6 +537,114 @@ async fn merge_and_save_skeleton_layers(
     }])
 }
 
+/// bookmarksForUpload: bookmarks are only imported if a single NML was uploaded. Merging several
+/// NMLs may change node and segment ids, which the bookmarks would then need to be adapted to.
+/// The references to annotation layers are resolved to the new tracingIds, references to things
+/// that do not exist (anymore) are dropped. The bookmarks count as created at the version of the
+/// uploaded annotation, together with their thumbnails.
+fn bookmarks_for_upload(
+    parse_successes: &[&NmlParseSuccessWithoutFile],
+    uploaded_volume_layers: &[&UploadedVolumeLayer],
+    // In the same order as `uploaded_volume_layers`.
+    saved_volume_layers: &[AnnotationLayer],
+    saved_skeleton_layers: &[AnnotationLayer],
+    data_source: &UsableDataSource,
+    other_files: &BTreeMap<String, Bytes>,
+    version: i64,
+) -> Vec<UploadedAnnotationBookmarkProto> {
+    let [parse_success] = parse_successes else {
+        if parse_successes
+            .iter()
+            .any(|success| !success.bookmarks.is_empty())
+        {
+            tracing::info!(
+                "Dropping the bookmarks of {} merged annotation files on upload.",
+                parse_successes.len()
+            );
+        }
+        return Vec::new();
+    };
+    let uploaded_and_saved = || uploaded_volume_layers.iter().zip(saved_volume_layers);
+    let volume_tracing_ids_by_name: HashMap<&str, &str> = uploaded_and_saved()
+        .filter_map(|(uploaded, saved)| {
+            Some((uploaded.name.as_deref()?, saved.tracing_id.as_str()))
+        })
+        .collect();
+    // Editable mappings are named after the tracingId of their volume layer.
+    let editable_mapping_names_by_volume_name: HashMap<&str, &str> = uploaded_and_saved()
+        .filter(|(uploaded, _)| uploaded.edited_mapping_edges_location.is_some())
+        .filter_map(|(uploaded, saved)| {
+            Some((uploaded.name.as_deref()?, saved.tracing_id.as_str()))
+        })
+        .collect();
+    let skeleton_tracing_id = saved_skeleton_layers
+        .first()
+        .map(|layer| layer.tracing_id.as_str());
+    let dataset_layer_names: HashSet<&str> = data_source
+        .data_layers
+        .iter()
+        .map(|layer| layer.name.as_str())
+        .collect();
+    let node_ids: HashSet<i32> = parse_success
+        .skeleton_tracing
+        .trees
+        .iter()
+        .flat_map(|tree| tree.nodes.iter().map(|node| node.id))
+        .collect();
+    let read_thumbnail = |locations: &BTreeMap<BookmarkThumbnailSize, String>,
+                          size: BookmarkThumbnailSize| {
+        locations
+            .get(&size)
+            .and_then(|location| other_files.get(location))
+            .filter(|bytes| is_jpeg(bytes))
+            .map(|bytes| bytes.to_vec())
+    };
+    parse_success
+        .bookmarks
+        .iter()
+        .map(|parsed| {
+            let mut bookmark = rewrite_layer_references(
+                parsed.bookmark.clone(),
+                |name| match NmlAnnotationLayerRef::decode(name) {
+                    Some(NmlAnnotationLayerRef::Volume(volume_layer_name)) => {
+                        volume_tracing_ids_by_name
+                            .get(volume_layer_name.as_str())
+                            .map(|id| (*id).to_owned())
+                    }
+                    Some(NmlAnnotationLayerRef::Skeleton) => skeleton_tracing_id.map(str::to_owned),
+                    None => dataset_layer_names.contains(name).then(|| name.to_owned()),
+                },
+                |name| match NmlAnnotationLayerRef::decode(name) {
+                    Some(NmlAnnotationLayerRef::Volume(volume_layer_name)) => {
+                        editable_mapping_names_by_volume_name
+                            .get(volume_layer_name.as_str())
+                            .map(|id| (*id).to_owned())
+                    }
+                    Some(NmlAnnotationLayerRef::Skeleton) => None,
+                    None => Some(name.to_owned()),
+                },
+            );
+            let small_thumbnail =
+                read_thumbnail(&parsed.thumbnail_locations, BookmarkThumbnailSize::Small);
+            let large_thumbnail =
+                read_thumbnail(&parsed.thumbnail_locations, BookmarkThumbnailSize::Large);
+            let has_thumbnails = small_thumbnail.is_some() || large_thumbnail.is_some();
+            bookmark.state.active_node_id = bookmark
+                .state
+                .active_node_id
+                .filter(|id| node_ids.contains(id));
+            bookmark.created_at_version = version;
+            bookmark.thumbnail_saved_at_version = has_thumbnails.then_some(version);
+            bookmark.thumbnail_viewport = bookmark.thumbnail_viewport.filter(|_| has_thumbnails);
+            UploadedAnnotationBookmarkProto {
+                bookmark,
+                small_thumbnail,
+                large_thumbnail,
+            }
+        })
+        .collect()
+}
+
 // ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
@@ -629,6 +744,30 @@ async fn upload(
         )
         .await?;
         let skeleton_layers = merge_and_save_skeleton_layers(&services, &url, &skeletons).await?;
+        let uploaded_volume_layers: Vec<&UploadedVolumeLayer> =
+            volume_groups.iter().flatten().collect();
+        let uploaded_bookmarks = bookmarks_for_upload(
+            &parse_successes,
+            &uploaded_volume_layers,
+            &volume_layers,
+            &skeleton_layers,
+            &source.source,
+            &parsed.other_files,
+            // The version of the uploaded annotation, the first save of the user is the next one.
+            (earliest_accessible_version - 1).max(0),
+        );
+        let bookmark_ids: Vec<i32> = uploaded_bookmarks
+            .iter()
+            .map(|uploaded| uploaded.bookmark.id)
+            .collect();
+        // Saved before the AnnotationProto that lists their ids.
+        if !uploaded_bookmarks.is_empty() {
+            services
+                .tracing_store
+                .save_uploaded_bookmarks(&url, &annotation_id, uploaded_bookmarks)
+                .await
+                .map_err(ProviderError::from)?;
+        }
         let layers: Vec<AnnotationLayer> =
             skeleton_layers.into_iter().chain(volume_layers).collect();
         let proto = AnnotationProto {
@@ -643,6 +782,7 @@ async fn upload(
                 })
                 .collect(),
             earliest_accessible_version,
+            bookmark_ids,
             ..Default::default()
         };
         services

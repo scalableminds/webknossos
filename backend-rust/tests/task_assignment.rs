@@ -119,6 +119,8 @@ fn proto(layers: Vec<AnnotationLayerProto>) -> AnnotationProto {
         skeleton_may_have_pending_updates: None,
         editable_mappings_may_have_pending_updates: None,
         user_states: Vec::new(),
+        bookmark_ids: Vec::new(),
+        largest_bookmark_id: None,
     }
 }
 

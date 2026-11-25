@@ -13,6 +13,15 @@ pub(super) fn to_long(s: &str) -> Option<i64> {
     java_integer_literal(s)?.parse().ok()
 }
 
+/// `java.lang.Long.parseUnsignedLong` (a leading `+` is allowed, `-` is not).
+pub(super) fn to_unsigned_long(s: &str) -> Option<u64> {
+    let digits = s.strip_prefix('+').unwrap_or(s);
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse().ok()
+}
+
 fn java_integer_literal(s: &str) -> Option<&str> {
     let digits = s.strip_prefix(['+', '-']).unwrap_or(s);
     (!digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())).then_some(s)

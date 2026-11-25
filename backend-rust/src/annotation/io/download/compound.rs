@@ -417,6 +417,8 @@ async fn zip_annotations(
             volume_data_zip_format: VolumeDataZipFormat::Wkw,
             writer_git_commit: &config.build_info.commit_hash,
             timestamp_millis: chrono::Utc::now().timestamp_millis(),
+            bookmarks: &[],
+            dataset_layer_names: None,
         })
         .map_err(|error| fail(error.to_string()))?;
         rendered.push((download.name, document, download.volume_data));

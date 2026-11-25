@@ -16,7 +16,8 @@ DONE. Both routes are implemented and tested: `GET /annotations/:typ/:id/downloa
   3. `nameFor`: the annotation name, otherwise `normalize(dataset__task|explorational__abbrev__hash6)`. The owner MultiUser is unreadable for anonymous requesters, so the user part is empty for them.
   4. allowDownload: fails closed with 403.
   5. Dataset (404), then organization (404).
-  - Skeleton-only: a raw NML with `application/xml` and `.nml`. Otherwise a zip (`application/zip`) holding `<name>.nml`, then per volume layer `data[_i]_<layer>.zip` and `editedMappingEdges[_i]_<layer>.zip` (level 1).
+  - Always a zip (`application/zip`, `.zip`; since #9967 also for skeleton-only annotations) holding `<name>.nml`, then per volume layer `data[_i]_<layer>.zip` and `editedMappingEdges[_i]_<layer>.zip` (level 1), then the bookmark thumbnails `bookmark_thumbnails/<id>_<size>.jpg` (level 1 if a volume entry came before, like Scala's zipper).
+  - Bookmarks (#9967): after the annotation proto, `GET /tracings/annotation/:id/bookmarks?version=` (`fetchBookmarksFailed`), then per bookmark with `thumbnailSavedAtVersion` and per size (`large`, `small`) `GET .../bookmarks/:bookmarkId/thumbnail?size=&v=`, 8 at a time; failed thumbnail requests are skipped. The NML refers to annotation layers by NML name and drops settings of dataset layers missing from `dataset_layers`.
   - `Content-Disposition: attachment; filename="<URLEncoder(name+ext), + -> %20>"`.
   - `version` is forwarded to every tracing-store fetch.
 - Compound (`downloadProject/Task/TaskType`): requires a user (403 `notAllowed`). Parent lookups use requester DAO access (404 with the `Msg.*.notFound(id)` texts).
@@ -44,7 +45,8 @@ DONE. Both routes are implemented and tested: `GET /annotations/:typ/:id/downloa
 ## Evidence
 
 - `cargo test --locked --offline --test annotation_download -- --include-ignored`: 6 passed, 0 failed. Coverage:
-  - Skeleton-only NML: headers, URL-encoded name, `nameForAnnotation` for member and anonymous, version forwarding, bad version returns 400.
+  - Skeleton-only zip: headers, URL-encoded name, `nameForAnnotation` for member and anonymous, version forwarding, bad version returns 400.
+  - Bookmarks: NML section, thumbnail entries, missing thumbnails skipped, thumbnail and bookmark query parameters.
   - Hybrid: entry order, data and edited-edges zips passed through, base mapping, zarr3 and voxel query, single-layer naming, unknown format falls back to wkw.
   - `skipVolumeData`.
   - Permissions: 404 for unreadable annotations, fail-closed 403 with no RPCs.

@@ -5,7 +5,10 @@ use crate::common;
 
 use std::{
     io::{Cursor, Read},
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 use axum::{
@@ -27,7 +30,9 @@ use webknossos_backend::{
     proto::{
         AnnotationProto, SkeletonTracing, VolumeTracing,
         datastore::{
-            Node, SkeletonTracingOpt, SkeletonTracings, Tree, VolumeTracingOpt, VolumeTracings,
+            AnnotationBookmarkProto, AnnotationBookmarkStateProto, AnnotationBookmarksProto,
+            BookmarkLayerStateProto, Node, SkeletonTracingOpt, SkeletonTracings, Tree,
+            VolumeTracingOpt, VolumeTracings,
         },
     },
     router,
@@ -57,6 +62,8 @@ impl Call {
 #[derive(Clone, Default)]
 struct Mock {
     calls: Arc<Mutex<Vec<Call>>>,
+    /// Serve one bookmark (see [`bookmark`]) instead of none.
+    with_bookmarks: Arc<AtomicBool>,
 }
 
 impl Mock {
@@ -109,6 +116,39 @@ fn volume(tracing_id: &str) -> VolumeTracing {
     }
 }
 
+/// A bookmark with a small thumbnail (the large one is missing), referring to the dataset layer
+/// `color`, an unknown dataset layer and the skeleton and volume layers of the annotation.
+fn bookmark(annotation_id: &str) -> AnnotationBookmarkProto {
+    let layer = |name: String| BookmarkLayerStateProto {
+        layer_name: name,
+        ..Default::default()
+    };
+    AnnotationBookmarkProto {
+        id: 2,
+        created: 1_700_000_000_000,
+        name: Some("first".into()),
+        state: AnnotationBookmarkStateProto {
+            mode: 1,
+            zoom_step: 1.0,
+            clipping_distance: 50.0,
+            natively_rendered_layer_name: Some(format!("vol-{annotation_id}")),
+            layers: vec![
+                layer("color".into()),
+                layer("unknown".into()),
+                layer(format!("skel-{annotation_id}")),
+                layer(format!("vol-{annotation_id}")),
+            ],
+            ..Default::default()
+        },
+        created_at_version: 3,
+        thumbnail_saved_at_version: Some(7),
+        thumbnail_viewport: Some(1),
+        ..Default::default()
+    }
+}
+
+const SMALL_THUMBNAIL: &[u8] = &[0xff, 0xd8, 0xff, 0xe0, 1, 2, 3];
+
 fn data_zip(tracing_id: &str) -> Vec<u8> {
     format!("PK-data-of-{tracing_id}").into_bytes()
 }
@@ -139,6 +179,10 @@ async fn mock_handler(State(mock): State<Mock>, request: Request) -> Response {
     let path = request.uri().path().to_owned();
     let query: Vec<(String, String)> =
         serde_urlencoded::from_str(request.uri().query().unwrap_or("")).unwrap();
+    let size = query
+        .iter()
+        .find(|(key, _)| key == "size")
+        .map(|(_, value)| value.clone());
     let bytes = to_bytes(request.into_body(), 1024 * 1024).await.unwrap();
     let body: Value = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
     mock.calls.lock().unwrap().push(Call {
@@ -180,6 +224,23 @@ async fn mock_handler(State(mock): State<Mock>, request: Request) -> Response {
         ["tracings", "mapping", _, "info"] => {
             axum::Json(json!({"baseMappingName": "base-mapping"})).into_response()
         }
+        ["tracings", "annotation", id, "bookmarks"] => protobuf(
+            AnnotationBookmarksProto {
+                bookmarks: if mock.with_bookmarks.load(Ordering::SeqCst) {
+                    vec![bookmark(id)]
+                } else {
+                    Vec::new()
+                },
+            }
+            .encode_to_vec(),
+        ),
+        ["tracings", "annotation", _, "bookmarks", "2", "thumbnail"] => {
+            if size.as_deref() == Some("small") {
+                (StatusCode::OK, SMALL_THUMBNAIL).into_response()
+            } else {
+                StatusCode::NOT_FOUND.into_response()
+            }
+        }
         ["tracings", "annotation", _] => protobuf(
             AnnotationProto {
                 description: String::new(),
@@ -189,6 +250,8 @@ async fn mock_handler(State(mock): State<Mock>, request: Request) -> Response {
                 skeleton_may_have_pending_updates: None,
                 editable_mappings_may_have_pending_updates: None,
                 user_states: Vec::new(),
+                bookmark_ids: Vec::new(),
+                largest_bookmark_id: None,
             }
             .encode_to_vec(),
         ),
@@ -429,7 +492,7 @@ const SKELETON_ONLY: &[(&str, &str, &str)] = &[("skel", "Skeleton", "Skeleton")]
 
 #[tokio::test]
 #[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
-async fn skeleton_only_explorational_is_a_plain_nml_with_scala_headers() {
+async fn skeleton_only_explorational_is_a_zipped_nml_with_scala_headers() {
     let db = TestDb::new().await;
     let (url, mock) = mock_tracing_store().await;
     let w = world(&db, &url).await;
@@ -455,13 +518,16 @@ async fn skeleton_only_explorational_is_a_plain_nml_with_scala_headers() {
     )
     .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert_eq!(reply.header(header::CONTENT_TYPE), "application/xml");
-    // URLEncoder.encode(name + ".nml", UTF-8).replace("+", "%20")
+    // Since annotation bookmarks, skeleton-only annotations are zipped, too.
+    assert_eq!(reply.header(header::CONTENT_TYPE), "application/zip");
+    // URLEncoder.encode(name + ".zip", UTF-8).replace("+", "%20")
     assert_eq!(
         reply.header(header::CONTENT_DISPOSITION),
-        "attachment; filename=\"My%20%C3%84nnotation%2B1.nml\""
+        "attachment; filename=\"My%20%C3%84nnotation%2B1.zip\""
     );
-    let nml = reply.text();
+    let entries = unzip(&reply.body);
+    assert_eq!(names(&entries), vec!["My Ännotation+1.nml"]);
+    let nml = String::from_utf8(entries[0].1.clone()).unwrap();
     assert!(nml.starts_with("<things>"), "{nml}");
     assert!(nml.ends_with("</things>"), "{nml}");
     assert!(nml.contains(&format!("tree-skel-{named}")), "{nml}");
@@ -474,19 +540,21 @@ async fn skeleton_only_explorational_is_a_plain_nml_with_scala_headers() {
     );
     assert!(!nml.contains("<volume"), "{nml}");
 
-    // Skeleton GET (annotationId, no version), then the annotation proto.
+    // Skeleton GET (annotationId, no version), then the annotation proto and its bookmarks.
     let calls = mock.calls();
     assert_eq!(
         mock.paths(),
         vec![
             format!("/tracings/skeleton/skel-{named}"),
             format!("/tracings/annotation/{named}"),
+            format!("/tracings/annotation/{named}/bookmarks"),
         ]
     );
     assert_eq!(calls[0].query("annotationId"), Some(named.as_str()));
     assert_eq!(calls[0].query("version"), None);
     assert!(calls[0].query("token").is_some());
     assert_eq!(calls[1].query("version"), None);
+    assert_eq!(calls[2].query("version"), None);
 
     // version is forwarded to every tracing-store fetch.
     mock.clear();
@@ -498,7 +566,7 @@ async fn skeleton_only_explorational_is_a_plain_nml_with_scala_headers() {
     .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     let calls = mock.calls();
-    assert_eq!(calls.len(), 2);
+    assert_eq!(calls.len(), 3);
     assert!(calls.iter().all(|call| call.query("version") == Some("5")));
 
     // Unnamed: nameForAnnotation (dataset__explorational__abbrev__hash).
@@ -525,7 +593,7 @@ async fn skeleton_only_explorational_is_a_plain_nml_with_scala_headers() {
     assert_eq!(
         reply.header(header::CONTENT_DISPOSITION),
         format!(
-            "attachment; filename=\"Dataset__explorational__rtest__{}.nml\"",
+            "attachment; filename=\"Dataset__explorational__rtest__{}.zip\"",
             hash(&unnamed)
         )
     );
@@ -541,7 +609,7 @@ async fn skeleton_only_explorational_is_a_plain_nml_with_scala_headers() {
     assert_eq!(
         reply.header(header::CONTENT_DISPOSITION),
         format!(
-            "attachment; filename=\"Dataset__explorational____{}.nml\"",
+            "attachment; filename=\"Dataset__explorational____{}.zip\"",
             hash(&unnamed)
         )
     );
@@ -634,6 +702,7 @@ async fn hybrid_download_zips_nml_volume_data_and_edited_edges() {
             format!("/tracings/mapping/{b_vol}/info"),
             format!("/tracings/skeleton/skel-{id}"),
             format!("/tracings/annotation/{id}"),
+            format!("/tracings/annotation/{id}/bookmarks"),
         ]
     );
     let data = mock.find(&format!("/tracings/volume/{a_vol}/allDataZip"));
@@ -725,7 +794,93 @@ async fn skip_volume_data_keeps_only_the_nml_in_the_zip() {
             .all(|path| !path.ends_with("/allDataZip") && !path.starts_with("/tracings/mapping")),
         "{paths:?}"
     );
-    assert_eq!(paths.len(), 4, "{paths:?}");
+    assert_eq!(paths.len(), 5, "{paths:?}");
+    db.cleanup().await;
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn bookmarks_are_written_to_the_nml_with_their_thumbnails() {
+    let db = TestDb::new().await;
+    let (url, mock) = mock_tracing_store().await;
+    mock.with_bookmarks.store(true, Ordering::SeqCst);
+    let w = world(&db, &url).await;
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layers(_dataset,name,category,elementClass,boundingBox) \
+         VALUES($1,'color','color','uint8',ROW(0,0,0,10,10,10)::webknossos.BOUNDING_BOX)",
+    )
+    .bind(&w.dataset)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    let app = app(&db);
+    let id = annotation(
+        &db,
+        &w,
+        Seed {
+            owner: &w.owner.user_id,
+            typ: "Explorational",
+            visibility: "Internal",
+            state: "Active",
+            name: "marked",
+            layers: &[("skel", "Skeleton", "Skeleton"), ("vol", "Volume", "Seg")],
+        },
+    )
+    .await;
+    let reply = get(
+        &app,
+        Some(&w.owner.token),
+        &format!("/api/annotations/Explorational/{id}/download?version=4"),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let entries = unzip(&reply.body);
+    // The missing large thumbnail is skipped.
+    assert_eq!(
+        names(&entries),
+        vec![
+            "marked.nml",
+            "data_Seg.zip",
+            "bookmark_thumbnails/2_small.jpg"
+        ]
+    );
+    assert_eq!(entries[2].1, SMALL_THUMBNAIL);
+    let nml = String::from_utf8(entries[0].1.clone()).unwrap();
+    let bookmarks = &nml[nml.find("  <bookmarks>").expect(&nml)..];
+    assert_eq!(
+        bookmarks,
+        r#"  <bookmarks>
+    <bookmark id="2" name="first" created="1700000000000">
+      <thumbnail size="small" viewport="xy" location="bookmark_thumbnails/2_small.jpg"/>
+      <state mode="orthogonal" zoomStep="1.0" clippingDistance="50.0" clipSkeletonToCurrentSection="false">
+        <position x="0" y="0" z="0"/>
+        <rotation xRot="0.0" yRot="0.0" zRot="0.0"/>
+        <nativelyRenderedLayer volumeLayer="Seg"/>
+        <layer datasetLayer="color"/>
+        <layer skeletonLayer="true"/>
+        <layer volumeLayer="Seg"/>
+      </state>
+    </bookmark>
+  </bookmarks>
+</things>"#
+    );
+    // Both thumbnails are requested at the version they were saved at.
+    let thumbnail_calls: Vec<Call> = mock
+        .calls()
+        .into_iter()
+        .filter(|call| call.path.ends_with("/thumbnail"))
+        .collect();
+    assert_eq!(thumbnail_calls.len(), 2);
+    assert!(thumbnail_calls.iter().all(|call| {
+        call.path == format!("/tracings/annotation/{id}/bookmarks/2/thumbnail")
+            && call.query("v") == Some("7")
+            && call.query("token").is_some()
+    }));
+    assert_eq!(
+        mock.find(&format!("/tracings/annotation/{id}/bookmarks"))
+            .query("version"),
+        Some("4")
+    );
     db.cleanup().await;
 }
 
@@ -828,20 +983,18 @@ async fn permissions_fail_closed_and_untyped_route_resolves_the_stored_type() {
         &format!("/api/annotations/{task_annotation}/download?version=2"),
     )
     .await;
-    assert_eq!(untyped.status, StatusCode::OK, "{}", untyped.text());
+    assert_eq!(untyped.status, StatusCode::OK);
     let expected = format!(
-        "attachment; filename=\"Dataset__{}__rtest__{}.nml\"",
+        "attachment; filename=\"Dataset__{}__rtest__{}.zip\"",
         w.task,
         hash(&task_annotation)
     );
     assert_eq!(typed.header(header::CONTENT_DISPOSITION), expected);
     assert_eq!(untyped.header(header::CONTENT_DISPOSITION), expected);
+    let nml = String::from_utf8(unzip(&untyped.body).remove(0).1).unwrap();
     assert!(
-        untyped
-            .text()
-            .contains(&format!("<meta name=\"taskId\" content=\"{}\"/>", w.task)),
-        "{}",
-        untyped.text()
+        nml.contains(&format!("<meta name=\"taskId\" content=\"{}\"/>", w.task)),
+        "{nml}"
     );
     assert_eq!(
         mock.find(&format!("/tracings/annotation/{task_annotation}"))

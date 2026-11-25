@@ -23,7 +23,8 @@ use webknossos_backend::{
     proto::{
         AnnotationLayerTypeProto, AnnotationProto, Vec3IntProto,
         datastore::{
-            SkeletonTracings, VolumeTracing, VolumeTracings, volume_tracing::ElementClassProto,
+            SkeletonTracings, UploadedAnnotationBookmarksProto, VolumeTracing, VolumeTracings,
+            volume_tracing::ElementClassProto,
         },
     },
     router,
@@ -572,6 +573,154 @@ async fn zip_with_volume_data_saves_volume_and_forwards_initial_data() {
         .await
         .unwrap();
     assert_eq!(name, "upload");
+    db.cleanup().await;
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn bookmarks_of_a_single_nml_are_saved_with_resolved_layers_and_thumbnails() {
+    let db = TestDb::new().await;
+    let w = world(&db).await;
+    let nml = r#"<things><parameters><experiment name="dir"/></parameters>
+<thing id="1" name="t"><nodes><node id="1" x="1" y="2" z="3"/></nodes><edges/></thing>
+<volume id="0" location="data_Volume.zip" name="My_volume" fallbackLayer="segmentation"/>
+<bookmarks>
+  <bookmark id="4" name="b" created="12">
+    <thumbnail size="small" viewport="xz" location="bookmark_thumbnails/4_small.jpg"/>
+    <thumbnail size="large" viewport="xz" location="bookmark_thumbnails/4_large.jpg"/>
+    <state mode="orthogonal" zoomStep="1.0" clippingDistance="50.0" clipSkeletonToCurrentSection="false" activeNodeId="99">
+      <position x="1" y="2" z="3"/>
+      <rotation xRot="0.0" yRot="0.0" zRot="0.0"/>
+      <nativelyRenderedLayer volumeLayer="My_volume"/>
+      <layer datasetLayer="color"/>
+      <layer datasetLayer="missing"/>
+      <layer skeletonLayer="true"/>
+      <layer volumeLayer="My_volume"><mapping mappingName="agg" mappingType="AGGLOMERATE"/></layer>
+      <layer volumeLayer="Gone"/>
+    </state>
+  </bookmark>
+  <bookmark id="6" created="13">
+    <state mode="flight" zoomStep="2.0" clippingDistance="50.0" clipSkeletonToCurrentSection="true" activeNodeId="1">
+      <position x="0" y="0" z="0"/>
+      <rotation xRot="0.0" yRot="0.0" zRot="0.0"/>
+    </state>
+  </bookmark>
+</bookmarks></things>"#;
+    let jpeg: &[u8] = &[0xff, 0xd8, 0xff, 0xe0, 9];
+    let png: &[u8] = &[0x89, 0x50, 0x4e, 0x47];
+    let archive = zip_of(&[
+        ("annotation.nml", nml.as_bytes()),
+        ("data_Volume.zip", b"volume data"),
+        ("bookmark_thumbnails/4_small.jpg", jpeg),
+        ("bookmark_thumbnails/4_large.jpg", png),
+    ]);
+    let (status, body) = upload(
+        &w.app,
+        Some(&w.f.token),
+        &[Part::File("upload.zip", archive)],
+    )
+    .await;
+    let id = success_id(status, &body);
+    // The bookmarks are saved before the AnnotationProto that lists their ids.
+    assert_eq!(
+        w.mock.paths(),
+        [
+            format!(
+                "/data/datasets/{}/layers/segmentation/hasSegmentIndex",
+                w.dataset
+            ),
+            "/tracings/volume/save".into(),
+            "/tracings/volume/:id/initialData".into(),
+            "/tracings/skeleton/mergedFromContents".into(),
+            format!("/tracings/annotation/{id}/bookmarks/saveUploaded"),
+            "/tracings/annotation/save".into(),
+        ]
+    );
+    let calls = w.mock.calls();
+    let volume_id = calls[1].param("newTracingId").unwrap().to_owned();
+    let skeleton_id = calls[3].param("newTracingId").unwrap().to_owned();
+    let saved = find(&calls, "/bookmarks/saveUploaded");
+    assert_eq!(saved.method, "POST");
+    assert_eq!(saved.keys(), ["token"]);
+    let uploaded = UploadedAnnotationBookmarksProto::decode(saved.body.as_slice())
+        .unwrap()
+        .bookmarks;
+    assert_eq!(uploaded.len(), 2);
+
+    let first = &uploaded[0];
+    let state = &first.bookmark.state;
+    let layer_names: Vec<&str> = state.layers.iter().map(|l| l.layer_name.as_str()).collect();
+    assert_eq!(
+        layer_names,
+        ["color", skeleton_id.as_str(), volume_id.as_str()]
+    );
+    // A plain mapping name stays, only editable mappings refer to volume layers.
+    assert_eq!(
+        state.layers[2]
+            .mapping
+            .as_ref()
+            .map(|m| m.mapping_name.as_str()),
+        Some("agg")
+    );
+    assert_eq!(
+        state.natively_rendered_layer_name.as_deref(),
+        Some(volume_id.as_str())
+    );
+    // Node 99 does not exist.
+    assert_eq!(state.active_node_id, None);
+    assert_eq!(first.bookmark.name.as_deref(), Some("b"));
+    assert_eq!(first.bookmark.created, 12);
+    assert_eq!(first.bookmark.created_at_version, 0);
+    assert_eq!(first.bookmark.thumbnail_saved_at_version, Some(0));
+    assert_eq!(first.bookmark.thumbnail_viewport, Some(3));
+    // Only JPEG thumbnails are kept.
+    assert_eq!(first.small_thumbnail.as_deref(), Some(jpeg));
+    assert_eq!(first.large_thumbnail, None);
+
+    let second = &uploaded[1];
+    assert_eq!(second.bookmark.id, 6);
+    assert_eq!(second.bookmark.state.active_node_id, Some(1));
+    assert_eq!(second.bookmark.thumbnail_saved_at_version, None);
+    assert_eq!(second.bookmark.thumbnail_viewport, None);
+    assert_eq!(second.small_thumbnail, None);
+
+    assert_eq!(annotation_proto(&calls).bookmark_ids, [4, 6]);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn bookmarks_are_dropped_when_several_nmls_are_merged() {
+    let db = TestDb::new().await;
+    let w = world(&db).await;
+    let with_bookmark = |tree: &str| {
+        format!(
+            r#"<things><parameters><experiment name="dir"/></parameters>
+<thing id="1" name="{tree}"><nodes><node id="1" x="1" y="2" z="3"/></nodes><edges/></thing>
+<bookmarks><bookmark id="1" created="1"><state mode="orthogonal" zoomStep="1.0" clippingDistance="50.0" clipSkeletonToCurrentSection="false"><position x="0" y="0" z="0"/><rotation xRot="0.0" yRot="0.0" zRot="0.0"/></state></bookmark></bookmarks></things>"#
+        )
+        .into_bytes()
+    };
+    let (status, body) = upload(
+        &w.app,
+        Some(&w.f.token),
+        &[
+            Part::File("a.nml", with_bookmark("a")),
+            Part::File("b.nml", with_bookmark("b")),
+            Part::Data("createGroupForEachFile", "false"),
+        ],
+    )
+    .await;
+    success_id(status, &body);
+    assert!(
+        !w.mock
+            .paths()
+            .iter()
+            .any(|path| path.ends_with("/saveUploaded")),
+        "{:?}",
+        w.mock.paths()
+    );
+    assert!(annotation_proto(&w.mock.calls()).bookmark_ids.is_empty());
     db.cleanup().await;
 }
 

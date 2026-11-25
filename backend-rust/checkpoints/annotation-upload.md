@@ -37,6 +37,13 @@ tests/annotation_upload.rs, this file. `annotation_upload::router(jobs_enabled)`
   `Volume` layer.
 - mergeAndSaveSkeletonLayers: every success contributes a skeleton (so every upload gets a `Skeleton`
   layer, as Scala) → `skeleton/mergedFromContents?newTracingId` (long).
+- bookmarksForUpload (#9967): only for a single parse success (otherwise dropped with an info log).
+  Layer references resolve to the new tracingIds (volume by NML name, editable mappings to their
+  volume's tracingId, `skeletonLayer` to the skeleton), unknown dataset layers and missing volumes
+  are dropped with what depends on them; activeNodeId only if the node exists; createdAtVersion and
+  thumbnailSavedAtVersion = max(earliestAccessibleVersion - 1, 0); thumbnails from the upload's other
+  files, only if they start like a JPEG. Non-empty → `POST /tracings/annotation/:id/bookmarks/saveUploaded`
+  (UploadedAnnotationBookmarksProto) before the annotation proto, which lists their ids in `bookmarkIds`.
 - saveAnnotationProto (description, v0, skeleton layers then volume layers, earliestAccessibleVersion),
   then one transaction insert_annotation (Explorational/Internal/OwnerOnly/Active, name = nameForUploaded
   or "", statistics `{}` = AnnotationLayerStatistics.unknown), then analytics `upload_annotation`

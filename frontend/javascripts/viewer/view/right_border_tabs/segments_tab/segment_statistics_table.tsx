@@ -172,7 +172,9 @@ function NumberCell({
   // Already converted to the unit of the column.
   number: number;
   fractionDigits: number;
-  barPercent: number;
+  // Only segments get a bar. Groups don't, as it is not settled yet what their bars should relate
+  // to (e.g. the other groups, their siblings or their parent).
+  barPercent?: number;
   // Set for the aggregated value of a group.
   aggregationLabel?: string;
 }) {
@@ -195,14 +197,16 @@ function NumberCell({
           </Typography.Text>
         ) : null}
       </span>
-      <Progress
-        percent={barPercent}
-        showInfo={false}
-        size={{ height: 2 }}
-        strokeLinecap="butt"
-        strokeColor={isGroup ? token.colorPrimary : token.colorPrimaryBorder}
-        style={{ lineHeight: 0, margin: 0 }}
-      />
+      {barPercent != null ? (
+        <Progress
+          percent={barPercent}
+          showInfo={false}
+          size={{ height: 2 }}
+          strokeLinecap="butt"
+          strokeColor={token.colorPrimaryBorder}
+          style={{ lineHeight: 0, margin: 0 }}
+        />
+      ) : null}
     </Flex>
   );
 }
@@ -229,7 +233,6 @@ function PositionCell({ position, layerName }: { position: Vector3; layerName: s
 function getStatisticColumn(
   spec: ValueSpec,
   rows: SegmentStatisticsRow[],
-  groupRows: GroupTableRow[],
   datasetUnit: UnitShort,
   layerName: string,
 ): TableColumnType<StatisticsTableRow> {
@@ -248,8 +251,6 @@ function getStatisticColumn(
     // Spreading many values into Math.min/max would exceed the maximum number of arguments.
     const minOfSegments = min(numbers) ?? 0;
     const maxOfSegments = max(numbers) ?? 0;
-    // The bars of groups relate the groups to each other, as e.g. totals exceed any single segment.
-    const maxOfGroups = max(groupRows.flatMap((group) => group.aggregates[spec.key] ?? [])) ?? 0;
     const aggregationLabel = AGGREGATION_LABELS[value.aggregation ?? "sum"];
     return {
       key: spec.key,
@@ -263,12 +264,10 @@ function getStatisticColumn(
           if (tableRow.kind === "group") {
             const aggregate = tableRow.aggregates[spec.key];
             if (aggregate == null) return null;
-            const barPercent = maxOfGroups > 0 ? (aggregate / maxOfGroups) * 100 : 100;
             return (
               <NumberCell
                 number={aggregate / unit.factor}
                 fractionDigits={fractionDigits}
-                barPercent={Math.max(MIN_BAR_PERCENT, barPercent)}
                 aggregationLabel={aggregationLabel}
               />
             );
@@ -290,27 +289,44 @@ function getStatisticColumn(
     };
   }
 
+  const { getPosition } = value;
+  const unitLabel = `x, y, z in ${unit.label}`;
   return {
     key: spec.key,
-    title: <ColumnTitle title={spec.title} unit={`x, y, z in ${unit.label}`} align="start" />,
+    title: (
+      <ColumnTitle
+        title={spec.title}
+        unit={getPosition != null ? `position · size, ${unitLabel}` : unitLabel}
+        align="start"
+      />
+    ),
     width: VECTOR_COLUMN_WIDTH,
-    sorter,
+    sorter: value.sortBy != null ? sorter : undefined,
     render: (_, tableRow) =>
       renderPending(() => {
         if (tableRow.kind === "group") {
           return <Typography.Text type="secondary">–</Typography.Text>;
         }
         const vector = value.get(tableRow.row);
-        if (vector == null) return null;
-        if (value.isPosition) {
+        const position = getPosition?.(tableRow.row);
+        if (vector == null && position == null) return null;
+        if (value.isPosition && vector != null) {
           return <PositionCell position={vector} layerName={layerName} />;
         }
+        const vectorText =
+          vector != null ? (
+            <Typography.Text type="secondary" style={{ fontVariantNumeric: "tabular-nums" }}>
+              {vector
+                .map((component) => formatNumber(component / unit.factor, fractionDigits))
+                .join(", ")}
+            </Typography.Text>
+          ) : null;
+        if (getPosition == null) return vectorText;
         return (
-          <Typography.Text type="secondary" style={{ fontVariantNumeric: "tabular-nums" }}>
-            {vector
-              .map((component) => formatNumber(component / unit.factor, fractionDigits))
-              .join(", ")}
-          </Typography.Text>
+          <Flex vertical align="start">
+            {position != null ? <PositionCell position={position} layerName={layerName} /> : null}
+            {vectorText}
+          </Flex>
         );
       }),
   };
@@ -372,11 +388,11 @@ export function SegmentStatisticsTable({ rows, tableRows, statisticSpecs, layerN
     const statisticColumns = statisticSpecs.flatMap((spec) => {
       const { title, value } = spec;
       return title != null && value != null
-        ? [getStatisticColumn({ ...spec, title, value }, rows, groupRows, datasetUnit, layerName)]
+        ? [getStatisticColumn({ ...spec, title, value }, rows, datasetUnit, layerName)]
         : [];
     });
     return [segmentColumn, ...statisticColumns];
-  }, [statisticSpecs, rows, groupRows, datasetUnit, layerName]);
+  }, [statisticSpecs, rows, datasetUnit, layerName]);
   const totalColumnWidth = columns.reduce((sum, column) => sum + Number(column.width), 0);
 
   return (

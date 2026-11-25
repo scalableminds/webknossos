@@ -147,9 +147,13 @@ export type StatisticValue =
       kind: "vector";
       unit: StatisticUnit;
       fractionDigits?: number;
-      sortBy: "first" | "product";
+      // Positions are not sortable, as their order along the first axis is rarely meaningful.
+      sortBy?: "first" | "product";
       // Whether the vector is a position in the dataset (in mag1 voxels).
       isPosition?: boolean;
+      // A position (in mag1 voxels) that is shown above the vector, e.g. the top-left corner above
+      // the size of a bounding box.
+      getPosition?: (row: SegmentStatisticsRow) => Vector3 | undefined;
       get: (row: SegmentStatisticsRow) => Vector3 | undefined;
     };
 

@@ -50,14 +50,14 @@ class BinaryDataService(
         handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
       }
     } else {
-      Fox.fromFuture {
-        Fox.sequence {
-          bucketQueue.toList.map { bucket =>
-            handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
-              .map(r => bucket -> r)
-          }
-        }
-      }.map(buckets => cutOutCuboid(request, buckets.flatten))
+      val buckets = bucketQueue.toList.map(_.copy(additionalCoordinates = request.settings.additionalCoordinates))
+      handleCuboidBucketRequests(request, buckets).map { bucketBoxes =>
+        // Missing, empty and failed buckets are cut out as zeros.
+        cutOutCuboid(
+          request,
+          buckets.zip(bucketBoxes).collect { case (bucket, Full(data)) if data.nonEmpty => bucket -> data }
+        )
+      }
     }
   }
 
@@ -90,10 +90,7 @@ class BinaryDataService(
             r.settings.version
           )
         )
-        bucketProvider <- bucketProviderCache.getOrLoad(
-          (dataSourceId, dataLayer.bucketProviderCacheKey),
-          _ => Fox.successful(dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
-        )
+        bucketProvider <- bucketProviderFor(firstRequest)
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
           firstRequest.datasetId,
           dataSourceId,
@@ -214,6 +211,33 @@ class BinaryDataService(
     }
   }
 
+  private def bucketProviderFor(request: DataServiceDataRequest): Fox[BucketProvider] = {
+    val dataSourceId = request.dataSourceIdOrVolumeDummy
+    bucketProviderCache.getOrLoad(
+      (dataSourceId, request.dataLayer.bucketProviderCacheKey),
+      _ => Fox.successful(request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
+    )
+  }
+
+  // Loads the buckets of a cuboid with one call to the bucket provider, see BucketProvider.loadForCuboid.
+  private def handleCuboidBucketRequests(request: DataServiceDataRequest, buckets: List[BucketPosition])(using
+      tc: TokenContext
+  ): Fox[Seq[Box[Array[Byte]]]] =
+    if (buckets.headOption.exists(bucket => request.dataLayer.containsMag(bucket.mag))) {
+      val readInstructions = buckets.map(
+        DataReadInstruction(request.dataSourceIdOrVolumeDummy, request.dataLayer, _, request.settings.version)
+      )
+      for {
+        bucketProvider <- bucketProviderFor(request)
+        bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
+          request.datasetId,
+          request.dataSourceIdOrVolumeDummy,
+          s"loading ${buckets.length} buckets for ${request.datasetId} (${request.dataSourceId}) layer ${request.dataLayer.name}, cuboid: ${request.cuboid}",
+          bucketProvider.loadForCuboid(readInstructions)
+        )
+      } yield bucketBoxes
+    } else Fox.successful(buckets.map(_ => Empty))
+
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(using
       tc: TokenContext
   ): Fox[Array[Byte]] =
@@ -222,13 +246,7 @@ class BinaryDataService(
         DataReadInstruction(request.dataSourceIdOrVolumeDummy, request.dataLayer, bucket, request.settings.version)
       val dataSourceId = request.dataSourceIdOrVolumeDummy
       for {
-        bucketProvider <- bucketProviderCache.getOrLoad(
-          (dataSourceId, request.dataLayer.bucketProviderCacheKey),
-          _ =>
-            Fox.successful(
-              request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache)
-            )
-        )
+        bucketProvider <- bucketProviderFor(request)
         result <- datasetErrorLoggingService.withErrorLogging(
           request.datasetId,
           dataSourceId,

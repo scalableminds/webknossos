@@ -48,10 +48,26 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
       } yield bucketBoxes
     }
 
+  // Fetches the fallback buckets of a cuboid with one request per maxBucketsPerFallbackRequest buckets, instead of one
+  // request per bucket. A request covers a whole surface chunk (at most 4³ buckets), while large cuboids are split so
+  // that no response grows too large.
+  override def loadForCuboid(
+      readInstructions: Seq[DataReadInstruction]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
+    Fox
+      .serialCombined(readInstructions.grouped(VolumeTracingBucketProvider.maxBucketsPerFallbackRequest).toList)(
+        loadMultiple
+      )
+      .map(_.flatten)
+
   override def bucketStream(version: Option[Long] = None)(using
       ec: ExecutionContext
   ): FoxIterator[(BucketPosition, Array[Byte])] =
     bucketStream(layer, version)
+}
+
+object VolumeTracingBucketProvider {
+  private val maxBucketsPerFallbackRequest = 64
 }
 
 class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {

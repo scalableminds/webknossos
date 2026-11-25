@@ -10,7 +10,9 @@ import {
   type WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
+import type { APIViewport } from "types/api_types";
 import constants, {
+  BOOKMARK_THUMBNAIL_MIME_TYPE,
   FLIGHT_CAM_DISTANCE,
   FlightViewport,
   type OrthoView,
@@ -18,6 +20,7 @@ import constants, {
   OrthoViews,
   OrthoViewValues,
   TDViewPerspectiveCameraName,
+  type Viewport,
 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
@@ -222,6 +225,113 @@ export async function captureScreenshots(
   }
 
   return results;
+}
+
+// In plane mode, the thumbnail shows the first of these viewports that is visible in the layout.
+const BOOKMARK_THUMBNAIL_PRIORITY: OrthoView[] = [
+  OrthoViews.PLANE_XY,
+  OrthoViews.PLANE_YZ,
+  OrthoViews.PLANE_XZ,
+  OrthoViews.TDView,
+];
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    // The data URL has the form "data:<mime>;base64,<data>".
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+const SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE = 96;
+// Set explicitly, as the default differs between browsers.
+const BOOKMARK_THUMBNAIL_QUALITY = 0.9;
+
+async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob> {
+  const bitmap = await createImageBitmap(blob);
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext("2d");
+  if (context == null) {
+    bitmap.close();
+    throw new Error("Could not create a 2D canvas context.");
+  }
+  context.imageSmoothingQuality = "high";
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (smallBlob) =>
+        smallBlob != null ? resolve(smallBlob) : reject(new Error("Could not encode the image.")),
+      BOOKMARK_THUMBNAIL_MIME_TYPE,
+      BOOKMARK_THUMBNAIL_QUALITY,
+    ),
+  );
+}
+
+export type BookmarkThumbnails = {
+  largeDataBase64: string;
+  smallDataBase64: string;
+  viewport: APIViewport;
+};
+
+const API_BOOKMARK_THUMBNAIL_VIEWPORTS: Record<Viewport, APIViewport> = {
+  PLANE_XY: "XY",
+  PLANE_YZ: "YZ",
+  PLANE_XZ: "XZ",
+  TDView: "TD",
+  [FlightViewport]: "FLIGHT",
+};
+
+// The viewports that are visible in the current layout, by thumbnail priority.
+export function getRenderedBookmarkThumbnailViewports(): Viewport[] {
+  const state = Store.getState();
+  const candidates: Viewport[] =
+    state.temporaryConfiguration.viewMode === constants.MODE_PLANE_TRACING
+      ? BOOKMARK_THUMBNAIL_PRIORITY
+      : [FlightViewport];
+  return candidates.filter((candidate) => {
+    const { width, height } = getInputCatcherRect(state, candidate);
+    return width > 0 && height > 0;
+  });
+}
+
+// Renders the first visible viewport (by priority) as base64-encoded JPEG images, once in
+// full size and once downsampled. Returns null if no viewport is visible in the current layout.
+// Throws if capturing fails.
+export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | null> {
+  const viewport = getRenderedBookmarkThumbnailViewports()[0];
+  if (viewport == null) return null;
+  return captureBookmarkThumbnailsOfViewport(viewport);
+}
+
+export async function captureBookmarkThumbnailsOfViewport(
+  viewport: Viewport,
+): Promise<BookmarkThumbnails> {
+  const { width, height } = getInputCatcherRect(Store.getState(), viewport);
+  // A clear color of 0xffffff is mapped to black or white depending on the theme (see getBackgroundColor).
+  const buffer = renderToTexture(viewport, undefined, undefined, false, 0xffffff, true);
+  const blob = await convertBufferToImage(
+    buffer,
+    width,
+    height,
+    null,
+    null,
+    true,
+    BOOKMARK_THUMBNAIL_MIME_TYPE,
+    BOOKMARK_THUMBNAIL_QUALITY,
+  );
+  if (blob == null) throw new Error("Could not encode the bookmark thumbnail.");
+  const smallBlob = await downsampleImage(blob, SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE);
+  return {
+    largeDataBase64: await blobToBase64(blob),
+    smallDataBase64: await blobToBase64(smallBlob),
+    viewport: API_BOOKMARK_THUMBNAIL_VIEWPORTS[viewport],
+  };
 }
 
 export async function downloadScreenshot() {

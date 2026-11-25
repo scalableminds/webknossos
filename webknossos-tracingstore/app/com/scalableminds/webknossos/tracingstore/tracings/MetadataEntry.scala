@@ -51,6 +51,19 @@ object MetadataEntry {
   def toProtoMultiple(propertiesOpt: Option[Seq[MetadataEntry]]): Seq[MetadataEntryProto] =
     propertiesOpt.map(_.map(_.toProto)).getOrElse(Seq.empty)
 
+  def upsertAndRemove(
+      metadata: Seq[MetadataEntryProto],
+      upsertEntriesByKey: Seq[MetadataEntry],
+      removeEntriesByKey: Seq[String]
+  ): Seq[MetadataEntryProto] = {
+    val metadataWithoutDeletedEntries = metadata.map(fromProto).filter(m => !removeEntriesByKey.contains(m.key))
+    val newEntries = upsertEntriesByKey.filter(m => !metadataWithoutDeletedEntries.exists(m.key == _.key))
+    val metadataWithUpdatedEntries = metadataWithoutDeletedEntries.map(entry =>
+      upsertEntriesByKey.find(entry.key == _.key).map(entry.update).getOrElse(entry)
+    )
+    toProtoMultiple(deduplicate(Some(metadataWithUpdatedEntries ++ newEntries)))
+  }
+
   def deduplicate(propertiesOpt: Option[Seq[MetadataEntry]]): Option[Seq[MetadataEntry]] =
     propertiesOpt.map(properties => properties.distinctBy(_.key))
 

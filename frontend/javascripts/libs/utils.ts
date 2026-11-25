@@ -362,14 +362,6 @@ export function point3ToVector3({ x, y, z }: Point3): Vector3 {
   return [x, y, z];
 }
 
-function _vector3ToPoint3([x, y, z]: Vector3): Point3 {
-  return {
-    x,
-    y,
-    z,
-  };
-}
-
 export function isUserTeamManager(user: APIUser): boolean {
   return user.teams.findIndex((team) => team.isTeamManager) >= 0;
 }
@@ -1011,6 +1003,8 @@ export function convertBufferToImage(
   canvasToMerge: HTMLCanvasElement | null | undefined,
   drawImageIntoCanvasCallback: ((ctx: CanvasRenderingContext2D) => void) | null | undefined,
   flipHorizontally: boolean = false,
+  mimeType?: string,
+  quality?: number,
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
     width = Math.round(width);
@@ -1039,10 +1033,14 @@ export function convertBufferToImage(
     if (drawImageIntoCanvasCallback) {
       drawImageIntoCanvasCallback(ctx);
     }
-    canvas.toBlob((blob: Blob | null) => {
-      canvas.remove();
-      resolve(blob);
-    });
+    canvas.toBlob(
+      (blob: Blob | null) => {
+        canvas.remove();
+        resolve(blob);
+      },
+      mimeType,
+      quality,
+    );
   });
 }
 

@@ -39,6 +39,7 @@ type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
 type ShowContextMenuAction = ReturnType<typeof showContextMenuAction>;
 type HideContextMenuAction = ReturnType<typeof hideContextMenuAction>;
 type SetActiveUserBoundingBoxId = ReturnType<typeof setActiveUserBoundingBoxId>;
+type SetBookmarkIdToFocusAction = ReturnType<typeof setBookmarkIdToFocusAction>;
 type SetGlobalProgressAction = ReturnType<typeof setGlobalProgressAction>;
 
 type SetRenderAnimationModalVisibilityAction = ReturnType<
@@ -90,6 +91,7 @@ export type UiAction =
   | ShowContextMenuAction
   | HideContextMenuAction
   | SetActiveUserBoundingBoxId
+  | SetBookmarkIdToFocusAction
   | SetGlobalProgressAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
@@ -282,6 +284,12 @@ export const showContextMenuAction = (
 export const hideContextMenuAction = () =>
   ({
     type: "HIDE_CONTEXT_MENU",
+  }) as const;
+
+export const setBookmarkIdToFocusAction = (bookmarkId: number | null) =>
+  ({
+    type: "SET_BOOKMARK_ID_TO_FOCUS",
+    bookmarkId,
   }) as const;
 
 export const setActiveUserBoundingBoxId = (id: number | null) => {

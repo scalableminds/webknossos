@@ -95,6 +95,58 @@ fn measure_whole(volume: &Volume, segment_id: i64, scale: [f64; 3]) -> Surface {
     measure_box(volume, segment_id, whole, whole, scale)
 }
 
+/// The buckets (in buckets) with a voxel of the segment, as listed by the segment index.
+fn segment_buckets(volume: &Volume, segment_id: i64, bucket_length: usize) -> Vec<[usize; 3]> {
+    let bucket_counts = volume.dimensions.map(|d| d.div_ceil(bucket_length));
+    let mut buckets = Vec::new();
+    for bz in 0..bucket_counts[2] {
+        for by in 0..bucket_counts[1] {
+            for bx in 0..bucket_counts[0] {
+                let start = [bx, by, bz].map(|b| b * bucket_length);
+                let end = [0, 1, 2]
+                    .map(|axis| (start[axis] + bucket_length).min(volume.dimensions[axis]));
+                if bucket_contains(volume, segment_id, start, end) {
+                    buckets.push([bx, by, bz]);
+                }
+            }
+        }
+    }
+    buckets
+}
+
+/// Measures the volume chunk by chunk, given the interiors of the chunks as their first bucket and their length in
+/// buckets per axis. Each cuboid is the interior extended by one voxel on each side within the volume.
+fn measure_chunks(
+    volume: &Volume,
+    segment_id: i64,
+    bucket_length: usize,
+    chunks: &[([usize; 3], usize)],
+    scale: [f64; 3],
+) -> Surface {
+    let mut total = Surface {
+        area: 0.0,
+        voxel_count: 0,
+    };
+    for &(first_bucket, buckets_per_axis) in chunks {
+        let interior_start = first_bucket.map(|b| b * bucket_length);
+        let interior_end = [0, 1, 2].map(|axis| {
+            (interior_start[axis] + bucket_length * buckets_per_axis).min(volume.dimensions[axis])
+        });
+        let start = interior_start.map(|s| s.saturating_sub(1));
+        let end = [0, 1, 2].map(|axis| (interior_end[axis] + 1).min(volume.dimensions[axis]));
+        let surface = measure_box(
+            volume,
+            segment_id,
+            [start, end],
+            [interior_start, interior_end],
+            scale,
+        );
+        total.area += surface.area;
+        total.voxel_count += surface.voxel_count;
+    }
+    total
+}
+
 /// Measures the volume chunk by chunk, as the datastore does with the buckets of the segment index: every bucket
 /// with a voxel of the segment, its cuboid extended by one voxel on each side within the volume.
 fn measure_by_buckets(
@@ -103,37 +155,33 @@ fn measure_by_buckets(
     bucket_length: usize,
     scale: [f64; 3],
 ) -> Surface {
-    let bucket_counts = volume.dimensions.map(|d| d.div_ceil(bucket_length));
-    let mut total = Surface {
-        area: 0.0,
-        voxel_count: 0,
-    };
-    for bz in 0..bucket_counts[2] {
-        for by in 0..bucket_counts[1] {
-            for bx in 0..bucket_counts[0] {
-                let interior_start = [bx, by, bz].map(|b| b * bucket_length);
-                let interior_end = [0, 1, 2].map(|axis| {
-                    (interior_start[axis] + bucket_length).min(volume.dimensions[axis])
-                });
-                if !bucket_contains(volume, segment_id, interior_start, interior_end) {
-                    continue; // not in the segment index
-                }
-                let start = interior_start.map(|s| s.saturating_sub(1));
-                let end =
-                    [0, 1, 2].map(|axis| (interior_end[axis] + 1).min(volume.dimensions[axis]));
-                let surface = measure_box(
-                    volume,
-                    segment_id,
-                    [start, end],
-                    [interior_start, interior_end],
-                    scale,
-                );
-                total.area += surface.area;
-                total.voxel_count += surface.voxel_count;
-            }
-        }
+    let chunks: Vec<_> = segment_buckets(volume, segment_id, bucket_length)
+        .into_iter()
+        .map(|bucket| (bucket, 1))
+        .collect();
+    measure_chunks(volume, segment_id, bucket_length, &chunks, scale)
+}
+
+/// The chunks of `SurfaceChunk.forSegmentBuckets` in the datastore: a group of 2×2×2 buckets with at least four
+/// buckets of the segment is one chunk, every other bucket of the segment is its own chunk.
+fn grouped_chunks(segment_buckets: &[[usize; 3]]) -> Vec<([usize; 3], usize)> {
+    let mut groups: std::collections::BTreeMap<[usize; 3], Vec<[usize; 3]>> = Default::default();
+    for &bucket in segment_buckets {
+        groups
+            .entry(bucket.map(|b| b / 2))
+            .or_default()
+            .push(bucket);
     }
-    total
+    groups
+        .into_iter()
+        .flat_map(|(group, buckets)| {
+            if buckets.len() >= 4 {
+                vec![(group.map(|g| g * 2), 2)]
+            } else {
+                buckets.into_iter().map(|bucket| (bucket, 1)).collect()
+            }
+        })
+        .collect()
 }
 
 fn bucket_contains(volume: &Volume, segment_id: i64, start: [usize; 3], end: [usize; 3]) -> bool {
@@ -305,6 +353,56 @@ fn chunks_sum_to_the_whole_surface() {
             assert_close(chunked.area, whole.area, 1e-12);
             assert_eq!(chunked.voxel_count, whole.voxel_count);
         }
+    }
+}
+
+#[test]
+fn grouped_and_single_bucket_chunks_sum_to_the_whole_surface() {
+    // Blobs fill whole groups, the noise leaves groups with one to three buckets of the segment, so both kinds of
+    // chunks occur, also next to each other, and at the cut-off end of the volume.
+    for (seed, bucket_length) in [(21, 16), (22, 16), (23, 8), (24, 7)] {
+        let volume = blobs([90, 75, 70], seed);
+        let buckets = segment_buckets(&volume, 7, bucket_length);
+        let chunks = grouped_chunks(&buckets);
+        let groups = chunks.iter().filter(|(_, length)| *length == 2).count();
+        assert!(
+            groups > 0 && groups < chunks.len(),
+            "{groups} of {} chunks are groups",
+            chunks.len()
+        );
+        for scale in [UNIT, ANISOTROPIC] {
+            let whole = measure_whole(&volume, 7, scale);
+            let chunked = measure_chunks(&volume, 7, bucket_length, &chunks, scale);
+            assert_close(chunked.area, whole.area, 1e-12);
+            assert_eq!(chunked.voxel_count, whole.voxel_count);
+        }
+    }
+}
+
+#[test]
+fn a_thin_segment_between_groups_sums_to_the_whole_surface() {
+    // A line of voxels along x that crosses the border of two groups in y, so every group has at most two of its
+    // buckets, and a blob that fills one group next to it.
+    let volume = Volume::new([64, 64, 32], |x, y, z| {
+        let line = y == 31 && z == 5;
+        let blob = (40..60).contains(&x) && (36..60).contains(&y) && (2..30).contains(&z);
+        (line || blob) as i64
+    });
+    let chunks = grouped_chunks(&segment_buckets(&volume, 1, 8));
+    assert!(chunks.iter().any(|(_, length)| *length == 2));
+    assert!(chunks.iter().any(|(_, length)| *length == 1));
+    for scale in [UNIT, ANISOTROPIC] {
+        let whole = measure_whole(&volume, 1, scale);
+        let chunked = measure_chunks(&volume, 1, 8, &chunks, scale);
+        assert_close(chunked.area, whole.area, 1e-12);
+        assert_eq!(chunked.voxel_count, whole.voxel_count);
+    }
+}
+
+#[test]
+fn cached_case_areas_follow_the_scale() {
+    for scale in [UNIT, ANISOTROPIC, ANISOTROPIC, UNIT, [0.5, 3.0, 7.25]] {
+        assert_eq!(cached_case_areas(scale), case_areas(scale));
     }
 }
 

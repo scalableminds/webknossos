@@ -47,6 +47,7 @@ import type {
   KeyboardShortcutsMap,
 } from "./view/keyboard_shortcuts/keyboard_shortcut_types";
 import { buildKeyBindingsFromConfig } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
+import { addBookmarkForCurrentViewFromAnywhere } from "./view/right_border_tabs/bookmarks_tab/add_bookmark";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
@@ -326,6 +327,14 @@ class Controller extends PureComponent<PropsWithRouter, State> {
           event.preventDefault();
           event.stopPropagation();
           Store.dispatch(redoAction());
+        },
+      },
+      ADD_BOOKMARK: {
+        onPressed: (event: KeyboardEvent) => {
+          // Firefox would otherwise toggle its bookmarks sidebar.
+          event.preventDefault();
+          event.stopPropagation();
+          addBookmarkForCurrentViewFromAnywhere(Store.dispatch);
         },
       },
     };

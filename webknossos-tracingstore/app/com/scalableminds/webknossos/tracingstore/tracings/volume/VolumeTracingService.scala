@@ -22,7 +22,12 @@ import com.scalableminds.webknossos.datastore.models.*
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.*
-import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  AdHocMesh,
+  AdHocMeshRequest,
+  AdHocMeshService,
+  AdHocMeshServiceHolder
+}
 import com.scalableminds.webknossos.tracingstore.annotation.UpdateTimingStats
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
@@ -703,7 +708,7 @@ class VolumeTracingService @Inject() (
       tracingId: String,
       tracing: VolumeTracing,
       request: WebknossosAdHocMeshRequest
-  )(using tc: TokenContext): Fox[(Array[Float], List[Int])] =
+  )(using tc: TokenContext): Fox[AdHocMesh] =
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       volumeLayer = volumeTracingLayer(

@@ -10,6 +10,7 @@ import type {
   AdditionalAxis,
   AdditionalAxisProto,
   APIAnnotation,
+  APIAnnotationBookmark,
   BoundingBoxProto,
   SkeletonUserState,
   UserBoundingBoxProto,
@@ -19,6 +20,10 @@ import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_bo
 import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
+import type {
+  SetBookmarkCreatedAtVersionAction,
+  SetBookmarkThumbnailSavedAtVersionAction,
+} from "viewer/model/actions/annotation_actions";
 import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
@@ -137,6 +142,8 @@ export function convertServerAnnotationToFrontendAnnotation(
     collaborationMode,
     isLockedByOwner,
     annotationLayers,
+    bookmarks,
+    largestBookmarkId,
   } = annotation;
   const restrictions = {
     ...annotation.restrictions,
@@ -166,6 +173,10 @@ export function convertServerAnnotationToFrontendAnnotation(
     contributors,
     collaborationMode,
     annotationLayers,
+    // Falls back to [] for annotation-info responses that never went through the
+    // tracingstore-proto merge in model_initialization.ts (e.g. compound/sandbox annotations).
+    bookmarks: bookmarks ?? [],
+    largestBookmarkIdOnLoad: largestBookmarkId ?? 0,
     isUpdatingCurrentlyAllowed,
   };
 }
@@ -283,4 +294,35 @@ export function getApplyUserStateToTreeFn(
       isVisible: treeIdToExpanded[tree.treeId] ?? tree.isVisible,
     };
   };
+}
+
+// Applies the versions the server assigned when saving bookmarks. Also used by the undo saga to
+// update its snapshots, so that undo/redo does not restore outdated (e.g., unset) versions.
+export function applyBookmarkVersionAction(
+  bookmarks: APIAnnotationBookmark[],
+  action: SetBookmarkCreatedAtVersionAction | SetBookmarkThumbnailSavedAtVersionAction,
+): APIAnnotationBookmark[] {
+  let changed = false;
+  const newBookmarks = bookmarks.map((bookmark) => {
+    if (bookmark.id !== action.bookmarkId) return bookmark;
+    if (action.type === "SET_BOOKMARK_CREATED_AT_VERSION") {
+      if (bookmark.createdAtVersion === action.createdAtVersion) return bookmark;
+      changed = true;
+      return { ...bookmark, createdAtVersion: action.createdAtVersion };
+    }
+    // While the save request was running, the user may have captured a newer thumbnail for this
+    // bookmark (e.g. by updating it to the current view). That one was not saved yet and must not
+    // get the version, as it still has to be sent. So the version is only set if the bookmark still
+    // shows the thumbnail that was sent, which is recognized by its image data (the frontend-only
+    // thumbnailId is not part of the sent action).
+    if (
+      bookmark.largeThumbnailDataBase64 !== action.savedLargeThumbnailDataBase64 ||
+      bookmark.thumbnailSavedAtVersion === action.thumbnailSavedAtVersion
+    ) {
+      return bookmark;
+    }
+    changed = true;
+    return { ...bookmark, thumbnailSavedAtVersion: action.thumbnailSavedAtVersion };
+  });
+  return changed ? newBookmarks : bookmarks;
 }

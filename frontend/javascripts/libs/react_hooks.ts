@@ -57,7 +57,7 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
  * Registers window listeners that call setKeyPressed with whether targetKey is pressed.
  * @returns A function that removes the keydown and keyup listeners
  */
-function subscribeToKeyPress(
+export function subscribeToKeyPress(
   targetKey: "Shift" | "Alt" | "ControlOrMeta",
   setKeyPressed: (isPressed: boolean) => void,
 ) {

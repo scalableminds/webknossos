@@ -30,6 +30,8 @@ class AdHocMeshTestSuite extends AnyWordSpec {
       val bytes = mesh.toBytes(indexed = false)
       assert(bytes.length == 18 * 4)
       assert(floats(bytes, 0, 18) == mesh.triangleSoup.toSeq)
+      assert(!mesh.responseHeaders(indexed = false).exists(_._1 == "Vertex-Count"))
+      assert(mesh.responseHeaders(indexed = false).contains("NEIGHBORS" -> "[2, 5]"))
     }
 
     "encode the vertices followed by 16-bit indices if indexed" in {
@@ -38,8 +40,8 @@ class AdHocMeshTestSuite extends AnyWordSpec {
       assert(floats(bytes, 0, 12) == mesh.vertices.toSeq)
       val indices = littleEndian(bytes, 48, 12).slice().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
       assert((0 until 6).map(indices.get(_).toInt) == mesh.indices.toSeq)
-      assert(mesh.responseHeaders.contains("Vertex-Count" -> "4"))
-      assert(mesh.responseHeaders.contains("NEIGHBORS" -> "[2, 5]"))
+      assert(mesh.responseHeaders(indexed = true).contains("Vertex-Count" -> "4"))
+      assert(mesh.responseHeaders(indexed = true).contains("NEIGHBORS" -> "[2, 5]"))
     }
 
     "use 16-bit indices up to 65535 vertices and 32-bit indices above" in {

@@ -105,11 +105,12 @@ class MeshFileService @Inject() (
     )
   }
 
-  // Same as above but this variant constructs the meshFilePath itself and converts null to None
+  // Same as above but this variant constructs the meshFilePath itself and converts null to None. Mesh files computed
+  // without a mapping may store an empty mapping name, which also becomes None.
   def mappingNameForMeshFile(
       meshFileKey: MeshFileKey
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[String]] =
-    meshFileKey.attachment.dataFormat match {
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[String]] = {
+    val mappingNameFox = meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.mappingNameForMeshFile(meshFileKey)
       case LayerAttachmentDataformat.hdf5 =>
@@ -118,6 +119,8 @@ class MeshFileService @Inject() (
         Fox.successful(None)
       case _ => unsupportedDataFormat(meshFileKey)
     }
+    mappingNameFox.map(_.filter(_.nonEmpty))
+  }
 
   private def versionForMeshFile(meshFileKey: MeshFileKey)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     meshFileKey.attachment.dataFormat match {

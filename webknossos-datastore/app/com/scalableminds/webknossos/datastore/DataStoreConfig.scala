@@ -66,8 +66,23 @@ class DataStoreConfig @Inject() (configuration: Configuration) extends ConfigRea
       val deleteTemporaryFilesAfterUpload: Boolean =
         get[Boolean]("datastore.upload.deleteTemporaryFilesAfterUpload")
     }
+    object ManagedS3PathDeletion {
+      val enabled: Boolean = get[Boolean]("datastore.managedS3PathDeletion.enabled")
+      val interval: FiniteDuration = get[FiniteDuration]("datastore.managedS3PathDeletion.interval")
+    }
     val children: List[Object] =
-      List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateTree, AgglomerateGraph, DataVaults, Upload)
+      List(
+        WebKnossos,
+        WatchFileSystem,
+        Cache,
+        AdHocMesh,
+        Redis,
+        AgglomerateTree,
+        AgglomerateGraph,
+        DataVaults,
+        Upload,
+        ManagedS3PathDeletion
+      )
   }
 
   object SlackNotifications {

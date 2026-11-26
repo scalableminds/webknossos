@@ -6,6 +6,13 @@ import subprocess
 
 VERSION_REGEX = r"[\d]{1,2}\.[\d]{1,2}\.[\d]{0,2}"
 GITHUB_REPO = "scalableminds/webknossos"
+GITHUB_REPO_URL = f"https://github.com/{GITHUB_REPO}"
+MONO_REPO = "scalableminds/mono"
+MONO_BRANCH = "origin/master"
+# PRs below this number were opened in the private monorepo, higher ones in the public webknossos repo.
+FIRST_WEBKNOSSOS_PR_NUMBER = 5000
+# Label that the monorepo->webknossos sync (copy.bara.sky) adds to every synced commit.
+MONO_REV_ID_REGEX = re.compile(r"^Mono-RevId: ([0-9a-f]{40})\s*$", re.MULTILINE)
 UNRELEASED_CHANGES_DIR = "unreleased_changes"
 
 
@@ -31,6 +38,81 @@ def get_last_version_and_index(lines):
         i for i, line in enumerate(lines) if line.startswith(first_match[0])
     )
     return last_version, last_release_idx
+
+
+def git(*args):
+    return subprocess.run(
+        ["git", *args], check=True, capture_output=True, text=True
+    ).stdout
+
+
+class PublicCommitResolver:
+    """Finds the commit in the public webknossos repo that a monorepo PR was synced to."""
+
+    def __init__(self):
+        self._mono_commits_by_pr = None
+        self._public_commits_by_mono_commit = None
+
+    @staticmethod
+    def _ensure_mono_checkout():
+        origin_url = subprocess.run(
+            ["git", "remote", "get-url", "origin"], capture_output=True, text=True
+        ).stdout.strip()
+        if not re.search(rf"[:/]{re.escape(MONO_REPO)}(\.git)?/?$", origin_url):
+            sys.exit(
+                f"Error: Changelog entries for monorepo PRs can only be resolved from a {MONO_REPO} "
+                f"checkout whose 'origin' remote points to {MONO_REPO} "
+                f"(found origin: '{origin_url or 'none'}'). Please run this script from the monorepo."
+            )
+
+    def _load(self):
+        self._ensure_mono_checkout()
+        print(f"Fetching {MONO_BRANCH} and {GITHUB_REPO_URL} to resolve monorepo PRs...")
+        git("fetch", "--quiet", "origin", MONO_BRANCH.split("/", 1)[1])
+        # Squash-merged PRs end their subject with "(#<pr number>)".
+        self._mono_commits_by_pr = {}
+        for line in git("log", MONO_BRANCH, "--format=%H %s").splitlines():
+            sha, subject = line.split(" ", 1)
+            match = re.search(r"\(#(\d+)\)$", subject)
+            if match:
+                self._mono_commits_by_pr.setdefault(int(match[1]), sha)
+
+        git("fetch", "--quiet", "--no-tags", GITHUB_REPO_URL, "master")
+        public_head = git("rev-parse", "FETCH_HEAD").strip()
+        self._public_commits_by_mono_commit = {}
+        for entry in git("log", public_head, "--format=%H%n%B%x1e").split("\x1e"):
+            entry = entry.strip()
+            if not entry:
+                continue
+            sha, body = entry.split("\n", 1) if "\n" in entry else (entry, "")
+            for mono_sha in MONO_REV_ID_REGEX.findall(body):
+                self._public_commits_by_mono_commit.setdefault(mono_sha, sha)
+
+    def resolve(self, pr_number):
+        if self._mono_commits_by_pr is None:
+            self._load()
+        mono_sha = self._mono_commits_by_pr.get(pr_number)
+        if mono_sha is None:
+            return None
+        return self._public_commits_by_mono_commit.get(mono_sha)
+
+
+public_commit_resolver = PublicCommitResolver()
+
+
+def make_pr_link(pr_number):
+    if pr_number >= FIRST_WEBKNOSSOS_PR_NUMBER:
+        return f"[#{pr_number}]({GITHUB_REPO_URL}/pull/{pr_number})"
+    # Monorepo PRs are private, so link the synced public commit and (for internal use) the PR.
+    mono_link = f"[mono#{pr_number}](https://github.com/{MONO_REPO}/pull/{pr_number})"
+    public_sha = public_commit_resolver.resolve(pr_number)
+    if public_sha is None:
+        print(
+            f"Warning: Could not find the public {GITHUB_REPO} commit for mono#{pr_number}. "
+            "Is it merged and synced? Please replace the TODO placeholder in the changelog."
+        )
+        return f"[TODO: public commit for mono#{pr_number}] ({mono_link})"
+    return f"[{public_sha[:7]}]({GITHUB_REPO_URL}/commit/{public_sha}) ({mono_link})"
 
 
 def parse_change_files():
@@ -67,8 +149,8 @@ def parse_change_files():
             if section in changelog_sections:
                 for line in body.strip().splitlines():
                     if line.strip().startswith("- "):
-                        pr_link = f"[#{pr_number}](https://github.com/{GITHUB_REPO}/pull/{pr_number})"
-                        if pr_link in line:
+                        pr_link = make_pr_link(pr_number)
+                        if f"/pull/{pr_number})" in line:
                             print(
                                 f"Warning: {file_name} already contains a link to its PR."
                             )

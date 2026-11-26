@@ -11,6 +11,7 @@ import Constants, {
   UnitLong,
   ViewModeValues,
 } from "viewer/constants";
+import { createEmptyAgglomerateDiffOverlay } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
 import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
@@ -208,6 +209,8 @@ const defaultState: WebknossosState = {
     contributors: [],
     collaborationMode: "OwnerOnly",
     annotationLayers: [],
+    bookmarks: [],
+    largestBookmarkIdOnLoad: 0,
     version: 0,
     earliestAccessibleVersion: 0,
     stats: {},
@@ -278,6 +281,7 @@ const defaultState: WebknossosState = {
     globalProgress: 0,
     activeTool: AnnotationTool.MOVE,
     activeUserBoundingBoxId: null,
+    bookmarkIdToFocus: null,
     showDropzoneModal: false,
     showVersionRestore: false,
     isRestoringVersion: false,
@@ -299,6 +303,7 @@ const defaultState: WebknossosState = {
       right: false,
       left: false,
     },
+    segmentStatisticsScope: null,
     systemTheme: getSystemColorTheme(),
     isWkInitialized: false,
     isUiReady: false,
@@ -333,9 +338,11 @@ const defaultState: WebknossosState = {
       activeIndex: -1,
     },
     showSkeletons: true,
+    agglomerateDiffOverlay: createEmptyAgglomerateDiffOverlay(),
   },
   localAnnotationState: {
     idReservationsForBoundingBoxes: [],
+    idReservationsForBookmarks: [],
   },
   operationContext: {
     activeOperations: [],

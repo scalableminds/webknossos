@@ -80,7 +80,7 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
     "fail only the ranges that cover a chunk that could not be read" in {
       val chunkBoxes: Map[Long, Box[Array[Byte]]] =
         Map(0L -> Full(Array[Byte](0, 1, 2, 3)), 1L -> Failure("read error"), 2L -> Full(Array[Byte](8, 9, 0, 0)))
-      val ranges = ZarrMeshFileService.copyRanges(chunkBoxes, 4, Seq((0L, 2L), (2L, 6L), (6L, 9L), (8L, 10L)))
+      val ranges = ZarrMeshFileService.copyRanges(chunkBoxes, 4, 10, Seq((0L, 2L), (2L, 6L), (6L, 9L), (8L, 10L)))
       assert(
         ranges.map(_.map(_.toSeq)) == Seq(
           Full(Seq[Byte](0, 1)),
@@ -89,6 +89,18 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
           Full(Seq[Byte](8, 9))
         )
       )
+    }
+
+    "fail ranges outside the array without failing the others" in {
+      val chunkBoxes: Map[Long, Box[Array[Byte]]] = Map(0L -> Full(Array[Byte](0, 1, 2, 3)))
+      val offset = Long.MaxValue - 1
+      val ranges = ZarrMeshFileService.copyRanges(
+        chunkBoxes,
+        4,
+        4,
+        Seq((0L, 2L), (-1L, 2L), (3L, 1L), (2L, 5L), (offset, offset + 8)) // the last one overflows
+      )
+      assert(ranges.map(_.isDefined) == Seq(true, false, false, false, false))
     }
   }
 

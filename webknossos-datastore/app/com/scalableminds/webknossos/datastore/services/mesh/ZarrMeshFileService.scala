@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
-import com.scalableminds.util.box.{Box, EmptyBox, Full}
+import com.scalableminds.util.box.{Box, EmptyBox, Failure, Full}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
@@ -615,20 +615,23 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       sortedSegmentIds
     )
 
-  /* Reads byte ranges [start, end) of a 1-d uint8 array from the chunks they cover. A range is a failure if a chunk it
-   * covers cannot be read, which does not fail the other ranges.
+  /* Reads byte ranges [start, end) of a 1-d uint8 array from the chunks they cover. A range is a failure if it lies
+   * outside the array or a chunk it covers cannot be read, which does not fail the other ranges.
    */
   private def readByteRangeBoxes(array: DatasetArray, ranges: Seq[(Long, Long)])(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[Seq[Box[Array[Byte]]]] = {
     val chunkSize = array.chunkShape(0).toLong
-    val chunkNumbers = ranges.flatMap { case (start, end) =>
-      ZarrMeshFileService.chunkNumbersOf(chunkSize, start, end)
-    }.distinct.sorted
     for {
+      length <- arrayLength(array)
+      chunkNumbers = ranges.flatMap { case (start, end) =>
+        if (ZarrMeshFileService.isRangeInArray(start, end, length))
+          ZarrMeshFileService.chunkNumbersOf(chunkSize, start, end)
+        else Seq.empty
+      }.distinct.sorted
       chunkBoxes <- readChunkBoxes[Byte](array, chunkNumbers)
-    } yield ZarrMeshFileService.copyRanges(chunkBoxes, chunkSize, ranges)
+    } yield ZarrMeshFileService.copyRanges(chunkBoxes, chunkSize, length, ranges)
   }
 
   // Like readByteRangeBoxes, but fails if any range cannot be read.
@@ -837,18 +840,28 @@ object ZarrMeshFileService {
   def chunkNumbersOf(chunkSize: Long, start: Long, end: Long): Seq[Long] =
     (start / chunkSize) until ((end + chunkSize - 1) / chunkSize)
 
-  // The bytes of each range [start, end), or the failure of the first chunk it covers that could not be read.
+  // Whether [start, end) is a valid byte range of an array of arrayLength bytes, e.g. not overflowed or negative.
+  def isRangeInArray(start: Long, end: Long, arrayLength: Long): Boolean =
+    start >= 0 && start <= end && end <= arrayLength
+
+  /* The bytes of each range [start, end) of an array of arrayLength bytes, or a failure if the range lies outside the
+   * array or a chunk it covers could not be read.
+   */
   def copyRanges(
       chunkBoxes: Map[Long, Box[Array[Byte]]],
       chunkSize: Long,
+      arrayLength: Long,
       ranges: Seq[(Long, Long)]
   ): Seq[Box[Array[Byte]]] = {
     val bytesByChunk = chunkBoxes.collect { case (chunkNumber, Full(bytes)) => chunkNumber -> bytes }
     ranges.map { case (start, end) =>
-      chunkNumbersOf(chunkSize, start, end).iterator
-        .map(chunkBoxes)
-        .collectFirst { case failed: EmptyBox => failed }
-        .getOrElse[Box[Array[Byte]]](tryo(copyRange(bytesByChunk, chunkSize, start, end)))
+      if (!isRangeInArray(start, end, arrayLength))
+        Failure(s"Byte range [$start, $end) lies outside the array of $arrayLength bytes")
+      else
+        chunkNumbersOf(chunkSize, start, end).iterator
+          .map(chunkBoxes)
+          .collectFirst { case failed: EmptyBox => failed }
+          .getOrElse[Box[Array[Byte]]](tryo(copyRange(bytesByChunk, chunkSize, start, end)))
     }
   }
 

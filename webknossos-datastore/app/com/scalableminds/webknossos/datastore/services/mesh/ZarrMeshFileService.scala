@@ -740,8 +740,8 @@ object ZarrMeshFileService {
   }
 
   /** The run [start, end) of indices around seedIndex of the mapping at level as Right if the loaded chunks
-    * [firstChunk, lastChunk] contain all of it. Otherwise the chunks that do as Left: the run continues past the loaded
-    * chunks up to the nearest chunk with a run start.
+    * [firstChunk, lastChunk] contain all of it. Otherwise the chunks the run spans as Left: where it continues past the
+    * loaded chunks, it does so up to the nearest chunk with a run start.
     */
   def runAround(
       layout: MeshMetadataLayout,
@@ -765,8 +765,8 @@ object ZarrMeshFileService {
     else
       Left(
         (
-          if (startFound) firstChunk else layout.runStartChunkBefore(firstChunk, level),
-          if (endFound) lastChunk else layout.runStartChunkAfter(lastChunk, level)
+          if (startFound) start / segmentsPerChunk else layout.runStartChunkBefore(firstChunk, level),
+          if (endFound) (end - 1) / segmentsPerChunk else layout.runStartChunkAfter(lastChunk, level)
         )
       )
   }

@@ -136,8 +136,8 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
       assert(findRun(levelsWithLongNeighbors, 14, 0) == ((13L, 15L), List((2L, 4L))))
 
     "read further chunks only once the run continues into them" in {
-      assert(findRun(levelsWithLongNeighbors, 12, 0) == ((0L, 13L), List((2L, 4L), (0L, 4L))))
-      assert(findRun(levelsWithLongNeighbors, 15, 0) == ((15L, 28L), List((2L, 4L), (2L, 6L))))
+      assert(findRun(levelsWithLongNeighbors, 12, 0) == ((0L, 13L), List((2L, 4L), (0L, 3L))))
+      assert(findRun(levelsWithLongNeighbors, 15, 0) == ((15L, 28L), List((2L, 4L), (3L, 6L))))
       assert(findRun(levelsWithLongNeighbors, 6, 0) == ((0L, 13L), List((0L, 2L), (0L, 3L))))
     }
   }
@@ -160,10 +160,12 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
       assert(choose(9, maxChunks = 6).contains((2, Left((0L, 5L)))))
     }
 
-    "find parts of a coarser agglomerate in finer runs" in {
+    "find parts of a coarser agglomerate in finer runs" in
       assert(choose(4, maxChunks = 3).contains((1, Right((0L, 6L)))))
-      assert(choose(7, maxChunks = 3).contains((0, Right((6L, 9L)))))
-    }
+
+    "count only the chunks of the run, not those read around its seed" in
+      // The run [6, 14) spans chunks 1 to 3, while chunks 0 to 2 were read around index 7.
+      assert(choose(7, maxChunks = 3).contains((1, Left((1L, 3L)))))
 
     "find no run if the finest one is too long" in {
       val (oneRunLayout, oneRunChunks) = meshMetadata(Array.tabulate(32)(i => if (i == 0) 255L else 0L))

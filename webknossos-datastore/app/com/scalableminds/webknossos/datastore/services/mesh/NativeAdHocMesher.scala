@@ -27,40 +27,29 @@ case class AdHocMesh(vertices: Array[Float], indices: Array[Int], neighbors: Lis
     soup
   }
 
-  /** The response body of an ad-hoc mesh request, little-endian.
-    *
-    * Indexed: the vertices as floats, followed by the indices as unsigned 16-bit integers if there are at most 65535
-    * vertices, else as 32-bit integers. Not 65536, because WebGL 2 treats the 16-bit index 65535 as primitive restart.
-    * Otherwise: the triangle soup as floats.
+  /** The response body of an ad-hoc mesh request, little-endian: the vertices as floats, followed by the indices as
+    * unsigned 16-bit integers if there are at most 65535 vertices, else as 32-bit integers. Not 65536, because WebGL 2
+    * treats the 16-bit index 65535 as primitive restart.
     */
-  def toBytes(indexed: Boolean): Array[Byte] =
-    if (indexed) {
-      val indexBytes = if (vertexCount <= AdHocMesh.maxVertexCountForShortIndices) 2 else 4
-      val buffer = ByteBuffer.allocate(vertices.length * 4 + indices.length * indexBytes).order(ByteOrder.LITTLE_ENDIAN)
-      buffer.asFloatBuffer().put(vertices)
-      buffer.position(vertices.length * 4)
-      if (indexBytes == 2) indices.foreach(index => buffer.putShort(index.toShort))
-      else buffer.asIntBuffer().put(indices)
-      buffer.array()
-    } else {
-      val soup = triangleSoup
-      val buffer = ByteBuffer.allocate(soup.length * 4).order(ByteOrder.LITTLE_ENDIAN)
-      buffer.asFloatBuffer().put(soup)
-      buffer.array()
-    }
+  def toBytes: Array[Byte] = {
+    val indexBytes = if (vertexCount <= AdHocMesh.maxVertexCountForShortIndices) 2 else 4
+    val buffer = ByteBuffer.allocate(vertices.length * 4 + indices.length * indexBytes).order(ByteOrder.LITTLE_ENDIAN)
+    buffer.asFloatBuffer().put(vertices)
+    buffer.position(vertices.length * 4)
+    if (indexBytes == 2) indices.foreach(index => buffer.putShort(index.toShort))
+    else buffer.asIntBuffer().put(indices)
+    buffer.array()
+  }
 
-  /** The headers of a response with the body [[toBytes]]: the neighbors (see [[neighbors]]) and, only if indexed, the
-    * vertex count, which locates the indices. So the header is present exactly if the body is indexed.
+  /** The headers of a response with the body [[toBytes]]: the neighbors (see [[neighbors]]) and the vertex count, which
+    * locates the indices.
     */
-  def responseHeaders(indexed: Boolean): List[(String, String)] =
-    if (indexed)
-      List(
-        "NEIGHBORS" -> neighbors.mkString("[", ", ", "]"),
-        "Vertex-Count" -> vertexCount.toString,
-        "Access-Control-Expose-Headers" -> "NEIGHBORS, Vertex-Count"
-      )
-    else
-      List("NEIGHBORS" -> neighbors.mkString("[", ", ", "]"), "Access-Control-Expose-Headers" -> "NEIGHBORS")
+  def responseHeaders: List[(String, String)] =
+    List(
+      "NEIGHBORS" -> neighbors.mkString("[", ", ", "]"),
+      "Vertex-Count" -> vertexCount.toString,
+      "Access-Control-Expose-Headers" -> "NEIGHBORS, Vertex-Count"
+    )
 }
 
 object AdHocMesh {

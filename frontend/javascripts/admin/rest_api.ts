@@ -2433,7 +2433,6 @@ export function computeAdHocMesh(
               mapping: mappingName,
               voxelSizeFactorInUnit: scaleFactor,
               mag,
-              indexed: true,
               ...rest,
             },
           },

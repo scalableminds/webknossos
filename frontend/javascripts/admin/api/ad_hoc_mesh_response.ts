@@ -1,21 +1,19 @@
 export type AdHocMeshGeometry = {
   // Three floats per vertex
   vertices: Float32Array;
-  // Three vertex indices per triangle. null if the server returned a triangle soup (older
-  // datastores), i.e., three vertices per triangle without shared vertices.
-  indices: Uint16Array | Uint32Array | null;
+  // Three vertex indices per triangle
+  indices: Uint16Array | Uint32Array;
 };
 
-// Parses the body of an ad-hoc mesh response. An indexed response contains the vertices,
-// followed by the indices, which are 16-bit if there are at most 65535 vertices, else 32-bit
-// (WebGL 2 treats the 16-bit index 65535 as primitive restart).
-// The Vertex-Count header locates the indices. Without it, the body is a triangle soup.
+// Parses the body of an ad-hoc mesh response. It contains the vertices, followed by the indices,
+// which are 16-bit if there are at most 65535 vertices, else 32-bit (WebGL 2 treats the 16-bit
+// index 65535 as primitive restart). The Vertex-Count header locates the indices.
 export function parseAdHocMeshResponse(
   buffer: ArrayBuffer,
   vertexCountHeader: string | undefined,
 ): AdHocMeshGeometry {
   if (vertexCountHeader == null) {
-    return { vertices: new Float32Array(buffer), indices: null };
+    throw new Error("Ad-hoc mesh response is missing the Vertex-Count header");
   }
   const vertexCount = Number(vertexCountHeader);
   const indexBytes = vertexCount <= 65535 ? 2 : 4;

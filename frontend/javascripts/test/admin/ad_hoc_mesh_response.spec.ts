@@ -61,9 +61,9 @@ describe("parseAdHocMeshResponse", () => {
     const { vertices, indices } = parseAdHocMeshResponse(body, "6");
     expect(Array.from(vertices)).toEqual(octahedronVertices);
     expect(indices).toBeInstanceOf(Uint16Array);
-    expect(Array.from(indices!)).toEqual(octahedronIndices);
+    expect(Array.from(indices)).toEqual(octahedronIndices);
     // Separate buffers, so that both can be transferred to a worker.
-    expect(vertices.buffer).not.toBe(indices!.buffer);
+    expect(vertices.buffer).not.toBe(indices.buffer);
   });
 
   it("parses 32-bit indices from 65536 vertices on", () => {
@@ -73,20 +73,18 @@ describe("parseAdHocMeshResponse", () => {
     const { vertices, indices } = parseAdHocMeshResponse(body, String(vertexCount));
     expect(vertices.length).toBe(vertexCount * 3);
     expect(indices).toBeInstanceOf(Uint32Array);
-    expect(Array.from(indices!)).toEqual([0, 65535, 3]);
+    expect(Array.from(indices)).toEqual([0, 65535, 3]);
   });
 
   it("parses an empty mesh", () => {
     const { vertices, indices } = parseAdHocMeshResponse(new ArrayBuffer(0), "0");
     expect(vertices.length).toBe(0);
-    expect(indices!.length).toBe(0);
+    expect(indices.length).toBe(0);
   });
 
-  it("returns a triangle soup without vertex count", () => {
-    const soup = triangleSoup(octahedronVertices, octahedronIndices);
-    const { vertices, indices } = parseAdHocMeshResponse(soup.buffer, undefined);
-    expect(vertices).toEqual(soup);
-    expect(indices).toBeNull();
+  it("rejects a response without vertex count", () => {
+    const body = indexedBody(octahedronVertices, octahedronIndices, Uint16Array);
+    expect(() => parseAdHocMeshResponse(body, undefined)).toThrow();
   });
 
   it("rejects inconsistent vertex counts", () => {
@@ -106,7 +104,7 @@ describe("parseAdHocMeshResponse", () => {
     );
     const indexed = new BufferGeometry();
     indexed.setAttribute("position", new BufferAttribute(vertices, 3));
-    indexed.setIndex(new BufferAttribute(indices!, 1));
+    indexed.setIndex(new BufferAttribute(indices, 1));
 
     const soup = new BufferGeometry();
     soup.setAttribute(

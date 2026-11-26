@@ -53,8 +53,7 @@ case class WebknossosAdHocMeshRequest(
     mappingType: Option[MappingType.Value] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     annotationVersion: Option[Long],
-    findNeighbors: Boolean = true,
-    indexed: Boolean = false // Respond with an indexed mesh instead of a triangle soup, see AdHocMesh.toBytes
+    findNeighbors: Boolean = true
 ) derives JsonAutoFormat {
   def cuboid: Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)

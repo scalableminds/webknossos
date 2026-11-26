@@ -26,32 +26,24 @@ class AdHocMeshTestSuite extends AnyWordSpec {
     "resolve the indices to a triangle soup" in
       assert(mesh.triangleSoup.toSeq == Seq(0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f, 0f, 1f, 1f, 0f, 0f))
 
-    "encode the triangle soup unless indexed" in {
-      val bytes = mesh.toBytes(indexed = false)
-      assert(bytes.length == 18 * 4)
-      assert(floats(bytes, 0, 18) == mesh.triangleSoup.toSeq)
-      assert(!mesh.responseHeaders(indexed = false).exists(_._1 == "Vertex-Count"))
-      assert(mesh.responseHeaders(indexed = false).contains("NEIGHBORS" -> "[2, 5]"))
-    }
-
-    "encode the vertices followed by 16-bit indices if indexed" in {
-      val bytes = mesh.toBytes(indexed = true)
+    "encode the vertices followed by 16-bit indices" in {
+      val bytes = mesh.toBytes
       assert(bytes.length == 12 * 4 + 6 * 2)
       assert(floats(bytes, 0, 12) == mesh.vertices.toSeq)
       val indices = littleEndian(bytes, 48, 12).slice().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
       assert((0 until 6).map(indices.get(_).toInt) == mesh.indices.toSeq)
-      assert(mesh.responseHeaders(indexed = true).contains("Vertex-Count" -> "4"))
-      assert(mesh.responseHeaders(indexed = true).contains("NEIGHBORS" -> "[2, 5]"))
+      assert(mesh.responseHeaders.contains("Vertex-Count" -> "4"))
+      assert(mesh.responseHeaders.contains("NEIGHBORS" -> "[2, 5]"))
     }
 
     "use 16-bit indices up to 65535 vertices and 32-bit indices above" in {
       // 16-bit index 65535 is the WebGL 2 primitive restart index, so it must not occur.
       def meshWithVertexCount(count: Int) =
         AdHocMesh(new Array[Float](count * 3), Array(0, count - 1, count / 2), List())
-      val short = meshWithVertexCount(65535).toBytes(indexed = true)
+      val short = meshWithVertexCount(65535).toBytes
       assert(short.length == 65535 * 12 + 3 * 2)
       assert((littleEndian(short, 65535 * 12 + 2, 2).getShort & 0xffff) == 65534)
-      val int = meshWithVertexCount(65536).toBytes(indexed = true)
+      val int = meshWithVertexCount(65536).toBytes
       assert(int.length == 65536 * 12 + 3 * 4)
       assert(littleEndian(int, 65536 * 12 + 4, 4).getInt == 65535)
     }

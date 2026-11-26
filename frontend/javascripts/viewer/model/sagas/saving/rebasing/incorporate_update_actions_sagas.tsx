@@ -1,20 +1,26 @@
 import { Button } from "antd";
 import Toast from "libs/toast";
-import { addToNestedMap, addToSetMap } from "libs/utils";
+import { getUid } from "libs/uid_generator";
+import { addToNestedMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
-import type { APIUpdateActionBatch } from "types/api_types";
-import type { LayerNameAsKey } from "types/type_utils";
+import type { APIUpdateActionBatch, APIViewport } from "types/api_types";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   getAllLoadedMeshes,
-  getMeshInfoForSegment,
   getVolumeTracingById,
-  isMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
+  addBookmarkAction,
+  type BookmarkThumbnail,
+  deleteBookmarkAction,
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
+  setBookmarkDescriptionAction,
+  setBookmarkNameAction,
+  setBookmarkStateAction,
+  setBookmarkThumbnailAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
+  updateBookmarkMetadataAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -45,10 +51,8 @@ import {
 } from "../../volume/proofreading/multi_split_selection_sagas";
 import type { PreservedMeshDisplayProps } from "../../volume/proofreading/proofreading_types";
 import { getMeshDisplayPropsByOldAgglomerateId } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
-import {
-  type ApplyingUpdateResults,
-  getFailedIncorporateActionsReturnValue,
-} from "./applying_update_artifacts";
+import type { MeshRefreshCollector, SplitInfo } from "./mesh_refresh_collector";
+import type { ApplyingUpdatesResult, RebasingFailure } from "./rebasing_types";
 
 const ANNOTATION_REVERTED_TOAST_KEY = "annotation_reverted_warning";
 const ANNOTATION_STRUCTURE_CHANGED_TOAST_KEY = "annotation_structure_changed_warning";
@@ -66,10 +70,41 @@ function* lockAnnotationAndShowReloadToast(toastKey: string, message: string) {
   });
 }
 
+// Stored update actions don't carry thumbnail data, only their thumbnailSavedAtVersion (unset if the
+// bookmark has no thumbnails). Unsaved actions of the user still carry the local thumbnails
+// (or reference saved ones).
+function getIncorporatedBookmarkThumbnail(value: {
+  smallThumbnailDataBase64?: string | null;
+  largeThumbnailDataBase64?: string | null;
+  thumbnailSavedAtVersion?: number | null;
+  thumbnailViewport?: APIViewport | null;
+}): BookmarkThumbnail {
+  const largeThumbnailDataBase64 = value.largeThumbnailDataBase64 ?? null;
+  const thumbnailSavedAtVersion = value.thumbnailSavedAtVersion ?? null;
+  return {
+    smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
+    largeThumbnailDataBase64,
+    thumbnailSavedAtVersion,
+    thumbnailViewport: value.thumbnailViewport ?? null,
+    // The diffing baseline is reset after incorporating, so a new id does not cause a change.
+    thumbnailId:
+      largeThumbnailDataBase64 != null || thumbnailSavedAtVersion != null ? getUid() : null,
+  };
+}
+
+function failed(failure: RebasingFailure): ApplyingUpdatesResult {
+  return { success: false, failure };
+}
+
+// meshRefreshes collects the proofreading meshes that are outdated by merges and splits of other
+// users. The caller removes and reloads them after the actions were applied. Pass null if the
+// meshes do not need to be refreshed, e.g. for the user's own actions, because the proofreading
+// saga reloads those meshes itself.
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
   areUnsavedChangesOfUser: boolean,
-): Saga<ApplyingUpdateResults> {
+  meshRefreshes: MeshRefreshCollector | null,
+): Saga<ApplyingUpdatesResult> {
   // After all actions were incorporated, volume buckets and hdf5 mappings
   // are reloaded (if they exist and necessary). This is done as a
   // "finalization step", because it requires that the newest version is set
@@ -80,29 +115,6 @@ export function* tryToIncorporateActions(
     for (const fn of Object.values(refreshLayerFunctionByTracing)) {
       yield* call(fn);
     }
-  }
-
-  // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
-  // Maps from the old agglomerate id to a potentially new one.
-  // Duplicates are later ignored when refreshing the meshes.
-  const meshIdsToRemovePerLayer: Map<string, Set<bigint>> = new Map();
-  // Maps each layer's agglomerate ids whose meshes should be (re)loaded to the display properties
-  // (opacity and visibility) the reloaded mesh should inherit from the agglomerate it originated
-  // from (empty if nothing was stored). These must be gathered here while the original meshes still
-  // exist; the meshes are only removed later in resolveApplyingUpdateArtifacts.
-  const meshesToLoadPerLayer: Map<
-    LayerNameAsKey,
-    Map<bigint, PreservedMeshDisplayProps>
-  > = new Map();
-  function recordMeshToLoad(
-    tracingId: string,
-    agglomerateId: bigint,
-    displayProps: PreservedMeshDisplayProps,
-  ) {
-    if (!meshesToLoadPerLayer.has(tracingId)) {
-      meshesToLoadPerLayer.set(tracingId, new Map());
-    }
-    meshesToLoadPerLayer.get(tracingId)?.set(agglomerateId, displayProps);
   }
 
   for (const actionBatch of newerActions) {
@@ -246,7 +258,7 @@ export function* tryToIncorporateActions(
               action.value,
             );
             yield* call(finalize);
-            return getFailedIncorporateActionsReturnValue({
+            return failed({
               reason: "Cannot apply mergeAgglomerate action without agglomerate ids",
               details: { actionValue: action.value },
             });
@@ -278,42 +290,15 @@ export function* tryToIncorporateActions(
             agglomerateId1,
             agglomerateId2,
           );
-          const hasAnyOfBothAgglomerateMeshesLoaded = yield* select(
-            (state) =>
-              isMeshLoaded(state, agglomerateId1, actionTracingId) ||
-              isMeshLoaded(state, agglomerateId2, actionTracingId),
-          );
-          if (!hasAnyOfBothAgglomerateMeshesLoaded) {
-            break;
+          if (meshRefreshes != null) {
+            yield* call(
+              recordMeshRefreshesForMerge,
+              meshRefreshes,
+              actionTracingId,
+              agglomerateId1,
+              agglomerateId2,
+            );
           }
-          // agglomerateId2 is merged into agglomerateId1 and the frontend currently has at least one of the meshes loaded.
-          // Outdate agglomerateId1 and agglomerateId2. Only agglomerateId1 needs to be reloaded however.
-          // Track outdated and updated agglomerateIds to refresh after applying updates.
-          addToSetMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId1);
-          addToSetMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId2);
-          // The merged mesh keeps agglomerateId1 (the source), so it should inherit the source's
-          // opacity and visibility. Fall back to the target's mesh in case only the target mesh was
-          // loaded.
-          const mergedMeshDisplayProps: PreservedMeshDisplayProps = yield* select((state) => {
-            const meshInfo =
-              getMeshInfoForSegment(
-                state,
-                state.flycam.additionalCoordinates,
-                actionTracingId,
-                agglomerateId1,
-              ) ??
-              getMeshInfoForSegment(
-                state,
-                state.flycam.additionalCoordinates,
-                actionTracingId,
-                agglomerateId2,
-              );
-            return { opacity: meshInfo?.opacity, isVisible: meshInfo?.isVisible };
-          });
-          // Only agglomerateId1 needs to be reloaded; record it with the props to inherit.
-          recordMeshToLoad(actionTracingId, agglomerateId1, mergedMeshDisplayProps);
-          // Drop any previously queued reload of agglomerateId2 as it was merged into agglomerateId1.
-          meshesToLoadPerLayer.get(actionTracingId)?.delete(agglomerateId2);
           break;
         }
         case "splitAgglomerate": {
@@ -416,6 +401,58 @@ export function* tryToIncorporateActions(
           yield* put(setAnnotationDescriptionAction(action.value.description));
           break;
         }
+        case "addBookmark": {
+          // Server-side update actions also carry metadata such as actionTimestamp.
+          const { id, created, name, description, state, metadata } = action.value;
+          yield* put(
+            addBookmarkAction({
+              id,
+              created,
+              name: name ?? null,
+              description: description ?? null,
+              state,
+              // Unsaved bookmarks of the user get their version once they are saved.
+              createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
+              // Optional in the backend, e.g. for actions sent by other clients.
+              metadata: metadata ?? [],
+              ...getIncorporatedBookmarkThumbnail(action.value),
+            }),
+          );
+          break;
+        }
+        case "updateBookmark": {
+          // Properties that are not part of the action were not changed.
+          const { id, name, description } = action.value;
+          if (name !== undefined) {
+            yield* put(setBookmarkNameAction(id, name));
+          }
+          if (description !== undefined) {
+            yield* put(setBookmarkDescriptionAction(id, description));
+          }
+          break;
+        }
+        case "updateMetadataOfBookmark": {
+          const { id, upsertEntriesByKey, removeEntriesByKey } = action.value;
+          yield* put(updateBookmarkMetadataAction(id, upsertEntriesByKey, removeEntriesByKey));
+          break;
+        }
+        case "updateBookmarkState": {
+          yield* put(setBookmarkStateAction(action.value.id, action.value.state, null));
+          break;
+        }
+        case "updateBookmarkThumbnail": {
+          yield* put(
+            setBookmarkThumbnailAction(
+              action.value.id,
+              getIncorporatedBookmarkThumbnail(action.value),
+            ),
+          );
+          break;
+        }
+        case "deleteBookmark": {
+          yield* put(deleteBookmarkAction(action.value.id));
+          break;
+        }
         case "addSegmentIndex": {
           yield* put(setHasSegmentIndexAction(action.value.actionTracingId));
           break;
@@ -441,7 +478,7 @@ export function* tryToIncorporateActions(
               "Your local session is now out of sync and further changes can no longer be saved. Please reload the page.",
           );
           yield* call(finalize);
-          return getFailedIncorporateActionsReturnValue({
+          return failed({
             reason: "Annotation was reverted by another user",
             isExpected: true,
           });
@@ -472,7 +509,7 @@ export function* tryToIncorporateActions(
               "now out of sync and further changes can no longer be saved. Please reload the page.",
           );
           yield* call(finalize);
-          return getFailedIncorporateActionsReturnValue({
+          return failed({
             reason: "Layers were changed by another user",
             isExpected: true,
             details: { actionName: action.name },
@@ -490,7 +527,7 @@ export function* tryToIncorporateActions(
         case "updateUserBoundingBoxesInVolumeTracing": {
           console.error("Cannot apply legacy action", action.name);
           yield* call(finalize);
-          return getFailedIncorporateActionsReturnValue({
+          return failed({
             reason: "Cannot apply legacy action",
             details: { actionName: action.name },
           });
@@ -522,16 +559,11 @@ export function* tryToIncorporateActions(
             "Failed to apply an agglomerate split action from another user. Please refresh the page to resync.";
           console.error(message);
           Toast.error(message);
-          return getFailedIncorporateActionsReturnValue({
+          return failed({
             reason: "Failed to apply an agglomerate split action of another user",
           });
         }
-        const {
-          mappingWithSplitApplied,
-          oldAgglomerateIds,
-          newAgglomerateIds,
-          newToOldAgglomerateIds,
-        } = splitMappingInfo;
+        const { mappingWithSplitApplied, oldAgglomerateIds } = splitMappingInfo;
 
         yield* put(
           setMappingDataAction(
@@ -552,39 +584,79 @@ export function* tryToIncorporateActions(
           mappingWithSplitApplied,
           actionBatch.version,
         );
-        const loadedMeshes = yield* select((state) => getAllLoadedMeshes(state, tracingId));
-        const loadedMeshesOfSplitAction = loadedMeshes.intersection(oldAgglomerateIds);
-        if (loadedMeshesOfSplitAction.size > 0) {
-          // Capture the opacity and visibility of the original agglomerates before their meshes are
-          // removed, so each split-off agglomerate can inherit the properties of the agglomerate it
-          // came from.
-          const additionalCoordinates = yield* select(
-            (state) => state.flycam.additionalCoordinates,
-          );
-          const displayPropsByOldAgglomerateId = yield* call(
-            getMeshDisplayPropsByOldAgglomerateId,
-            tracingId,
-            oldAgglomerateIds,
-            additionalCoordinates,
-          );
-          oldAgglomerateIds.forEach((oldAggloId) => {
-            addToSetMap(meshIdsToRemovePerLayer, tracingId, oldAggloId);
-          });
-          newAgglomerateIds.forEach((newAggloId) => {
-            const oldAggloId = newToOldAgglomerateIds.get(newAggloId);
-            const displayProps =
-              (oldAggloId != null ? displayPropsByOldAgglomerateId.get(oldAggloId) : undefined) ??
-              {};
-            recordMeshToLoad(tracingId, newAggloId, displayProps);
-          });
+        if (meshRefreshes != null) {
+          yield* call(recordMeshRefreshesForSplit, meshRefreshes, tracingId, splitMappingInfo);
         }
       }
     }
   }
 
   yield* call(finalize);
-  return {
-    success: true,
-    artifactInfos: { meshIdsToRemovePerLayer, meshesToLoadPerLayer },
-  };
+  return { success: true };
+}
+
+// Returns the display properties of the meshes that will be shown after the refreshes recorded so
+// far, by agglomerate id (see MeshRefreshCollector.getDisplayPropsOfShownMeshesAfterRefresh).
+function* getDisplayPropsOfShownMeshesAfterRefresh(
+  meshRefreshes: MeshRefreshCollector,
+  tracingId: string,
+): Saga<Map<bigint, PreservedMeshDisplayProps>> {
+  const loadedMeshIds = yield* select((state) => getAllLoadedMeshes(state, tracingId));
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const displayPropsOfMeshesInScene = yield* call(
+    getMeshDisplayPropsByOldAgglomerateId,
+    tracingId,
+    loadedMeshIds,
+    additionalCoordinates,
+  );
+  return meshRefreshes.getDisplayPropsOfShownMeshesAfterRefresh(
+    tracingId,
+    displayPropsOfMeshesInScene,
+  );
+}
+
+function* recordMeshRefreshesForMerge(
+  meshRefreshes: MeshRefreshCollector,
+  tracingId: string,
+  sourceAgglomerateId: bigint,
+  targetAgglomerateId: bigint,
+): Saga<void> {
+  const displayPropsAfterRefresh = yield* call(
+    getDisplayPropsOfShownMeshesAfterRefresh,
+    meshRefreshes,
+    tracingId,
+  );
+  // The merged mesh keeps the source id, so it should inherit the source's opacity and
+  // visibility. Fall back to the target's mesh in case only the target mesh is shown.
+  const mergedMeshDisplayProps =
+    displayPropsAfterRefresh.get(sourceAgglomerateId) ??
+    displayPropsAfterRefresh.get(targetAgglomerateId);
+  if (mergedMeshDisplayProps == null) {
+    // Neither mesh is shown.
+    return;
+  }
+  meshRefreshes.recordMerge(
+    tracingId,
+    sourceAgglomerateId,
+    targetAgglomerateId,
+    mergedMeshDisplayProps,
+  );
+}
+
+function* recordMeshRefreshesForSplit(
+  meshRefreshes: MeshRefreshCollector,
+  tracingId: string,
+  splitMappingInfo: SplitInfo,
+): Saga<void> {
+  const displayPropsAfterRefresh = yield* call(
+    getDisplayPropsOfShownMeshesAfterRefresh,
+    meshRefreshes,
+    tracingId,
+  );
+  if (![...splitMappingInfo.oldAgglomerateIds].some((id) => displayPropsAfterRefresh.has(id))) {
+    return;
+  }
+  // Each split-off agglomerate inherits the opacity and visibility of the agglomerate it came
+  // from.
+  meshRefreshes.recordSplit(tracingId, splitMappingInfo, displayPropsAfterRefresh);
 }

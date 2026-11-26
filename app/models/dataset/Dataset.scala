@@ -50,6 +50,7 @@ import com.scalableminds.webknossos.schema.Tables.{
 import controllers.DatasetUpdatePartialParameters
 import models.annotation.{AnnotationAccessQueries, AnnotationState, AnnotationType}
 import models.dataset.DatasetCreationType.DatasetCreationType
+import models.dataset.DatasetSortBy.DatasetSortBy
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
@@ -274,7 +275,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         searchQuery,
         includeSubfolders,
         None,
-        None
+        None,
+        List.empty
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery".as[DatasetsRow])
@@ -292,6 +294,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       includeSubfolders: Boolean = false,
       statusOpt: Option[String] = None,
       createdSinceOpt: Option[Instant] = None,
+      tags: List[String] = List.empty,
+      sortByOpt: Option[DatasetSortBy] = None,
       limitOpt: Option[Int] = None,
       requestingUserOrga: Option[String] = None,
       includeAnnotationInfo: Boolean = false
@@ -306,15 +310,17 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         searchQuery,
         includeSubfolders,
         statusOpt,
-        createdSinceOpt
+        createdSinceOpt,
+        tags
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
-      (annotationColumns, annotationJoin) = requestingUserIdOpt match {
+      (annotationCountColumn, latestOwnAnnotationIdColumn, annotationJoin) = requestingUserIdOpt match {
         case Some(requestingUserId) if includeAnnotationInfo =>
           // The annotation join (count and latest own annotation) is designed for best index use.
           // The dataset access check is skipped, since only already-checked datasets are joined.
           (
-            q"COALESCE(annotationsPerDataset.count, 0), annotationsPerDataset.latestOwnAnnotationId",
+            q"COALESCE(annotationsPerDataset.count, 0)",
+            q"annotationsPerDataset.latestOwnAnnotationId",
             q"""LEFT JOIN (
                   SELECT a._dataset, COUNT(*) AS count, (ARRAY_AGG(a._id ORDER BY a.modified DESC, a._id DESC) FILTER (WHERE a._user = $requestingUserId))[1] AS latestOwnAnnotationId
                   FROM webknossos.annotations_ a
@@ -325,8 +331,18 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                 ) annotationsPerDataset
                   ON annotationsPerDataset._dataset = d._id"""
           )
-        case _ => (q"NULL::BIGINT, NULL::TEXT", q"")
+        case _ => (q"NULL::BIGINT", q"NULL::TEXT", q"")
       }
+      lastUsedTimeColumn = q"COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero})"
+      usedStorageColumn = q"COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0)"
+      orderByQuery = buildOrderBy(
+        sortByOpt,
+        searchQuery,
+        lastUsedTimeColumn,
+        // Only datasets of your own organization report their used storage (see below).
+        q"CASE WHEN o._id = $requestingUserOrga THEN $usedStorageColumn ELSE 0 END",
+        annotationCountColumn
+      )
       query = q"""
             SELECT
               d._id,
@@ -358,16 +374,17 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                   )
                 ), FALSE
               ) AS isEditable,
-              COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
+              $lastUsedTimeColumn,
               d.status,
               d.tags,
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames,
-              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes,
+              $usedStorageColumn AS usedStorageBytes,
               d.thumbnailCacheVersion,
-              $annotationColumns
+              $annotationCountColumn AS annotationCount,
+              $latestOwnAnnotationIdColumn AS latestOwnAnnotationId
             FROM
-            (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
+            (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates) d
             JOIN webknossos.organizations o
               ON o._id = d._organization
             LEFT JOIN webknossos.users_ u
@@ -383,6 +400,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
             LEFT JOIN (SELECT _dataset, COALESCE(SUM(usedStorageBytes), 0) AS storage FROM webknossos.organization_usedStorage_attachments GROUP BY _dataset) attachmentStorage
               ON d._id = attachmentStorage._dataset
             $annotationJoin
+            $orderByQuery
+            $limitQuery
             """
       rows <- run(
         query.as[
@@ -440,7 +459,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       searchQuery: Option[String],
       includeSubfolders: Boolean,
       statusOpt: Option[String],
-      createdSinceOpt: Option[Instant]
+      createdSinceOpt: Option[Instant],
+      tags: List[String]
   )(using ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- readAccessQuery
@@ -458,6 +478,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       statusPredicate = statusOpt.map(status => q"status = $status").getOrElse(q"TRUE")
       createdSincePredicate = createdSinceOpt.map(createdSince => q"created >= $createdSince").getOrElse(q"TRUE")
       searchPredicate = buildSearchPredicate(searchQuery)
+      tagsPredicate = if (tags.isEmpty) q"TRUE" else q"tags @> $tags::TEXT[]"
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
     } yield q"""
             ($folderPredicate)
@@ -468,6 +489,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         AND ($organizationPredicate)
         AND ($statusPredicate)
         AND ($createdSincePredicate)
+        AND ($tagsPredicate)
         AND $accessQuery
        """
 
@@ -489,6 +511,35 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         }
     }
+
+  // Expects the outer query of findAllCompactWithSearch, where the dataset is aliased as d.
+  private def buildOrderBy(
+      sortByOpt: Option[DatasetSortBy],
+      searchQueryOpt: Option[String],
+      lastUsedTimeColumn: SqlToken,
+      usedStorageColumn: SqlToken,
+      annotationCountColumn: SqlToken
+  ): SqlToken = {
+    val lastUsedOrder = q"$lastUsedTimeColumn DESC, d.created DESC"
+    val orderTokens = sortByOpt.map {
+      case DatasetSortBy.createdDesc     => q"d.created DESC"
+      case DatasetSortBy.createdAsc      => q"d.created ASC"
+      case DatasetSortBy.name            => q"d.name COLLATE webknossos.natural_sort, d.name"
+      case DatasetSortBy.storage         => q"$usedStorageColumn DESC, $lastUsedOrder"
+      case DatasetSortBy.annotationCount => q"$annotationCountColumn DESC NULLS LAST, $lastUsedOrder"
+      case DatasetSortBy.searchRelevance =>
+        searchQueryOpt.map(_.toLowerCase.trim.replaceAll(" +", " ")).filter(_.nonEmpty) match {
+          case Some(searchQuery) =>
+            val position = q"POSITION($searchQuery IN LOWER(d.name))"
+            // Exact name match first, then prefix, then substring, then matches of only the individual query tokens.
+            q"""CASE WHEN LOWER(d.name) = $searchQuery THEN 0 WHEN $position = 1 THEN 1 WHEN $position > 0 THEN 2 ELSE 3 END,
+                 $position, LENGTH(d.name), $lastUsedOrder"""
+          case None => lastUsedOrder
+        }
+      case _ => lastUsedOrder
+    }
+    orderTokens.map(orderToken => q"ORDER BY $orderToken, d._id").getOrElse(q"")
+  }
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {

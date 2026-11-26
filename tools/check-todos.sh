@@ -9,6 +9,7 @@ BLACKLIST=(
   docs/images/raw/tracing_ui_overview.svg
   schema/evolutions/008-task-instances-triggers.sql
   tools/check-todos.sh
+  tools/make-changelog.py
   webknossos-datastore/deployment/config/datastore-docker.conf
   webknossos-tracingstore/deployment/config/tracingstore-docker.conf
 )

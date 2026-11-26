@@ -28,6 +28,7 @@ import {
   AnnotationLayerEnum,
   type AnnotationViewConfiguration,
   type APIAnnotation,
+  type APIAnnotationBookmark,
   type APIAnnotationInfo,
   type APIAnnotationType,
   type APIAnnotationVisibility,
@@ -1032,6 +1033,61 @@ export async function getAnnotationProto(
   return annotationProto;
 }
 
+export async function getAnnotationBookmarks(
+  tracingStoreUrl: string,
+  annotationId: string,
+  version?: number | null | undefined,
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIAnnotationBookmark[]>> {
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.set("version", version.toString());
+  }
+  return requestResult(
+    async (adaptedOptions) => {
+      const bookmarksArrayBuffer = await doWithToken((token) => {
+        params.set("token", token);
+        return Request.receiveArraybuffer(
+          `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks?${params}`,
+          {
+            ...adaptedOptions,
+            headers: {
+              Accept: "application/x-protobuf",
+            },
+          },
+        );
+      });
+      const { parseProtoAnnotationBookmarks } = await loadProtoHelpers();
+      return parseProtoAnnotationBookmarks(bookmarksArrayBuffer);
+    },
+    options,
+    retryOptions,
+  );
+}
+
+export function getBookmarkThumbnailUrl(
+  tracingStoreUrl: string,
+  annotationId: string,
+  bookmarkId: number,
+  thumbnailSavedAtVersion: number,
+  size: "small" | "large",
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<string>> {
+  // The thumbnails of a bookmark can be replaced (and an undo or revert can point back to older ones),
+  // so thumbnailSavedAtVersion keeps the cached thumbnails apart.
+  return requestResult(
+    () =>
+      doWithToken(
+        async (token) =>
+          `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks/${bookmarkId}/thumbnail?size=${size}&v=${thumbnailSavedAtVersion}&token=${token}`,
+      ),
+    options,
+    retryOptions,
+  );
+}
+
 export function hasSegmentIndexInDataStore(
   dataStoreUrl: string,
   datasetId: string,
@@ -1362,31 +1418,61 @@ export async function reserveIdsForAnnotation(
 
 // ### Datasets
 
+export type DatasetSortBy =
+  | "lastUsed"
+  | "createdDesc"
+  | "createdAsc"
+  | "name"
+  | "storage"
+  | "annotationCount"
+  | "searchRelevance";
+
+export type DatasetListOptions = {
+  isActive?: boolean;
+  isUnreported?: boolean;
+  onlyMyOrganization?: boolean;
+  folderId?: string | null;
+  searchQuery?: string | null;
+  includeSubfolders?: boolean;
+  // Datasets must have all of these tags.
+  tags?: string[];
+  sortBy?: DatasetSortBy;
+  limit?: number;
+  includeAnnotationInfo?: boolean;
+};
+
 export async function getDatasets(
-  isUnreported: boolean | null | undefined = null,
-  folderId: string | null = null,
-  searchQuery: string | null = null,
-  includeSubfolders: boolean | null = null,
-  limit: number | null = null,
-  includeAnnotationInfo: boolean = false,
+  options: DatasetListOptions = {},
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
-  if (isUnreported != null) {
-    params.set("isUnreported", String(isUnreported));
+  if (options.isActive != null) {
+    params.set("isActive", String(options.isActive));
   }
-  if (folderId != null && folderId !== "") {
-    params.set("folderId", folderId);
+  if (options.isUnreported != null) {
+    params.set("isUnreported", String(options.isUnreported));
   }
-  if (searchQuery != null) {
-    params.set("searchQuery", searchQuery.trim());
+  if (options.onlyMyOrganization) {
+    params.set("onlyMyOrganization", "true");
   }
-  if (limit != null) {
-    params.set("limit", String(limit));
+  if (options.folderId != null && options.folderId !== "") {
+    params.set("folderId", options.folderId);
   }
-  if (includeSubfolders != null) {
-    params.set("includeSubfolders", includeSubfolders ? "true" : "false");
+  if (options.searchQuery != null) {
+    params.set("searchQuery", options.searchQuery.trim());
   }
-  if (includeAnnotationInfo) {
+  if (options.includeSubfolders != null) {
+    params.set("includeSubfolders", options.includeSubfolders ? "true" : "false");
+  }
+  for (const tag of options.tags ?? []) {
+    params.append("tags", tag);
+  }
+  if (options.sortBy != null) {
+    params.set("sortBy", options.sortBy);
+  }
+  if (options.limit != null) {
+    params.set("limit", String(options.limit));
+  }
+  if (options.includeAnnotationInfo) {
     params.set("includeAnnotationInfo", "true");
   }
 
@@ -1592,7 +1678,10 @@ export function createResumableUpload(
       chunkSize: 10 * 1024 * 1024, // 10MB
       simultaneousUploads: 3,
       chunkRetryInterval: 2000,
-      maxChunkRetries: undefined,
+      // Only retryable HTTP errors (e.g. 502/503) count towards this limit, network errors are
+      // retried indefinitely. 100 retries every 2 s give the datastore ~200 s to recover before
+      // the file fails and is retried once more with a refreshed token (see below).
+      maxChunkRetries: 100,
       fetchTimeout: 10 * 60 * 1000, // 10m
       generateUniqueIdentifier,
       // The following errors only tell Resumable-upload to not
@@ -2413,6 +2502,34 @@ export function getAgglomerateTreeAsSkeletonTracing(
       },
     ),
   );
+}
+
+export function getAgglomerateDiffToReference(
+  dataStoreUrl: string,
+  dataset: APIDataset,
+  layerName: string,
+  mappingId: string,
+  agglomerateId: bigint,
+  referenceMappingId: string,
+  // Segment of the agglomerate whose reference agglomerate should be used for the comparison
+  segmentId: bigint,
+): Promise<ArrayBuffer> {
+  return doWithToken((token) => {
+    const params = new URLSearchParams({
+      token,
+      referenceMappingName: referenceMappingId,
+      segmentId: segmentId.toString(),
+    });
+    return Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/diffToReference/${agglomerateId}?${params}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
+      {
+        useWebworkerForArrayBuffer: false,
+        showErrorToast: false,
+      },
+    );
+  });
 }
 
 async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(

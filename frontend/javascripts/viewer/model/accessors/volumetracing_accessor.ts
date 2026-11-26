@@ -14,6 +14,7 @@ import type {
 } from "types/api_types";
 import Constants, {
   type ContourMode,
+  ContourModeEnum,
   MAX_MAG_FOR_AGGLOMERATE_MAPPING,
   MappingStatusEnum,
   type Vector3,
@@ -626,6 +627,64 @@ export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEqual
   _getRenderableMagForActiveSegmentationTracing,
 );
 
+// Erasing a stroke with a brush of exactly the same size is finicky, since the
+// eraser has to retrace the original stroke precisely to remove all voxels.
+// Therefore, the eraser is roughly 5% larger than the draw brush.
+const ERASE_BRUSH_SIZE_INCREASE = 0.05;
+
+/**
+ * Per-axis diameter (in voxels of the labeled mag) of the eraser, given the diameter of
+ * the draw brush in that mag (see getBrushDiameterInMag). The increase is applied per
+ * axis in voxels of the labeled mag and rounded to an even number of voxels, so that the
+ * rounded diameter keeps its parity. Thus, the eraser is centered exactly like the draw
+ * brush (see getBrushCenterInMag) and grows evenly on all sides, regardless of the mag
+ * and the voxel size. Consequently, brushes which are smaller than ~20 voxels of the
+ * labeled mag are not enlarged. The increase is capped so that the eraser does not
+ * exceed maximumDiameterInMag (the diameter of the maximum brush size, see
+ * getMaximumBrushSize).
+ */
+export function getEraseBrushDiameterInMag(
+  diameterInMag: Vector3,
+  maximumDiameterInMag: Vector3,
+): Vector3 {
+  return [0, 1, 2].map((axis) => {
+    const diameter = diameterInMag[axis];
+    const increase = 2 * Math.round((diameter * ERASE_BRUSH_SIZE_INCREASE) / 2);
+    const maximumIncrease = 2 * Math.floor(Math.max(0, maximumDiameterInMag[axis] - diameter) / 2);
+    return diameter + Math.min(increase, maximumIncrease);
+  }) as Vector3;
+}
+
+/**
+ * Whether the brush preview / stroke uses the eraser size. isEraseShortcutPressed
+ * signals that the user holds the modifiers which turn the brush tool into the eraser
+ * (see adaptActiveToolToShortcuts), so that the preview already shows the eraser size
+ * before the stroke starts.
+ */
+function isErasingWithBrush(state: WebknossosState, isEraseShortcutPressed: boolean): boolean {
+  const { activeTool } = state.uiInformation;
+  if (activeTool === AnnotationTool.ERASE_BRUSH) {
+    return true;
+  }
+  if (activeTool !== AnnotationTool.BRUSH) {
+    return false;
+  }
+  if (isEraseShortcutPressed) {
+    return true;
+  }
+  // The brush tool also erases while dragging with a modifier (or with the right mouse
+  // button when using legacy bindings). The contour tracing mode keeps its value after
+  // the stroke ended, so only consider it during an ongoing stroke.
+  const volumeTracing = getActiveSegmentationTracing(state);
+  if (volumeTracing == null) {
+    return false;
+  }
+  const localState = state.localSegmentationStateByLayer[volumeTracing.tracingId];
+  return (
+    localState?.contourTracingMode === ContourModeEnum.DELETE && localState.contourList.length > 0
+  );
+}
+
 /**
  * Per-axis brush diameter in voxels of `mag`. brushSize is a diameter in pixels at zoom
  * step 1 (see getVoxelPerPixel), so this folds in both the voxel size (so the brush is
@@ -637,6 +696,31 @@ export function getBrushDiameterInMag(
   mag: Vector3,
 ): Vector3 {
   return [0, 1, 2].map((axis) => (brushSize * voxelPerPixel[axis]) / mag[axis]) as Vector3;
+}
+
+/**
+ * Per-axis brush diameter in voxels of `mag` that is currently in effect, i.e., the
+ * enlarged eraser diameter while erasing (see getEraseBrushDiameterInMag) and the
+ * diameter of the configured brush size otherwise.
+ */
+export function getEffectiveBrushDiameterInMag(
+  state: WebknossosState,
+  mag: Vector3,
+  isEraseShortcutPressed: boolean = false,
+): Vector3 {
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state));
+  const diameterInMag = getBrushDiameterInMag(
+    state.userConfiguration.brushSize,
+    voxelPerPixel,
+    mag,
+  );
+  if (!isErasingWithBrush(state, isEraseShortcutPressed)) {
+    return diameterInMag;
+  }
+  return getEraseBrushDiameterInMag(
+    diameterInMag,
+    getBrushDiameterInMag(getMaximumBrushSize(state), voxelPerPixel, mag),
+  );
 }
 
 /**
@@ -661,7 +745,22 @@ export function getBrushCenterInMag(
   }) as Vector3;
 }
 
-function _getBrushCenterPosition(state: WebknossosState): Vector3 | null {
+function _getBrushPreviewDiameterInMag(
+  state: WebknossosState,
+  isEraseShortcutPressed: boolean = false,
+): Vector3 {
+  // Per-axis brush diameter in voxels of the mag in which the brush is applied, as used
+  // by the brush preview.
+  const mag = getRenderableMagForActiveSegmentationTracing(state)?.mag ?? [1, 1, 1];
+  return getEffectiveBrushDiameterInMag(state, mag, isEraseShortcutPressed);
+}
+
+export const getBrushPreviewDiameterInMag = reuseInstanceOnEquality(_getBrushPreviewDiameterInMag);
+
+function _getBrushCenterPosition(
+  state: WebknossosState,
+  isEraseShortcutPressed: boolean = false,
+): Vector3 | null {
   // Global (mag-1) position of the brush center under the mouse, as used by the
   // brush preview. Like the preview, this ignores transforms of the segmentation layer.
   const mousePosition = getGlobalMousePositionFloating(state);
@@ -670,11 +769,7 @@ function _getBrushCenterPosition(state: WebknossosState): Vector3 | null {
     return null;
   }
   const { mag } = maybeMagWithZoomStep;
-  const diameterInMag = getBrushDiameterInMag(
-    state.userConfiguration.brushSize,
-    getVoxelPerPixel(getGlobalVoxelSizeFromState(state)),
-    mag,
-  );
+  const diameterInMag = getEffectiveBrushDiameterInMag(state, mag, isEraseShortcutPressed);
   const planeAxis = Dimensions.getIndices(state.viewModeData.plane.activeViewport)[2];
   return V3.scale3(getBrushCenterInMag(mousePosition, mag, diameterInMag, planeAxis), mag);
 }

@@ -15,13 +15,16 @@ CREATE TYPE webknossos.BOUNDING_BOX AS (
   depth DOUBLE PRECISION
 );
 
+-- Sorts digit sequences by their numeric value (e.g. ds2 before ds10). Case is only a tie-breaker.
+CREATE COLLATION webknossos.natural_sort (provider = icu, locale = 'en-u-kn-true');
+
 
 START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(194);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(196);
 COMMIT TRANSACTION;
 
 
@@ -82,10 +85,10 @@ CREATE TABLE webknossos.annotation_mutexes(
   expiry TIMESTAMP NOT NULL
 );
 
-CREATE TYPE webknossos.ANNOTATION_ID_DOMAIN AS ENUM ('Segment', 'SegmentGroup', 'Tree', 'Node', 'TreeGroup', 'BoundingBox');
+CREATE TYPE webknossos.ANNOTATION_ID_DOMAIN AS ENUM ('Segment', 'SegmentGroup', 'Tree', 'Node', 'TreeGroup', 'BoundingBox', 'Bookmark');
 CREATE TABLE webknossos.annotation_reserved_ids(
   _annotation TEXT NOT NULL CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
-  tracingId TEXT NOT NULL,
+  tracingId TEXT NOT NULL, -- empty string for annotation-scoped ids (domain Bookmark)
   domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL,
   _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$'),
   id BIGINT NOT NULL,

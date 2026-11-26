@@ -271,12 +271,16 @@ class PcgAgglomerateService @Inject() (
         Msg.AgglomerateGraph.tooManyEdges(subgraph.edges.length, edgeLimit)
     } yield subgraph
 
-  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(using
+  def generateAgglomerateGraph(
+      agglomerateFileKey: AgglomerateFileKey,
+      agglomerateId: Long,
+      edgeLimit: Int,
+      includeAffinities: Boolean
+  )(using
       ec: ExecutionContext
   ): Fox[AgglomerateGraph] =
     for {
       segmentIds <- segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
-      edgeLimit = config.Datastore.AgglomerateGraph.maxEdges
       _ <- Fox.fromBool(segmentIds.length <= edgeLimit) ?~>
         Msg.AgglomerateGraph.tooManyNodes(segmentIds.length, edgeLimit)
       response <- subgraphForAgglomerateId(agglomerateFileKey, agglomerateId, edgeLimit)
@@ -290,7 +294,7 @@ class PcgAgglomerateService @Inject() (
       segments = segmentIds,
       edges = edges,
       positions = segmentIds.map(positionProtoFromMap(positions, _)),
-      affinities = response.affinities
+      affinities = if (includeAffinities) response.affinities else Seq.empty
     )
 
   def generateTree(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(using

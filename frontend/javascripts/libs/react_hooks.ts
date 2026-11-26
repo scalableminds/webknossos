@@ -55,7 +55,7 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
 
 /**
  * Registers window listeners that call setKeyPressed with whether targetKey is pressed.
- * @returns A function that removes the keydown and keyup listeners
+ * @returns A function that removes all listeners registered by this function
  */
 export function subscribeToKeyPress(
   targetKey: "Shift" | "Alt" | "ControlOrMeta",
@@ -111,6 +111,7 @@ export function subscribeToKeyPress(
   return () => {
     window.removeEventListener("keydown", downHandler);
     window.removeEventListener("keyup", upHandler);
+    window.removeEventListener("blur", releaseKey);
   };
 }
 

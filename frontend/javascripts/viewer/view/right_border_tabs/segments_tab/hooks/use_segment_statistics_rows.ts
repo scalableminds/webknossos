@@ -224,7 +224,12 @@ export function useSegmentStatisticsRows({
       specs.push({
         key: "maxDistance",
         title: "Max Distance",
-        value: { kind: "number", unit: { dimension: 1 }, get: (row) => row.maxDistanceInUnit },
+        value: {
+          kind: "number",
+          unit: { dimension: 1 },
+          aggregation: "max",
+          get: (row) => row.maxDistanceInUnit,
+        },
         isLoading: maxDistances.isLoading,
         isError: maxDistances.isError,
         csvHeaders: [`maxDistanceIn${capitalizedUnit}`],
@@ -236,7 +241,13 @@ export function useSegmentStatisticsRows({
       specs.push({
         key: "sphericity",
         title: "Sphericity",
-        value: { kind: "number", unit: "0–1", fractionDigits: 3, get: (row) => row.sphericity },
+        value: {
+          kind: "number",
+          unit: "0–1",
+          fractionDigits: 3,
+          aggregation: "mean",
+          get: (row) => row.sphericity,
+        },
         isLoading: sphericities.isLoading,
         isError: sphericities.isError,
         csvHeaders: ["sphericity"],
@@ -270,39 +281,29 @@ export function useSegmentStatisticsRows({
     }
 
     if (isBoundingBoxAvailable) {
-      specs.push(
-        {
-          key: "boundingBoxTopLeft",
-          title: "Bounding Box Position",
-          value: {
-            kind: "vector",
-            unit: "vx",
-            fractionDigits: 0,
-            sortBy: "first",
-            isPosition: true,
-            get: (row) => row.boundingBoxTopLeft,
-          },
-          isLoading: boundingBoxes.isLoading,
-          isError: boundingBoxes.isError,
-          csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxTopLeftPosition${axis}`),
-          getCsvValues: (row) => row.boundingBoxTopLeft ?? emptyVector,
+      specs.push({
+        key: "boundingBox",
+        title: "Bounding Box",
+        // The table shows the top-left corner above the size and sorts by the volume of the box.
+        value: {
+          kind: "vector",
+          unit: "vx",
+          fractionDigits: 0,
+          sortBy: "product",
+          getPosition: (row) => row.boundingBoxTopLeft,
+          get: (row) => row.boundingBoxSize,
         },
-        {
-          key: "boundingBoxSize",
-          title: "Bounding Box Size",
-          value: {
-            kind: "vector",
-            unit: "vx",
-            fractionDigits: 0,
-            sortBy: "product",
-            get: (row) => row.boundingBoxSize,
-          },
-          isLoading: boundingBoxes.isLoading,
-          isError: boundingBoxes.isError,
-          csvHeaders: ["X", "Y", "Z"].map((axis) => `boundingBoxSize${axis}`),
-          getCsvValues: (row) => row.boundingBoxSize ?? emptyVector,
-        },
-      );
+        isLoading: boundingBoxes.isLoading,
+        isError: boundingBoxes.isError,
+        csvHeaders: [
+          ...["X", "Y", "Z"].map((axis) => `boundingBoxTopLeftPosition${axis}`),
+          ...["X", "Y", "Z"].map((axis) => `boundingBoxSize${axis}`),
+        ],
+        getCsvValues: (row) => [
+          ...(row.boundingBoxTopLeft ?? emptyVector),
+          ...(row.boundingBoxSize ?? emptyVector),
+        ],
+      });
     }
 
     if (availableFileMetrics.centerOfMass) {
@@ -313,7 +314,6 @@ export function useSegmentStatisticsRows({
           kind: "vector",
           unit: "vx",
           fractionDigits: 0,
-          sortBy: "first",
           isPosition: true,
           get: (row) => row.centerOfMass?.map(Math.round) as Vector3 | undefined,
         },

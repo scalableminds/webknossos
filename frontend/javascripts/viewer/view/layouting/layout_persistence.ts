@@ -20,7 +20,9 @@ export enum LayoutEvents {
   toggleMaximize = "TOGGLE_MAXIMIZE",
   showSkeletonTab = "SHOW_SKELETON_TAB",
   showSegmentsTab = "SHOW_SEGMENTS_TAB",
+  showBookmarksTab = "SHOW_BOOKMARKS_TAB",
   showAbstractTreeTab = "SHOW_ABSTRACT_TREE_TAB",
+  showSegmentStatisticsTab = "SHOW_SEGMENT_STATISTICS_TAB",
 }
 // For debugging purposes:
 const disableLayoutPersistance = false;

@@ -72,6 +72,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_SEGMENT_STATISTICS_SCOPE": {
+      return updateKey(state, "uiInformation", {
+        segmentStatisticsScope: action.scope,
+      });
+    }
+
     case "SET_SYSTEM_THEME": {
       return updateKey(state, "uiInformation", {
         systemTheme: action.systemTheme,
@@ -211,6 +217,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
     case "SET_ACTIVE_USER_BOUNDING_BOX_ID": {
       return updateKey(state, "uiInformation", {
         activeUserBoundingBoxId: action.id,
+      });
+    }
+
+    case "SET_BOOKMARK_ID_TO_FOCUS": {
+      return updateKey(state, "uiInformation", {
+        bookmarkIdToFocus: action.bookmarkId,
       });
     }
 

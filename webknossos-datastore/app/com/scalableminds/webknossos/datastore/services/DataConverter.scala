@@ -1,10 +1,14 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.services.mesh.DataTypeFunctors
 
 import java.nio.*
 import scala.reflect.ClassTag
+
+case class DataTypeFunctors[T, B](
+    getTypedBufferFn: ByteBuffer => B,
+    copyDataFn: (B, Array[T]) => Unit
+)
 
 trait DataConverter {
 
@@ -20,22 +24,22 @@ trait DataConverter {
   def convertData(data: Array[Byte], elementClass: ElementClass.Value): Array[? >: Byte & Short & Int & Long & Float] =
     elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_)))
       case ElementClass.uint16 | ElementClass.int16 =>
         convertDataImpl[Short, ShortBuffer](
           data,
-          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort)
+          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_))
         )
       case ElementClass.uint24 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_)))
       case ElementClass.uint32 | ElementClass.int32 =>
-        convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
+        convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_)))
       case ElementClass.uint64 | ElementClass.int64 =>
-        convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
+        convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_)))
       case ElementClass.float =>
         convertDataImpl[Float, FloatBuffer](
           data,
-          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)
+          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_))
         )
     }
 

@@ -7,6 +7,7 @@
 
 #![allow(non_snake_case)] // JNI function names are mandated by the JNI spec
 
+mod ad_hoc_mesh;
 mod bucket_scanner;
 mod compresso;
 mod draco;

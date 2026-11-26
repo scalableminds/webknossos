@@ -558,11 +558,9 @@ function* maybeLoadMeshChunk(
     ErrorHandling.notify(meshResult.error.cause as Error);
     return [];
   }
-  const { buffer: responseBuffer, neighbors } = meshResult.value;
+  const { vertices, indices, neighbors } = meshResult.value;
 
   try {
-    const vertices = new Float32Array(responseBuffer);
-
     if (removeExistingMesh) {
       segmentMeshController.removeMeshById(segmentId, layer.name);
     }
@@ -576,6 +574,7 @@ function* maybeLoadMeshChunk(
     yield* call(
       { fn: segmentMeshController.addMeshFromVerticesAsync, context: segmentMeshController },
       vertices,
+      indices,
       segmentId,
       layer.name,
       meshExtraInfo.opacity,

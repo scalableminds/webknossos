@@ -126,6 +126,8 @@ export type CsvValue = string | number | bigint | undefined;
 // raised to the given dimension (length, area or volume).
 export type StatisticUnit = string | { dimension: 1 | 2 | 3 };
 
+export type StatisticAggregation = "sum" | "mean" | "max";
+
 /*
  * How the value of a statistic is obtained for the table. Numbers are right-aligned, sortable and
  * get a bar that relates them to the other rows. Vectors are sorted by their first component or by
@@ -135,6 +137,8 @@ export type StatisticValue =
   | {
       kind: "number";
       unit: StatisticUnit;
+      // How the values of the segments of a group are combined. Defaults to "sum".
+      aggregation?: StatisticAggregation;
       // How many decimal places are shown. Defaults to 2.
       fractionDigits?: number;
       get: (row: SegmentStatisticsRow) => number | undefined;
@@ -143,9 +147,13 @@ export type StatisticValue =
       kind: "vector";
       unit: StatisticUnit;
       fractionDigits?: number;
-      sortBy: "first" | "product";
+      // Positions are not sortable, as their order along the first axis is rarely meaningful.
+      sortBy?: "first" | "product";
       // Whether the vector is a position in the dataset (in mag1 voxels).
       isPosition?: boolean;
+      // A position (in mag1 voxels) that is shown above the vector, e.g. the top-left corner above
+      // the size of a bounding box.
+      getPosition?: (row: SegmentStatisticsRow) => Vector3 | undefined;
       get: (row: SegmentStatisticsRow) => Vector3 | undefined;
     };
 

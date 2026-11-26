@@ -1,5 +1,4 @@
 import app from "app";
-import { mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { createTween } from "libs/tween_group";
 import { clamp } from "libs/utils";
@@ -204,7 +203,7 @@ export default class SegmentMeshController {
 
   async addMeshFromVerticesAsync(
     vertices: Float32Array,
-    indices: Uint16Array | Uint32Array | null,
+    indices: Uint16Array | Uint32Array,
     segmentId: bigint,
     layerName: string,
     opacity: number | undefined,
@@ -212,15 +211,9 @@ export default class SegmentMeshController {
   ): Promise<void> {
     // Currently, this function is only used by ad hoc meshing.
     if (vertices.length === 0) return;
-    let bufferGeometry = new BufferGeometry();
+    const bufferGeometry = new BufferGeometry();
     bufferGeometry.setAttribute("position", new BufferAttribute(vertices, 3));
-    if (indices != null) {
-      bufferGeometry.setIndex(new BufferAttribute(indices, 1));
-    } else {
-      // A triangle soup from an older datastore. Share the vertices between triangles, so that
-      // the normals are smooth.
-      bufferGeometry = mergeVertices(bufferGeometry);
-    }
+    bufferGeometry.setIndex(new BufferAttribute(indices, 1));
     bufferGeometry.computeVertexNormals();
 
     bufferGeometry.boundsTree = await computeBvhAsync(bufferGeometry);

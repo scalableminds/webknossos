@@ -35,7 +35,7 @@ export type Theme = "light" | "dark";
 //  4. One of the brand constants below — only for colors that must stay identical in both the
 //     light and the dark theme.
 export const ColorWKBlue = "#5660ff"; // DS "Indigo" (primary)
-export const ColorWKBlueZircon = "#59f8e8"; // DS "Mint", apply by hand for rare highlights only
+export const ColorWKMint = "#59f8e8"; // DS "Mint", apply by hand for rare highlights only
 export const ColorWKGold = "#ddbc00"; // WK Gold, used for the credit/billing iconography
 export const ColorWhite = "white";
 const ColorWKDarkGrey = "#1f1f1f";

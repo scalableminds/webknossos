@@ -90,7 +90,7 @@ class DSFullMeshService @Inject() (
         dataLayer.asInstanceOf[SegmentationLayer]
       ).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
       hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
-      verticesForChunks <-
+      meshChunks <-
         if (hasSegmentIndexFile)
           getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
         else {
@@ -106,7 +106,7 @@ class DSFullMeshService @Inject() (
             )
           } yield chunks
         }
-    } yield verticesForChunks.map(adHocMeshToStl).map(surfaceAreaFromRawChunkStlBytes).sum
+    } yield meshChunks.map(surfaceArea).sum
 
   def loadFor(
       datasetId: ObjectId,
@@ -133,7 +133,7 @@ class DSFullMeshService @Inject() (
       ).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
       hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       before = Instant.now
-      verticesForChunks <-
+      meshChunks <-
         if (hasSegmentIndexFile)
           getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
         else {
@@ -150,7 +150,7 @@ class DSFullMeshService @Inject() (
           } yield chunks
         }
 
-      encoded = verticesForChunks.map(adHocMeshToStl)
+      encoded = meshChunks.map(adHocMeshToStl)
       array = combineEncodedChunksToStl(encoded)
       _ = logMeshingDuration(before, "ad-hoc meshing", array.length)
     } yield array
@@ -161,7 +161,7 @@ class DSFullMeshService @Inject() (
       segmentationLayer: SegmentationLayer,
       fullMeshRequest: FullMeshRequest,
       mag: Vec3Int
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[AdHocMesh]] =
     for {
       segmentIndexFileKey <- segmentIndexFileService.lookUpSegmentIndexFileKey(dataSource.id, segmentationLayer)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
@@ -213,7 +213,7 @@ class DSFullMeshService @Inject() (
         )
         adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
       }
-    } yield meshChunks.map(_.triangleSoup)
+    } yield meshChunks
 
   private def getAllAdHocChunksWithNeighborLogic(
       datasetId: ObjectId,
@@ -222,7 +222,7 @@ class DSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest,
       topLeft: VoxelPosition,
       chunkSize: Vec3Int
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[AdHocMesh]] = {
     // Iterative parallel BFS. Each wave dispatches all frontier positions concurrently
     // (in actorPoolSize batches) rather than serially one at a time.
     // visited is marked before dispatch so parallel wave members don't queue the same position.
@@ -232,7 +232,7 @@ class DSFullMeshService @Inject() (
     // via Fox.serialCombined, so no two writes ever race.
     val visited = collection.mutable.Set[VoxelPosition]()
 
-    def processFrontier(frontier: List[VoxelPosition], acc: List[Array[Float]]): Fox[List[Array[Float]]] =
+    def processFrontier(frontier: List[VoxelPosition], acc: List[AdHocMesh]): Fox[List[AdHocMesh]] =
       if (frontier.isEmpty) Fox.successful(acc)
       else if (visited.size + frontier.size > maxAdHocFullMeshChunks)
         Fox.failure(Msg.Mesh.tooManyAdHocMeshRequests(maxAdHocFullMeshChunks))
@@ -257,7 +257,7 @@ class DSFullMeshService @Inject() (
               )
               adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest).map { mesh =>
                 (
-                  mesh.triangleSoup,
+                  mesh,
                   generateNextTopLeftsFromNeighbors(
                     position,
                     mesh.neighbors,
@@ -270,11 +270,11 @@ class DSFullMeshService @Inject() (
             })
           }
           results = batchResults.flatten
-          newVertices = results.map(_._1)
+          newMeshChunks = results.map(_._1)
           // Two wave members may share a border and independently report the same neighbor position
           nextFrontier = results.flatMap(_._2).distinct
-          allVertices <- processFrontier(nextFrontier, newVertices ::: acc)
-        } yield allVertices
+          allMeshChunks <- processFrontier(nextFrontier, newMeshChunks ::: acc)
+        } yield allMeshChunks
       }
 
     processFrontier(List(topLeft), List.empty)

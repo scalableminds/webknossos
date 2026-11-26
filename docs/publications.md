@@ -2,6 +2,31 @@
 The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:support@webknossos.org) if your publication is missing.
 
 ## 2026
+* Lukas Hessel, Jonas Albers, Matthias M. Gaida, Christoph Eckert, Caroline V. Schimmel, Klara Schulze, Verena Wagner, Philipp Mayer, Alexander Rathenborg, Thomas Hank, Christoph W. Michalski, Elizabeth Duke, Martin Loos & Gabriel A. Salg.  
+  Synchrotron X-ray Data of non-diseased and diabetic Human Pancreas Tissue and Islet Segmentation Model.  
+  [Scientific Data, Volume 13, Article 1542 (2026). DOI: 10.1038/s41597-026-08613-1](https://doi.org/10.1038/s41597-026-08613-1)
+
+* Luke A. Noon, Giulia Casal, Mario Soriano-Navarro, Anne-Laure Cattin, Rafael Camacho, Carlos Acosta Umanzor, Carmen Rojo Sanz, Arantxa Leal Tassias, Julia Fernandez-Rodriguez, Elisabeth Verboven, Jose Antonio Gomez Sanchez, Marousa Darsinou, Alex Power, Antonella Riccio, Emma R. Andersson, Jemima J. Burden & Alison C. Lloyd.  
+  Quantitative spatial connectomics of liver reveals a partially exposed sympathetic network that integrates multiple cell types across the portal tract.  
+  [bioRxiv (2026). DOI: 10.64898/2026.10.26.761888](https://doi.org/10.64898/2026.10.26.761888)
+
+* Martina Monaco, Vanessa Chiappini, Maria Fernanda Veloz Castillo, Kalpana Kare, Marinella Clerico, Luca Bartesaghi & Corrado Calì.  
+  Volume electron microscopy reveals oligodendrocyte axon selection patterns and spatial assembly of myelin and nodes.  
+  [iScience, Volume 29, Issue 11, 117773 (2026). DOI: 10.1016/j.isci.2026.117773](https://doi.org/10.1016/j.isci.2026.117773)
+
+* Argel Aguilar-Valles, Brandon Rodrigue, Jared VanderZwaag, Amanda Carroll, Keagan Canning, Michael Parkhill, Tori Rock, Mathew Sajish, Paul Schimmel, Nahum Sonenberg & Marie-Eve Tremblay.  
+  cis-Resveratrol Reduces Male-Specific Anxiety-Like Behaviour and Facilitates Fear Extinction via mRNA Translation.  
+  [Research Square preprint (2026). DOI: 10.21203/rs.3.rs-11040928/v1](https://doi.org/10.21203/rs.3.rs-11040928/v1)
+
+* Daniela Chequer Charan, Fangfang Wang, María Eugenia Gómez-Casati, Haoyu Wang, Yumeng Qi, Walen Leonardo Gribaudo, Camila Catalano Di Meo, Carolina Wedemeyer, Yunfeng Hua, Ana Belén Elgoyhen & Mariano Nicolás Di Guilmi.  
+  Medial olivocochlear activity modulates central auditory synapse structure and function.  
+  [Scientific Reports (2026). DOI: 10.1038/s41598-026-66941-z](https://doi.org/10.1038/s41598-026-66941-z)
+
+* John Benedict, Mox Engelman, Meaghan Klos, Robyn J. Crook & Gabrielle C. Winters-Bostwick.  
+  Molecular and ultrastructural characterization of the intramuscular nerve cords of the octopus arm.  
+  [bioRxiv (2026). DOI: 10.64898/2026.06.06.730610](https://doi.org/10.64898/2026.06.06.730610)  
+  **View data [#1](https://webknossos.org/links/7uAmVu-za0VJ5Pnj) [#2](https://webknossos.org/links/3GW4meFvrXr1_rjk)** in WEBKNOSSOS
+
 * Arent J. Kievits, B. H. Peter Duinkerken, Ryan Lane, Ben N. G. Giepmans & Jacob P. Hoogenboom.  
   Mitigation of artifacts in imaging biosamples with optical scanning transmission electron microscopy.  
   [Applied Microscopy, Volume 56, Article 11 (2026). DOI: 10.1186/s42649-026-00132-y](https://doi.org/10.1186/s42649-026-00132-y)

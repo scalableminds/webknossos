@@ -1,5 +1,8 @@
 //! Draco→raw STL and STL geometry, preserving the native converter's float arithmetic.
-use crate::error::{DsError, DsResult};
+use crate::{
+    error::{DsError, DsResult},
+    services::mesh::marching_cubes::AdHocMesh,
+};
 use draco_core::{
     DecodeLimits, DecoderBuffer, Mesh, MeshDecoder, draco_types::DataType,
     geometry_attribute::GeometryAttributeType,
@@ -124,12 +127,13 @@ pub fn combine_stl(chunks: &[Vec<u8>]) -> DsResult<Vec<u8>> {
     }
     Ok(bytes)
 }
-/// FullMeshHelper.adHocMeshToStl: each face's own normal, then its three vertices.
-pub fn ad_hoc_to_stl(vertices: &[f32]) -> DsResult<Vec<u8>> {
-    if !vertices.len().is_multiple_of(9) {
-        return Err(DsError::failure("Invalid mesh vertex count."));
+/// FullMeshHelper.adHocMeshToStl: each face's own normal, then its three vertices, read
+/// through the indices.
+pub fn ad_hoc_to_stl(mesh: &AdHocMesh) -> DsResult<Vec<u8>> {
+    if !mesh.indices.len().is_multiple_of(3) {
+        return Err(DsError::failure("Invalid mesh index count."));
     }
-    let size = (vertices.len() / 9)
+    let size = (mesh.indices.len() / 3)
         .checked_mul(50)
         .filter(|n| *n <= i32::MAX as usize)
         .ok_or_else(|| DsError::failure("Single mesh chunk is too large to encode as STL."))?;
@@ -137,8 +141,8 @@ pub fn ad_hoc_to_stl(vertices: &[f32]) -> DsResult<Vec<u8>> {
     output
         .try_reserve_exact(size)
         .map_err(DsError::from_exception)?;
-    for positions in vertices.as_chunks::<9>().0 {
-        let points = std::array::from_fn(|v| std::array::from_fn(|d| positions[3 * v + d]));
+    for face in mesh.indices.as_chunks::<3>().0 {
+        let points = face_vertices(mesh, face)?;
         let normal = cross(points);
         let reciprocal = 1.
             / (f64::from(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2])
@@ -146,12 +150,40 @@ pub fn ad_hoc_to_stl(vertices: &[f32]) -> DsResult<Vec<u8>> {
         for coordinate in normal {
             output.extend((coordinate * reciprocal).to_le_bytes());
         }
-        for coordinate in positions {
+        for coordinate in points.as_flattened() {
             output.extend(coordinate.to_le_bytes());
         }
         output.extend([0, 0]);
     }
     Ok(output)
+}
+fn face_vertices(mesh: &AdHocMesh, face: &[u32; 3]) -> DsResult<[[f32; 3]; 3]> {
+    let mut points = [[0.; 3]; 3];
+    for (point, &index) in points.iter_mut().zip(face) {
+        let start = 3 * index as usize;
+        *point = mesh
+            .vertices
+            .get(start..start + 3)
+            .and_then(|v| v.try_into().ok())
+            .ok_or_else(|| DsError::failure("Mesh index out of range."))?;
+    }
+    Ok(points)
+}
+fn triangle_area(vertices: [[f32; 3]; 3]) -> f32 {
+    let [x, y, z] = cross(vertices);
+    // Scala computes squared length in Float, sqrt in Double, then narrows before /2.
+    (f64::from(x * x + y * y + z * z).sqrt() as f32) / 2.
+}
+/// FullMeshHelper.surfaceArea: the area of an ad-hoc mesh chunk, equal to
+/// `surface_area(&ad_hoc_to_stl(mesh)?)` without encoding the STL.
+pub fn ad_hoc_surface_area(mesh: &AdHocMesh) -> DsResult<f32> {
+    mesh.indices
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .try_fold(0f32, |sum, face| {
+            Ok(sum + triangle_area(face_vertices(mesh, face)?))
+        })
 }
 pub fn surface_area(raw: &[u8]) -> DsResult<f32> {
     if !raw.len().is_multiple_of(50) {
@@ -163,9 +195,7 @@ pub fn surface_area(raw: &[u8]) -> DsResult<f32> {
         for (index, bytes) in record[12..48].as_chunks::<4>().0.iter().enumerate() {
             vertices[index / 3][index % 3] = f32::from_le_bytes(*bytes);
         }
-        let [x, y, z] = cross(vertices);
-        // Scala computes squared length in Float, sqrt in Double, then narrows before /2.
-        area += (f64::from(x * x + y * y + z * z).sqrt() as f32) / 2.;
+        area += triangle_area(vertices);
     }
     Ok(area)
 }

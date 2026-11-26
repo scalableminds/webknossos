@@ -47,8 +47,6 @@ struct Request {
     coordinates: Option<Vec<RequestedAdditionalCoordinate>>,
     version: Option<i64>,
     neighbors: bool,
-    /// Respond with an indexed mesh instead of a triangle soup, see `AdHocMesh::to_bytes`.
-    indexed: bool,
 }
 fn parse(value: &Value) -> JsResult<Request> {
     let mut f = Fields::new(value);
@@ -64,7 +62,6 @@ fn parse(value: &Value) -> JsResult<Request> {
     });
     let version = f.opt("annotationVersion", read_i64);
     let neighbors = f.with_default("findNeighbors", true, read_bool);
-    let indexed = f.with_default("indexed", false, read_bool);
     f.finish()?;
     Ok(Request {
         position: position?,
@@ -77,7 +74,6 @@ fn parse(value: &Value) -> JsResult<Request> {
         coordinates: coordinates?,
         version: version?,
         neighbors: neighbors?,
-        indexed: indexed?,
     })
 }
 async fn generate(
@@ -122,16 +118,15 @@ async fn generate(
             tc.user_token.as_deref(),
         )
         .await?;
-    Ok(ad_hoc_mesh_response(&mesh, request.indexed))
+    Ok(ad_hoc_mesh_response(&mesh))
 }
 
-/// Scala `AdHocMesh.toBytes` with `AdHocMesh.responseHeaders`: the neighbors and, only if
-/// indexed, the vertex count, which locates the indices. So the `Vertex-Count` header is
-/// present exactly if the body is indexed.
-pub(crate) fn ad_hoc_mesh_response(mesh: &AdHocMesh, indexed: bool) -> Response {
+/// Scala `AdHocMesh.toBytes` with `AdHocMesh.responseHeaders`: the neighbors and the vertex
+/// count, which locates the indices.
+pub(crate) fn ad_hoc_mesh_response(mesh: &AdHocMesh) -> Response {
     let mut response = (
         [(header::CONTENT_TYPE, "application/octet-stream")],
-        mesh.to_bytes(indexed),
+        mesh.to_bytes(),
     )
         .into_response();
     let headers = response.headers_mut();
@@ -147,17 +142,10 @@ pub(crate) fn ad_hoc_mesh_response(mesh: &AdHocMesh, indexed: bool) -> Response 
         ))
         .expect("numeric neighbors"),
     );
-    if indexed {
-        headers.insert("vertex-count", HeaderValue::from(mesh.vertex_count()));
-        headers.insert(
-            header::ACCESS_CONTROL_EXPOSE_HEADERS,
-            HeaderValue::from_static("NEIGHBORS, Vertex-Count"),
-        );
-    } else {
-        headers.insert(
-            header::ACCESS_CONTROL_EXPOSE_HEADERS,
-            HeaderValue::from_static("NEIGHBORS"),
-        );
-    }
+    headers.insert("vertex-count", HeaderValue::from(mesh.vertex_count()));
+    headers.insert(
+        header::ACCESS_CONTROL_EXPOSE_HEADERS,
+        HeaderValue::from_static("NEIGHBORS, Vertex-Count"),
+    );
     response
 }

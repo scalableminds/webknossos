@@ -16,7 +16,10 @@ use crate::{
         agglomerate::AgglomerateService,
         mesh::ad_hoc::{AdHocMeshRequest, AdHocMeshService, MappingType},
         mesh::file::{ChunkRequest, MeshFileService},
-        mesh::geometry::{ad_hoc_to_stl, combine_stl, draco_to_stl, surface_area},
+        mesh::geometry::{
+            ad_hoc_surface_area, ad_hoc_to_stl, combine_stl, draco_to_stl, surface_area,
+        },
+        mesh::marching_cubes::AdHocMesh,
         segment::index::{
             SegmentIndexService, segment_ids_for_agglomerate_id_if_needed,
             top_lefts_to_target_mag_buckets,
@@ -32,6 +35,12 @@ use std::{collections::HashSet, sync::Arc};
 pub const MAX_AD_HOC_FULL_MESH_CHUNKS: usize = 25000;
 /// Scala `FullMeshHelper.adHocChunkSize` (per axis, in the target mag).
 const AD_HOC_CHUNK_SIZE: i32 = 128;
+/// The chunks of a full mesh: raw STL from a mesh file, or ad-hoc meshes, which stay indexed
+/// until they are encoded (Scala `DSFullMeshService`).
+enum Chunks {
+    Stl(Vec<Vec<u8>>),
+    AdHoc(Vec<AdHocMesh>),
+}
 fn too_many_ad_hoc_mesh_requests() -> DsError {
     DsError::failure(format!(
         "Segment is too large for ad-hoc full mesh computation (more than \
@@ -132,7 +141,11 @@ impl FullMeshService {
         request: &FullMeshRequest,
         tc: &TokenContext,
     ) -> DsResult<Vec<u8>> {
-        combine_stl(&self.raw_chunks(dataset, source, layer, request, tc).await?)
+        let encoded = match self.chunks(dataset, source, layer, request, tc).await? {
+            Chunks::Stl(chunks) => chunks,
+            Chunks::AdHoc(meshes) => meshes.iter().map(ad_hoc_to_stl).collect::<DsResult<_>>()?,
+        };
+        combine_stl(&encoded)
     }
     pub async fn cached_surface_area(
         &self,
@@ -150,21 +163,26 @@ impl FullMeshService {
         };
         self.areas
             .get_or_load(key, || async {
-                let chunks = self.raw_chunks(dataset, source, layer, request, tc).await?;
-                chunks
-                    .iter()
-                    .try_fold(0f32, |sum, c| Ok(sum + surface_area(c)?))
+                match self.chunks(dataset, source, layer, request, tc).await? {
+                    Chunks::Stl(chunks) => chunks
+                        .iter()
+                        .try_fold(0f32, |sum, c| Ok(sum + surface_area(c)?)),
+                    // Scala `FullMeshHelper.surfaceArea`: straight from the indexed chunks.
+                    Chunks::AdHoc(meshes) => meshes
+                        .iter()
+                        .try_fold(0f32, |sum, mesh| Ok(sum + ad_hoc_surface_area(mesh)?)),
+                }
             })
             .await
     }
-    async fn raw_chunks(
+    async fn chunks(
         &self,
         dataset: &str,
         source: &UsableDataSource,
         layer: Arc<StaticLayer>,
         request: &FullMeshRequest,
         tc: &TokenContext,
-    ) -> DsResult<Vec<Vec<u8>>> {
+    ) -> DsResult<Chunks> {
         if let Some(name) = request.mesh_file_name.as_deref() {
             let key = MeshFileService::look_up(&source.id, &layer, name)?;
             let mapping = self
@@ -221,7 +239,7 @@ impl FullMeshService {
                 let raw = blocking(move || draco_to_stl(&bytes, offset, scale, bits)).await?;
                 chunks.push(raw);
             }
-            return Ok(chunks);
+            return Ok(Chunks::Stl(chunks));
         }
         let mag = request.mag.ok_or_else(|| {
             DsError::failure("A mag needs to be provided for ad-hoc mesh computation.")
@@ -235,7 +253,7 @@ impl FullMeshService {
         if !layer.is_segmentation() {
             return Err(DsError::failure("Data layer must be a segmentation layer."));
         }
-        let vertices: Vec<Vec<f32>> = if layer
+        let meshes: Vec<AdHocMesh> = if layer
             .attachments
             .as_ref()
             .and_then(|a| a.segment_index.as_ref())
@@ -286,7 +304,7 @@ impl FullMeshService {
             self.batch(dataset, source, &layer, request, positions, 33, false, tc)
                 .await?
                 .into_iter()
-                .map(|(v, _)| v)
+                .map(|(mesh, _)| mesh)
                 .collect()
         } else {
             let seed = request.seed_position.ok_or_else(|| {
@@ -325,8 +343,8 @@ impl FullMeshService {
                 let mut next = Vec::new();
                 let mut seen = HashSet::new();
                 let mut wave = Vec::new();
-                for (position, (vertices, neighbors)) in frontier.into_iter().zip(results) {
-                    wave.push(vertices);
+                for (position, (mesh, neighbors)) in frontier.into_iter().zip(results) {
+                    wave.push(mesh);
                     for neighbor in neighbors {
                         let delta = NEIGHBORS[neighbor as usize];
                         let axis = |p: i32, m: i32, d: i32| {
@@ -361,7 +379,7 @@ impl FullMeshService {
             }
             waves.into_iter().rev().flatten().collect()
         };
-        vertices.iter().map(|v| ad_hoc_to_stl(v)).collect()
+        Ok(Chunks::AdHoc(meshes))
     }
     #[allow(clippy::too_many_arguments)]
     async fn batch(
@@ -374,7 +392,7 @@ impl FullMeshService {
         size: i32,
         neighbors: bool,
         tc: &TokenContext,
-    ) -> DsResult<Vec<(Vec<f32>, Vec<i32>)>> {
+    ) -> DsResult<Vec<(AdHocMesh, Vec<i32>)>> {
         let requests = positions.into_iter().map(|position| {
             self.ad_hoc_mesh.generate(
                 AdHocMeshRequest {
@@ -395,7 +413,10 @@ impl FullMeshService {
         });
         stream::iter(requests)
             .buffered(self.ad_hoc_concurrency)
-            .map_ok(|mesh| (mesh.triangle_soup(), mesh.neighbors))
+            .map_ok(|mut mesh| {
+                let neighbors = std::mem::take(&mut mesh.neighbors);
+                (mesh, neighbors)
+            })
             .try_collect()
             .await
     }

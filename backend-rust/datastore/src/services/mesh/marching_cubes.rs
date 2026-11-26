@@ -37,17 +37,10 @@ impl AdHocMesh {
             .collect()
     }
 
-    /// Scala `AdHocMesh.toBytes`, little-endian. Indexed: the vertices as floats, followed by
-    /// the indices as `u16` if there are at most [`MAX_VERTEX_COUNT_FOR_SHORT_INDICES`]
-    /// vertices, else as `u32`. Otherwise: the triangle soup as floats.
-    pub fn to_bytes(&self, indexed: bool) -> Vec<u8> {
-        if !indexed {
-            return self
-                .triangle_soup()
-                .into_iter()
-                .flat_map(f32::to_le_bytes)
-                .collect();
-        }
+    /// Scala `AdHocMesh.toBytes`, little-endian: the vertices as floats, followed by the
+    /// indices as `u16` if there are at most [`MAX_VERTEX_COUNT_FOR_SHORT_INDICES`]
+    /// vertices, else as `u32`.
+    pub fn to_bytes(&self) -> Vec<u8> {
         let short = self.vertex_count() <= MAX_VERTEX_COUNT_FOR_SHORT_INDICES;
         let mut bytes = Vec::with_capacity(
             4 * self.vertices.len() + if short { 2 } else { 4 } * self.indices.len(),

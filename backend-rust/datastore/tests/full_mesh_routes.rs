@@ -233,6 +233,30 @@ async fn call(
 fn request() -> Value {
     json!({"position":[0,0,0],"mag":[1,1,1],"cubeSize":[2,2,2],"segmentId":{"customJsonEncoding":"bigint","value":u64::MAX.to_string()},"voxelSizeFactorInUnit":[2.5,0.75,4]})
 }
+/// Resolves an indexed ad-hoc mesh response to the triangle soup bytes.
+fn resolve_indexed(headers: &axum::http::HeaderMap, bytes: &[u8]) -> Vec<u8> {
+    let vertex_count: usize = headers["vertex-count"].to_str().unwrap().parse().unwrap();
+    let (vertex_bytes, index_bytes) = bytes.split_at(vertex_count * 12);
+    let indices: Vec<usize> = if vertex_count <= 65535 {
+        index_bytes
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|&b| u16::from_le_bytes(b) as usize)
+            .collect()
+    } else {
+        index_bytes
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|&b| u32::from_le_bytes(b) as usize)
+            .collect()
+    };
+    indices
+        .iter()
+        .flat_map(|&i| vertex_bytes[12 * i..12 * i + 12].iter().copied())
+        .collect()
+}
 fn complete(raw: &[u8]) -> Vec<u8> {
     let mut out = vec![0; 80];
     out.extend(((raw.len() / 50) as u32).to_le_bytes());
@@ -259,9 +283,12 @@ async fn ad_hoc_reads_every_integer_storage_width_and_maps_data_and_segment() {
                 "{class}: {}",
                 String::from_utf8_lossy(&bytes)
             );
-            assert_eq!(bytes, expected, "{class}");
+            assert_eq!(resolve_indexed(&headers, &bytes), expected, "{class}");
             assert_eq!(headers["neighbors"], "[0, 1, 2]");
-            assert_eq!(headers["access-control-expose-headers"], "NEIGHBORS");
+            assert_eq!(
+                headers["access-control-expose-headers"],
+                "NEIGHBORS, Vertex-Count"
+            );
         }
     }
 }
@@ -269,9 +296,7 @@ async fn ad_hoc_reads_every_integer_storage_width_and_maps_data_and_segment() {
 async fn indexed_ad_hoc_mesh_shares_vertices_and_resolves_to_the_triangle_soup() {
     let (_wk, app, _, _) = start().await;
     let soup = std::fs::read(fixtures().join("draco/route_cube.bin")).unwrap();
-    let mut r = request();
-    r["indexed"] = json!(true);
-    let (status, headers, bytes) = call(&app, "uint32", "adHocMesh", r, "t").await;
+    let (status, headers, bytes) = call(&app, "uint32", "adHocMesh", request(), "t").await;
     assert_eq!(
         status,
         StatusCode::OK,
@@ -306,11 +331,12 @@ async fn indexed_ad_hoc_mesh_shares_vertices_and_resolves_to_the_triangle_soup()
         }
     }
     assert_eq!(first_uses, (0..vertex_count).collect::<Vec<_>>());
+    // The removed `indexed` parameter is ignored like any unknown field.
     let mut r = request();
     r["indexed"] = json!(false);
-    let (_, headers, bytes) = call(&app, "uint32", "adHocMesh", r, "t").await;
-    assert_eq!(bytes, soup);
-    assert!(!headers.contains_key("vertex-count"));
+    let (_, headers, indexed_bytes) = call(&app, "uint32", "adHocMesh", r, "t").await;
+    assert_eq!(indexed_bytes, bytes);
+    assert!(headers.contains_key("vertex-count"));
 }
 #[tokio::test]
 async fn explicit_hdf5_agglomerate_mapping_applies_even_above_mag16() {
@@ -322,7 +348,7 @@ async fn explicit_hdf5_agglomerate_mapping_applies_even_above_mag16() {
         r["voxelSizeFactorInUnit"] = json!([2.5 / 32., 0.75 / 32., 4. / 32.]);
         r["mapping"] = json!("agg");
         r["mappingType"] = json!(kind);
-        let (status, _, bytes) = call(&app, "agg", "adHocMesh", r, "t").await;
+        let (status, headers, bytes) = call(&app, "agg", "adHocMesh", r, "t").await;
         assert_eq!(
             status,
             StatusCode::OK,
@@ -330,7 +356,7 @@ async fn explicit_hdf5_agglomerate_mapping_applies_even_above_mag16() {
             String::from_utf8_lossy(&bytes)
         );
         assert_eq!(
-            bytes,
+            resolve_indexed(&headers, &bytes),
             std::fs::read(fixtures().join("draco/route_cube.bin")).unwrap()
         );
     }

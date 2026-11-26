@@ -49,14 +49,36 @@ fn malformed_draco_is_rejected_and_stl_headers_count_actual_faces() {
 }
 #[test]
 fn stl_normals_and_areas_match_actual_compiled_scala() {
-    use webknossos_datastore::services::mesh::geometry::ad_hoc_to_stl;
-    let vertices = [
-        0., 0., 0., 1., 0., 0., 0., 1., 0., 2., 3., 4., 7., 3., 4., 2., 9., 4.,
-    ];
-    assert_eq!(
-        ad_hoc_to_stl(&vertices).unwrap(),
-        std::fs::read(root().join("adhoc.stlraw")).unwrap()
+    use webknossos_datastore::services::mesh::{
+        geometry::{ad_hoc_surface_area, ad_hoc_to_stl},
+        marching_cubes::AdHocMesh,
+    };
+    let mesh = |vertices: Vec<f32>, indices: Vec<u32>| AdHocMesh {
+        vertices,
+        indices,
+        neighbors: vec![],
+    };
+    let soup = mesh(
+        vec![
+            0., 0., 0., 1., 0., 0., 0., 1., 0., 2., 3., 4., 7., 3., 4., 2., 9., 4.,
+        ],
+        (0..6).collect(),
     );
+    let expected = std::fs::read(root().join("adhoc.stlraw")).unwrap();
+    assert_eq!(ad_hoc_to_stl(&soup).unwrap(), expected);
+    // Shared vertices are read through the indices; the STL bytes are the same.
+    let indexed = mesh(
+        vec![
+            2., 3., 4., 0., 0., 0., 7., 3., 4., 1., 0., 0., 0., 1., 0., 2., 9., 4.,
+        ],
+        vec![1, 3, 4, 0, 2, 5],
+    );
+    assert_eq!(ad_hoc_to_stl(&indexed).unwrap(), expected);
+    assert_eq!(
+        ad_hoc_surface_area(&indexed).unwrap().to_bits(),
+        surface_area(&expected).unwrap().to_bits()
+    );
+    assert!(ad_hoc_to_stl(&mesh(vec![0.; 9], vec![0, 1, 3])).is_err());
     let areas: serde_json::Value =
         serde_json::from_slice(&std::fs::read(root().join("areas.json")).unwrap()).unwrap();
     for (name, expected) in areas.as_object().unwrap() {
@@ -67,8 +89,8 @@ fn stl_normals_and_areas_match_actual_compiled_scala() {
             "{name}"
         );
     }
-    assert!(ad_hoc_to_stl(&[0.; 8]).is_err());
-    let degenerate = ad_hoc_to_stl(&[0.; 9]).unwrap();
+    assert!(ad_hoc_to_stl(&mesh(vec![0.; 9], vec![0, 1])).is_err());
+    let degenerate = ad_hoc_to_stl(&mesh(vec![0.; 9], vec![0, 1, 2])).unwrap();
     assert!(f32::from_le_bytes(degenerate[..4].try_into().unwrap()).is_nan());
 }
 fn vertex_bytes(vertices: &[f32]) -> Vec<u8> {
@@ -178,17 +200,14 @@ fn indexed_mesh_bytes_switch_to_u32_indices_above_65535_vertices() {
         indices: vec![0, 1, 2, 2, 1, 0],
         neighbors: vec![],
     };
-    let bytes = small.to_bytes(true);
+    let bytes = small.to_bytes();
     assert_eq!(bytes.len(), 9 * 4 + 6 * 2);
     assert_eq!(&bytes[36..40], &[0, 0, 1, 0]);
     assert_eq!(
-        small.to_bytes(false),
+        small.triangle_soup(),
         [
             0f32, 1., 2., 3., 4., 5., 6., 7., 8., 6., 7., 8., 3., 4., 5., 0., 1., 2.
         ]
-        .iter()
-        .flat_map(|f| f.to_le_bytes())
-        .collect::<Vec<u8>>()
     );
     let count = MAX_VERTEX_COUNT_FOR_SHORT_INDICES + 1;
     let large = AdHocMesh {
@@ -196,7 +215,7 @@ fn indexed_mesh_bytes_switch_to_u32_indices_above_65535_vertices() {
         indices: vec![0, 1, (count - 1) as u32],
         neighbors: vec![],
     };
-    let bytes = large.to_bytes(true);
+    let bytes = large.to_bytes();
     assert_eq!(bytes.len(), 12 * count + 3 * 4);
     assert_eq!(&bytes[12 * count + 8..], &(count as u32 - 1).to_le_bytes());
     let at_limit = AdHocMesh {
@@ -205,7 +224,7 @@ fn indexed_mesh_bytes_switch_to_u32_indices_above_65535_vertices() {
         neighbors: vec![],
     };
     assert_eq!(
-        at_limit.to_bytes(true).len(),
+        at_limit.to_bytes().len(),
         12 * MAX_VERTEX_COUNT_FOR_SHORT_INDICES + 3 * 2
     );
 }

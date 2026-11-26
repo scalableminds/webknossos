@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.explore.{
 }
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.services.mapping.GrapheneUri
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset.{DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.dataset.credential.CredentialService
@@ -91,6 +92,13 @@ class WKExploreRemoteLayerService @Inject() (
       }
     } yield dataStore
 
+  // For zip entry paths (e.g. s3://…/archive.zip|zip:inner/path), credentials apply to the whole zip file. A CAVE
+  // token for a graphene url is a token credential for the https url of the graph.
+  private def credentialUri(layerUri: String): String = {
+    val withoutZipEntry = layerUri.takeWhile(_ != '|')
+    if (GrapheneUri.isGraphene(withoutZipEntry)) GrapheneUri.withoutPrefixes(withoutZipEntry) else withoutZipEntry
+  }
+
   private def storeCredentials(
       layerUri: String,
       credentialIdentifier: Option[String],
@@ -98,9 +106,8 @@ class WKExploreRemoteLayerService @Inject() (
       requestingUser: User
   )(implicit ec: ExecutionContext): Fox[Option[ObjectId]] =
     for {
-      // For zip entry paths (e.g. s3://…/archive.zip|zip:inner/path), credentials apply to the whole zip file.
       uri <- tryo(
-        new URI(escapeExtraFragmentHashes(removeHeaderFileNamesFromUriSuffix(layerUri.takeWhile(_ != '|'))))
+        new URI(escapeExtraFragmentHashes(removeHeaderFileNamesFromUriSuffix(credentialUri(layerUri))))
       ).toFox ?~> s"Received invalid URI: $layerUri"
       credentialOpt = credentialService.createCredentialOpt(
         uri,

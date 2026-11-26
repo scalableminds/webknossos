@@ -10,8 +10,17 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{S3DataVault, VaultPath}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayerAttachments,
+  DataSourceId,
+  LayerAttachment,
+  LayerAttachmentDataformat,
+  StaticLayer,
+  StaticSegmentationLayer,
+  UsableDataSource
+}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
+import com.scalableminds.webknossos.datastore.services.mapping.{GrapheneUri, PcgClient}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
   DataVaultCredential,
@@ -42,7 +51,8 @@ class ExploreRemoteLayerService @Inject() (
     dataVaultService: DataVaultService,
     remoteWebknossosClient: DSRemoteWebknossosClient,
     dataStoreConfig: DataStoreConfig,
-    s3ClientPoolHolder: S3ClientPoolHolder
+    s3ClientPoolHolder: S3ClientPoolHolder,
+    pcgClient: PcgClient
 ) extends ExploreLayerUtils
     with Formatter
     with LazyLogging {
@@ -71,6 +81,38 @@ class ExploreRemoteLayerService @Inject() (
     } yield dataSource
 
   private def exploreRemoteLayersForOneUri(
+      layerUri: String,
+      credentialId: Option[String],
+      reportMutable: ListBuffer[String]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+    if (GrapheneUri.isGraphene(layerUri)) exploreGrapheneLayers(layerUri, credentialId, reportMutable)
+    else exploreRemoteLayersAtPath(layerUri, credentialId, reportMutable)
+
+  /** A CAVE graph: its supervoxel volume is a precomputed volume at the `data_dir` named in the graph's info. It gets
+    * the graph as agglomerate mapping and the graph's meshes as mesh file, both named after the graph's table. The
+    * credential is the CAVE token, which only the graph's own services need, so the supervoxel volume is explored
+    * without it.
+    */
+  private def exploreGrapheneLayers(
+      layerUri: String,
+      credentialId: Option[String],
+      reportMutable: ListBuffer[String]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+    for {
+      pcgApiUrl <- GrapheneUri.pcgApiUrl(layerUri).toFox
+      pcgApiPath <- UPath.fromString(pcgApiUrl).toFox
+      tableName = GrapheneUri.tableName(layerUri)
+      attachment = LayerAttachment(tableName, pcgApiPath, LayerAttachmentDataformat.pcg, credentialId)
+      graphInfo <- pcgClient.getMeshInfo(attachment) ?~> s"Could not read the info of the CAVE graph at $pcgApiUrl"
+      supervoxelLayers <- exploreRemoteLayersAtPath(graphInfo.dataDirectory, None, reportMutable)
+      graphAttachments = DataLayerAttachments(meshes = Seq(attachment), agglomerates = Seq(attachment))
+      _ = reportMutable += s"Attached the CAVE graph $pcgApiUrl as agglomerate mapping and mesh file."
+    } yield supervoxelLayers.map {
+      case (layer: StaticSegmentationLayer, voxelSize) => (layer.withAttachments(graphAttachments), voxelSize)
+      case other                                       => other
+    }
+
+  private def exploreRemoteLayersAtPath(
       layerUri: String,
       credentialId: Option[String],
       reportMutable: ListBuffer[String]

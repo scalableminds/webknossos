@@ -177,7 +177,7 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
     [view.groupBy, filteredRows, rootGroups, statisticSpecs],
   );
   const filteredTitles = columnSpecs
-    .filter((spec) => view.ranges[spec.key] != null)
+    .filter((spec) => view.ranges[spec.key] != null && !spec.isLoading && !spec.isError)
     .map((spec) => spec.title.toLowerCase());
   // Hidden columns are left out of the export. Specs without a column (e.g. ids) are always kept.
   const exportedSpecs = statisticSpecs.filter((spec) => !view.hiddenColumnKeys.has(spec.key));
@@ -281,7 +281,7 @@ function SegmentStatisticsTabContent({ layer }: { layer: APISegmentationLayer })
         <Splitter.Panel>
           <Flex vertical style={{ height: "100%", minHeight: 0, paddingInlineStart: 8 }}>
             <SegmentStatisticsTable
-              rows={rows}
+              rows={filteredRows}
               tableRows={tableRows}
               columnSpecs={visibleColumnSpecs}
               units={units}

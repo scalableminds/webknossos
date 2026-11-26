@@ -15,6 +15,7 @@ import {
   formatStatisticNumber,
   getSelectableUnits,
   type Histogram,
+  isRangeInverted,
   type ResolvedUnit,
   type StatisticsView,
   type ValueRange,
@@ -38,14 +39,17 @@ function StatisticHistogram({
   const { bins, min, max } = histogram;
   const maxCount = Math.max(1, ...bins);
   const binWidth = (max - min) / bins.length;
+  const isInverted = isRangeInverted(range);
   return (
     <Flex align="flex-end" gap={1} style={{ height: HISTOGRAM_HEIGHT }} aria-hidden>
       {bins.map((count, index) => {
         const binStart = min + index * binWidth;
         const binEnd = binStart + binWidth;
         const isInRange =
-          range == null ||
-          ((range[0] == null || binEnd >= range[0]) && (range[1] == null || binStart <= range[1]));
+          !isInverted &&
+          (range == null ||
+            ((range[0] == null || binEnd >= range[0]) &&
+              (range[1] == null || binStart <= range[1])));
         return (
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: the bins have a fixed order
@@ -78,11 +82,12 @@ function RangeFilter({
 }: {
   spec: ColumnSpec;
   unit: ResolvedUnit;
-  histogram: Histogram;
+  histogram: Histogram | null;
   range: ValueRange | undefined;
   onChange: (range: ValueRange) => void;
 }) {
   const [min, max] = range ?? [null, null];
+  const isInverted = isRangeInverted(range);
   // The bounds are stored in the base unit of the statistic, but edited in the displayed one.
   const toDisplayed = (bound: number | null) => (bound == null ? null : bound / unit.factor);
   const fromDisplayed = (bound: number | null) => (bound == null ? null : bound * unit.factor);
@@ -91,9 +96,12 @@ function RangeFilter({
       <InputNumber
         size="small"
         controls={false}
+        status={isInverted ? "error" : undefined}
         style={{ flex: 1, minWidth: 0 }}
         aria-label={`${spec.title} minimum`}
-        placeholder={formatStatisticNumber(histogram.min, spec.value, unit)}
+        placeholder={
+          histogram != null ? formatStatisticNumber(histogram.min, spec.value, unit) : "Min"
+        }
         value={toDisplayed(min)}
         onChange={(bound) => onChange([fromDisplayed(bound), max])}
       />
@@ -101,9 +109,12 @@ function RangeFilter({
       <InputNumber
         size="small"
         controls={false}
+        status={isInverted ? "error" : undefined}
         style={{ flex: 1, minWidth: 0 }}
         aria-label={`${spec.title} maximum`}
-        placeholder={formatStatisticNumber(histogram.max, spec.value, unit)}
+        placeholder={
+          histogram != null ? formatStatisticNumber(histogram.max, spec.value, unit) : "Max"
+        }
         value={toDisplayed(max)}
         onChange={(bound) => onChange([min, fromDisplayed(bound)])}
       />
@@ -130,6 +141,12 @@ function StatisticCard({
   const isVisible = !view.hiddenColumnKeys.has(spec.key);
   const range = view.ranges[spec.key];
   const sortOrder = view.sort?.key === spec.key ? view.sort.order : null;
+  const sortLabel =
+    sortOrder === "descend"
+      ? `Sorted descending by ${spec.title} – click to sort ascending`
+      : sortOrder === "ascend"
+        ? `Sorted ascending by ${spec.title} – click to sort descending`
+        : `Sort by ${spec.title}`;
   const selectableUnits = getSelectableUnits(value, datasetUnit);
 
   const histogram = useMemo(
@@ -188,13 +205,15 @@ function StatisticCard({
             <Tag style={{ marginInlineEnd: 0 }}>{unit.label}</Tag>
           )}
         </Flex>
-        {value.kind === "number" && histogram != null ? (
+        {value.kind === "number" && (histogram != null || range != null) ? (
           <>
-            <StatisticHistogram
-              histogram={histogram}
-              range={range}
-              isHighlighted={sortOrder != null}
-            />
+            {histogram != null ? (
+              <StatisticHistogram
+                histogram={histogram}
+                range={range}
+                isHighlighted={sortOrder != null}
+              />
+            ) : null}
             <Flex align="center" gap={6}>
               <RangeFilter
                 spec={spec}
@@ -203,14 +222,15 @@ function StatisticCard({
                 range={range}
                 onChange={(newRange) => view.setRange(spec.key, newRange)}
               />
-              <Tooltip title={`Sort by ${spec.title}`}>
+              <Tooltip title={sortLabel}>
                 <Button
                   size="small"
                   type={sortOrder != null ? "primary" : "default"}
                   icon={
                     sortOrder === "ascend" ? <SortAscendingOutlined /> : <SortDescendingOutlined />
                   }
-                  aria-label={`Sort by ${spec.title}`}
+                  aria-label={sortLabel}
+                  aria-pressed={sortOrder != null}
                   onClick={() =>
                     view.setSort({
                       key: spec.key,
@@ -253,7 +273,7 @@ type Props = {
  * value range.
  */
 export function SegmentStatisticsRail({ columnSpecs, units, rows, view }: Props) {
-  const hasFilters = Object.keys(view.ranges).length > 0;
+  const hasFilters = columnSpecs.some((spec) => view.ranges[spec.key] != null);
   return (
     <Flex vertical gap="small" style={{ height: "100%", minHeight: 0, paddingInlineEnd: 8 }}>
       <Flex align="center" style={{ minHeight: 24 }}>

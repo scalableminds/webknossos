@@ -477,36 +477,75 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       maxLevels <- maxSegmentLevelPerChunkCache.getOrLoad(meshFileKey, readMaxSegmentLevelPerChunk)
       segmentsPerChunk = meshMetadataArray.chunkShape(0).toLong
       meshMetadataWidth = meshMetadataArray.chunkShape(1)
-      seedSpans = seedIndices
-        .map(index => (index, ZarrMeshFileService.runChunkSpan(maxLevels, index / segmentsPerChunk, level)))
-        .filter { case (_, (first, last)) =>
-          ZarrMeshFileService.runFitsRequest(last - first + 1, segmentsPerChunk, requestedCount)
-        }
-      chunks <- readChunks[Long](
+      (chunks, runs) <- readRunChunks(
         meshMetadataArray,
-        seedSpans.flatMap { case (_, (first, last)) => first to last }.distinct.sorted,
-        rank = 2
+        maxLevels,
+        nSegments,
+        level,
+        requestedCount,
+        seedIndices.map(index =>
+          index -> ZarrMeshFileService.initialRunChunks(maxLevels, index / segmentsPerChunk, level)
+        )
       )
-    } yield {
-      val runs = seedSpans.map { case (seedIndex, (firstChunk, lastChunk)) =>
-        ZarrMeshFileService.runAround(
-          chunks,
-          segmentsPerChunk,
-          meshMetadataWidth,
-          nSegments,
-          firstChunk,
-          lastChunk,
-          seedIndex,
-          level
-        )
-      }
-      runs.distinct.flatMap { case (start, end) =>
-        (start until end).map(index =>
-          ZarrMeshFileService
-            .segmentMeshMetadataAt(chunks(index / segmentsPerChunk), meshMetadataWidth, index % segmentsPerChunk)
-        )
-      }
+    } yield runs.distinct.flatMap { case (start, end) =>
+      (start until end).map(index =>
+        ZarrMeshFileService
+          .segmentMeshMetadataAt(chunks(index / segmentsPerChunk), meshMetadataWidth, index % segmentsPerChunk)
+      )
     }
+
+  /* Reads the chunks [first, last] of the segment mesh metadata for each seed and finds its run in them. A run that
+   * continues past these chunks is read further in another round. Runs that are too long for the number of requested
+   * segments are not read. Returns all chunks read and the runs [start, end).
+   */
+  private def readRunChunks(
+      meshMetadataArray: DatasetArray,
+      maxSegmentLevelPerChunk: Array[Byte],
+      nSegments: Long,
+      level: Int,
+      requestedCount: Int,
+      seedSpans: Seq[(Long, (Long, Long))],
+      chunks: Map[Long, Array[Long]] = Map.empty,
+      runs: Seq[(Long, Long)] = Seq.empty
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(Map[Long, Array[Long]], Seq[(Long, Long)])] = {
+    val segmentsPerChunk = meshMetadataArray.chunkShape(0).toLong
+    val readable = seedSpans.filter { case (_, (first, last)) =>
+      ZarrMeshFileService.runFitsRequest(last - first + 1, segmentsPerChunk, requestedCount)
+    }
+    if (readable.isEmpty) Fox.successful((chunks, runs))
+    else
+      for {
+        newChunks <- readChunks[Long](
+          meshMetadataArray,
+          readable.flatMap { case (_, (first, last)) => first to last }.distinct.filterNot(chunks.contains).sorted,
+          rank = 2
+        )
+        allChunks = chunks ++ newChunks
+        runsOrSpans = readable.map { case (seedIndex, (firstChunk, lastChunk)) =>
+          seedIndex -> ZarrMeshFileService.runAround(
+            allChunks,
+            maxSegmentLevelPerChunk,
+            segmentsPerChunk,
+            meshMetadataArray.chunkShape(1),
+            nSegments,
+            firstChunk,
+            lastChunk,
+            seedIndex,
+            level
+          )
+        }
+        result <- readRunChunks(
+          meshMetadataArray,
+          maxSegmentLevelPerChunk,
+          nSegments,
+          level,
+          requestedCount,
+          runsOrSpans.collect { case (seedIndex, Left(span)) => seedIndex -> span },
+          allChunks,
+          runs ++ runsOrSpans.collect { case (_, Right(run)) => run }
+        )
+      } yield result
+  }
 
   private def readMaxSegmentLevelPerChunk(
       meshFileKey: MeshFileKey
@@ -675,23 +714,50 @@ object ZarrMeshFileService {
     )
   }
 
-  /** The chunks [first, last] that contain the run of the merge-tree order mapping at level around an index in chunk. A
-    * run extends over a whole chunk if no segment in it starts a new agglomerate, i.e. if the chunk's maximum segment
-    * level is at most level. The run starts in the index's chunk or in the nearest chunk before it that is not passed
-    * over whole, and ends in the index's chunk or in the nearest such chunk after it.
-    */
-  def runChunkSpan(maxSegmentLevelPerChunk: Array[Byte], chunk: Long, level: Int): (Long, Long) = {
-    def maxLevelAt(c: Long): Int = maxSegmentLevelPerChunk(Math.toIntExact(c)) & 0xff
-    var first = Math.max(chunk - 1, 0)
-    while (first > 0 && maxLevelAt(first) <= level) first -= 1
-    var last = chunk
-    while (last + 1 < maxSegmentLevelPerChunk.length && maxLevelAt(last + 1) <= level) last += 1
-    (first, Math.min(last + 1, maxSegmentLevelPerChunk.length - 1L))
+  private def maxLevelAt(maxSegmentLevelPerChunk: Array[Byte], chunk: Long): Int =
+    maxSegmentLevelPerChunk(Math.toIntExact(chunk)) & 0xff
+
+  // The nearest chunk before chunk that contains a run start at level, or 0.
+  private def runStartChunkBefore(maxSegmentLevelPerChunk: Array[Byte], chunk: Long, level: Int): Long = {
+    var c = Math.max(chunk - 1, 0)
+    while (c > 0 && maxLevelAt(maxSegmentLevelPerChunk, c) <= level) c -= 1
+    c
   }
 
-  // The run [start, end) of indices around seedIndex within the loaded chunks [firstChunk, lastChunk].
+  // The nearest chunk after chunk that contains a run start at level, or the last chunk.
+  private def runStartChunkAfter(maxSegmentLevelPerChunk: Array[Byte], chunk: Long, level: Int): Long = {
+    val lastChunk = maxSegmentLevelPerChunk.length - 1L
+    var c = Math.min(chunk + 1, lastChunk)
+    while (c < lastChunk && maxLevelAt(maxSegmentLevelPerChunk, c) <= level) c += 1
+    c
+  }
+
+  /** The chunks [first, last] to read first for the run of the merge-tree order mapping at level around an index in
+    * chunk. A segment whose level is greater than level starts a run, so a chunk whose maximum segment level is at most
+    * level lies within one run. If chunk contains no run start, its run reaches from the nearest chunk before it with a
+    * run start to the nearest one after it. Otherwise the run may continue into a neighboring chunk, depending on where
+    * the run starts in chunk lie: neighbors with a run start are read along, others only once the run turns out to
+    * continue into them.
+    */
+  def initialRunChunks(maxSegmentLevelPerChunk: Array[Byte], chunk: Long, level: Int): (Long, Long) =
+    if (maxLevelAt(maxSegmentLevelPerChunk, chunk) <= level)
+      (
+        runStartChunkBefore(maxSegmentLevelPerChunk, chunk, level),
+        runStartChunkAfter(maxSegmentLevelPerChunk, chunk, level)
+      )
+    else {
+      def hasRunStart(c: Long) =
+        c >= 0 && c < maxSegmentLevelPerChunk.length && maxLevelAt(maxSegmentLevelPerChunk, c) > level
+      (if (hasRunStart(chunk - 1)) chunk - 1 else chunk, if (hasRunStart(chunk + 1)) chunk + 1 else chunk)
+    }
+
+  /** The run [start, end) of indices around seedIndex as Right if the loaded chunks [firstChunk, lastChunk] contain all
+    * of it. Otherwise the chunks that do as Left: the run continues past the loaded chunks up to the nearest chunk with
+    * a run start.
+    */
   def runAround(
       chunks: Map[Long, Array[Long]],
+      maxSegmentLevelPerChunk: Array[Byte],
       segmentsPerChunk: Long,
       meshMetadataWidth: Int,
       nSegments: Long,
@@ -699,7 +765,7 @@ object ZarrMeshFileService {
       lastChunk: Long,
       seedIndex: Long,
       level: Int
-  ): (Long, Long) = {
+  ): Either[(Long, Long), (Long, Long)] = {
     def levelAt(index: Long): Long =
       chunks(index / segmentsPerChunk)(
         Math.toIntExact(index % segmentsPerChunk) * meshMetadataWidth + meshMetadataLevel
@@ -709,7 +775,16 @@ object ZarrMeshFileService {
     var end = seedIndex + 1
     val upperBound = Math.min((lastChunk + 1) * segmentsPerChunk, nSegments)
     while (end < upperBound && levelAt(end) <= level) end += 1
-    (start, end)
+    val startFound = start == 0 || levelAt(start) > level
+    val endFound = end < upperBound || end == nSegments
+    if (startFound && endFound) Right((start, end))
+    else
+      Left(
+        (
+          if (startFound) firstChunk else runStartChunkBefore(maxSegmentLevelPerChunk, firstChunk, level),
+          if (endFound) lastChunk else runStartChunkAfter(maxSegmentLevelPerChunk, lastChunk, level)
+        )
+      )
   }
 
   /* Index of the last of the first `length` sorted values at most segmentId (unsigned), -1 if there is none. Value i is

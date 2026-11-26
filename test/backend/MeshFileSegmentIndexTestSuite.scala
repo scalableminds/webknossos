@@ -92,39 +92,57 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
     }
   }
 
-  // Segment mesh metadata of width 5 whose last column is the level; indices 0-9 with runs at level 0 starting at
-  // indices 0, 3 and 7.
-  private val levels = Array(255L, 0, 0, 1, 0, 0, 0, 2, 0, 0)
-  private val segmentsPerChunk = 4L
-  private val meshMetadataChunks: Map[Long, Array[Long]] = levels
-    .grouped(4)
-    .zipWithIndex
-    .map { case (chunkLevels, chunk) =>
-      chunk.toLong -> chunkLevels.flatMap(level => Array(0L, 0L, 0L, 0L, level)).padTo(20, 0L)
-    }
-    .toMap
-  private val maxSegmentLevelPerChunk: Array[Byte] = levels.grouped(4).map(_.max.toByte).toArray
-
-  "ZarrMeshFileService.runChunkSpan" should {
-    "include neighboring chunks whose segments all continue the run" in {
-      assert(ZarrMeshFileService.runChunkSpan(maxSegmentLevelPerChunk, 0, level = 0) == (0L, 1L))
-      assert(ZarrMeshFileService.runChunkSpan(maxSegmentLevelPerChunk, 1, level = 0) == (0L, 2L))
-      assert(ZarrMeshFileService.runChunkSpan(maxSegmentLevelPerChunk, 2, level = 2) == (0L, 2L))
-    }
+  /* The run of a mapping level around index in segment mesh metadata with the given levels, in chunks of 4 segments,
+   * and the chunk spans read for it, starting with initialRunChunks like readRunChunks.
+   */
+  private def findRun(levels: Array[Long], index: Long, level: Int): ((Long, Long), List[(Long, Long)]) = {
+    val chunks = levels
+      .grouped(4)
+      .zipWithIndex
+      .map { case (chunkLevels, chunk) =>
+        chunk.toLong -> chunkLevels.flatMap(level => Array(0L, 0L, 0L, 0L, level)).padTo(20, 0L)
+      }
+      .toMap
+    val maxSegmentLevelPerChunk = levels.grouped(4).map(_.max.toByte).toArray
+    def readSpans(span: (Long, Long), spansRead: List[(Long, Long)]): ((Long, Long), List[(Long, Long)]) =
+      ZarrMeshFileService.runAround(
+        chunks,
+        maxSegmentLevelPerChunk,
+        4,
+        5,
+        levels.length,
+        span._1,
+        span._2,
+        index,
+        level
+      ) match {
+        case Right(run)     => (run, (span :: spansRead).reverse)
+        case Left(nextSpan) => readSpans(nextSpan, span :: spansRead)
+      }
+    readSpans(ZarrMeshFileService.initialRunChunks(maxSegmentLevelPerChunk, index / 4, level), Nil)
   }
 
   "ZarrMeshFileService.runAround" should {
     "find the run of a mapping level around an index" in {
-      def run(index: Long, level: Int) = {
-        val (first, last) =
-          ZarrMeshFileService.runChunkSpan(maxSegmentLevelPerChunk, index / segmentsPerChunk, level)
-        ZarrMeshFileService.runAround(meshMetadataChunks, segmentsPerChunk, 5, levels.length, first, last, index, level)
-      }
-      assert(run(1, 0) == (0L, 3L))
-      assert(run(5, 0) == (3L, 7L))
-      assert(run(8, 0) == (7L, 10L))
-      assert(run(5, 1) == (0L, 7L))
-      assert(run(9, 2) == (0L, 10L))
+      // Runs start at indices 0, 3 and 7 at level 0, at 0 and 7 at level 1 and at 0 at level 2.
+      val levels = Array(255L, 0, 0, 1, 0, 0, 0, 2, 0, 0)
+      assert(findRun(levels, 1, 0)._1 == (0L, 3L))
+      assert(findRun(levels, 5, 0)._1 == (3L, 7L))
+      assert(findRun(levels, 8, 0)._1 == (7L, 10L))
+      assert(findRun(levels, 5, 1)._1 == (0L, 7L))
+      assert(findRun(levels, 9, 2)._1 == (0L, 10L))
+    }
+
+    // Runs start at indices 0, 13 and 15, so chunk 3 holds a run of two segments between runs over several chunks.
+    val levelsWithLongNeighbors = Array.tabulate(28)(i => if (i == 0) 255L else if (i == 13 || i == 15) 1L else 0L)
+
+    "read only the seed's chunk for a short run between long ones" in
+      assert(findRun(levelsWithLongNeighbors, 14, 0) == ((13L, 15L), List((3L, 3L))))
+
+    "read further chunks only once the run continues into them" in {
+      assert(findRun(levelsWithLongNeighbors, 12, 0) == ((0L, 13L), List((3L, 3L), (0L, 3L))))
+      assert(findRun(levelsWithLongNeighbors, 15, 0) == ((15L, 28L), List((3L, 3L), (3L, 6L))))
+      assert(findRun(levelsWithLongNeighbors, 6, 0) == ((0L, 13L), List((0L, 3L))))
     }
   }
 

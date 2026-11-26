@@ -48,7 +48,8 @@ case class MeshFileInfo(
 class MeshFileService @Inject() (
     hdf5MeshFileService: Hdf5MeshFileService,
     zarrMeshFileService: ZarrMeshFileService,
-    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService
+    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
+    pcgMeshFileService: PcgMeshFileService
 ) extends LazyLogging {
 
   private val meshFileKeyCache: AlfuCache[(DataSourceId, String, String), MeshFileKey] =
@@ -117,6 +118,8 @@ class MeshFileService @Inject() (
         hdf5MeshFileService.mappingNameForMeshFile(meshFileKey).toFox
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         Fox.successful(None)
+      case LayerAttachmentDataformat.pcg =>
+        Fox.successful(pcgMeshFileService.mappingNameForMeshFile(meshFileKey))
       case _ => unsupportedDataFormat(meshFileKey)
     }
     mappingNameFox.map(_.filter(_.nonEmpty))
@@ -128,7 +131,7 @@ class MeshFileService @Inject() (
         zarrMeshFileService.versionForMeshFile(meshFileKey)
       case LayerAttachmentDataformat.hdf5 =>
         Fox.successful(hdf5MeshFileService.versionForMeshFile(meshFileKey))
-      case LayerAttachmentDataformat.neuroglancerPrecomputed =>
+      case LayerAttachmentDataformat.neuroglancerPrecomputed | LayerAttachmentDataformat.pcg =>
         Fox.successful(NeuroglancerMesh.meshInfoVersion)
       case _ => unsupportedDataFormat(meshFileKey)
     }
@@ -159,6 +162,8 @@ class MeshFileService @Inject() (
           segmentIds,
           failOnZeroChunks
         )
+      case LayerAttachmentDataformat.pcg =>
+        pcgMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, failOnZeroChunks)
       case _ => unsupportedDataFormat(meshFileKey)
     }
 
@@ -171,6 +176,7 @@ class MeshFileService @Inject() (
       case LayerAttachmentDataformat.hdf5 => hdf5MeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests).toFox
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         neuroglancerPrecomputedMeshService.readMeshChunk(meshFileKey, meshChunkDataRequests)
+      case LayerAttachmentDataformat.pcg => pcgMeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests)
       case _ => unsupportedDataFormat(meshFileKey)
     }
 
@@ -185,7 +191,9 @@ class MeshFileService @Inject() (
 
     val clearedNeuroglancerCount = neuroglancerPrecomputedMeshService.clearCache(dataSourceId, layerNameOpt)
 
-    clearedHdf5Count + clearedZarrCount + clearedNeuroglancerCount
+    val clearedPcgCount = pcgMeshFileService.clearCache(dataSourceId, layerNameOpt)
+
+    clearedHdf5Count + clearedZarrCount + clearedNeuroglancerCount + clearedPcgCount
   }
 
   private def unsupportedDataFormat(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext) =

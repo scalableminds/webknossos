@@ -866,6 +866,14 @@ object Msg {
         s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
       val loadChunkFailed: String = "Could not load mesh chunk for segment."
       val pathNotAbsolute = "Path of mesh file is ambiguous, must be absolute."
+      object Pcg {
+        def invalidFragment(fragment: String): String =
+          s"The CAVE meshing service listed the mesh fragment “$fragment” in an unknown format."
+        val oneAgglomeratePerChunkRequest: String =
+          "Mesh chunks of a CAVE graph can only be requested for one agglomerate at a time."
+        def unknownChunk(index: Long): String =
+          s"Mesh chunk $index is not part of the agglomerate's mesh. Its mesh may have changed, please reload it."
+      }
     }
   }
   object ConnectomeFile {

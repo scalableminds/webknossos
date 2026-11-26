@@ -7,6 +7,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.JsonAutoFormat
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, XAuthTokenCredential}
@@ -85,6 +86,24 @@ object PcgGraphInfo {
 // Field named after PCG's wire key so that the format can be derived.
 case class PcgLeaves(leaf_ids: Seq[Long]) derives JsonAutoFormat
 
+/** The part of PCG's `info` that says where the graph's precomputed meshes are stored: the directory `mesh` below
+  * `data_dir`. Meshes of nodes that edits created are stored unsharded, in `unshardedMeshDirectory` below it.
+  */
+case class PcgMeshInfo(dataDirectory: String, meshDirectory: String, unshardedMeshDirectory: String)
+
+object PcgMeshInfo {
+  implicit val reads: Reads[PcgMeshInfo] = Reads(json =>
+    for {
+      dataDirectory <- (json \ "data_dir").validate[String]
+      meshDirectory <- (json \ "mesh").validate[String]
+      unshardedMeshDirectory <- (json \ "mesh_metadata" \ "unsharded_mesh_dir").validateOpt[String]
+    } yield PcgMeshInfo(dataDirectory, meshDirectory, unshardedMeshDirectory.getOrElse("dynamic"))
+  )
+}
+
+// Field named after the wire key of the meshing service so that the format can be derived.
+case class PcgMeshManifest(fragments: Seq[String]) derives JsonAutoFormat
+
 case class PcgSubgraph(edges: Seq[Seq[Long]], affinities: Seq[Float])
 
 object PcgSubgraph {
@@ -114,10 +133,8 @@ class PcgClient @Inject() (rpc: RPC, remoteWebknossosClient: DSRemoteWebknossosC
   /** A request to the attachment's PCG. A CAVE instance answers only requests that carry a CAVE token, which the
     * attachment references as a token credential and which is sent as a bearer token.
     */
-  private def request(agglomerateFileKey: AgglomerateFileKey, url: String)(using
-      ec: ExecutionContext
-  ): Fox[RPCRequest] =
-    agglomerateFileKey.attachment.credentialId match {
+  private def request(attachment: LayerAttachment, url: String)(using ec: ExecutionContext): Fox[RPCRequest] =
+    attachment.credentialId match {
       case None               => Fox.successful(rpc(url))
       case Some(credentialId) =>
         remoteWebknossosClient.getCredential(credentialId).flatMap {
@@ -127,15 +144,45 @@ class PcgClient @Inject() (rpc: RPC, remoteWebknossosClient: DSRemoteWebknossosC
         }
     }
 
-  private def baseUrl(agglomerateFileKey: AgglomerateFileKey): String =
-    agglomerateFileKey.attachment.path.toString.stripSuffix("/")
+  private def request(agglomerateFileKey: AgglomerateFileKey, url: String)(using
+      ec: ExecutionContext
+  ): Fox[RPCRequest] = request(agglomerateFileKey.attachment, url)
+
+  private def baseUrl(attachment: LayerAttachment): String = attachment.path.toString.stripSuffix("/")
+
+  private def baseUrl(agglomerateFileKey: AgglomerateFileKey): String = baseUrl(agglomerateFileKey.attachment)
 
   // PCGs info url is not versioned, thus removing this part from the URL here.
-  private def infoUrl(agglomerateFileKey: AgglomerateFileKey): String =
-    s"${baseUrl(agglomerateFileKey).replace("/api/v1/table/", "/table/")}/info"
+  private def infoUrl(attachment: LayerAttachment): String =
+    s"${baseUrl(attachment).replace("/api/v1/table/", "/table/")}/info"
+
+  /** The meshing service of a CAVE instance runs next to its PCG, under `/meshing` instead of `/segmentation`. */
+  private def meshingUrl(attachment: LayerAttachment): String =
+    baseUrl(attachment).replace("/segmentation/api/v1/table/", "/meshing/api/v1/table/")
 
   def getGraphInfo(agglomerateFileKey: AgglomerateFileKey)(using ec: ExecutionContext): Fox[PcgGraphInfo] =
-    request(agglomerateFileKey, infoUrl(agglomerateFileKey)).flatMap(_.silent.getWithJsonResponse[PcgGraphInfo])
+    request(agglomerateFileKey, infoUrl(agglomerateFileKey.attachment))
+      .flatMap(_.silent.getWithJsonResponse[PcgGraphInfo])
+
+  def getMeshInfo(attachment: LayerAttachment)(using ec: ExecutionContext): Fox[PcgMeshInfo] =
+    request(attachment, infoUrl(attachment)).flatMap(_.silent.getWithJsonResponse[PcgMeshInfo])
+
+  /** The mesh fragments that together form the mesh of an agglomerate. `verify=1` makes the meshing service list only
+    * fragments that exist and resolve each sharded one to its shard file and byte range. `prepend_seg_ids=1` prefixes
+    * each fragment with the id of the graph node it belongs to.
+    */
+  def getMeshManifest(attachment: LayerAttachment, agglomerateId: Long)(using
+      ec: ExecutionContext
+  ): Fox[Seq[String]] = {
+    val agglomerate = java.lang.Long.toUnsignedString(agglomerateId)
+    for {
+      manifestRequest <- request(attachment, s"${meshingUrl(attachment)}/manifest/$agglomerate:0")
+      manifest <- manifestRequest.silent
+        .addQueryParam("verify", "1")
+        .addQueryParam("prepend_seg_ids", "1")
+        .getWithJsonResponse[PcgMeshManifest]
+    } yield manifest.fragments
+  }
 
   def postRootsBinary(agglomerateFileKey: AgglomerateFileKey, supervoxelIds: Array[Long])(using
       ec: ExecutionContext

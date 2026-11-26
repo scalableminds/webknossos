@@ -357,10 +357,8 @@ class PcgAgglomerateService @Inject() (
       loadBucket: DataServiceDataRequest => Fox[Array[Byte]]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Vec3Int] =
     for {
-      // Asking PCG may fail without being fatal here: the scan below finds the position by reading the volume,
-      // which is slower but needs nothing from PCG beyond the graph info already fetched.
-      storedBox <- pcgClient.postNodePositions(agglomerateFileKey, Seq(segmentId)).shiftBox
-      position <- storedBox.toOption.flatMap(_.get(segmentId)) match {
+      storedPositions <- pcgClient.postNodePositions(agglomerateFileKey, Seq(segmentId))
+      position <- storedPositions.get(segmentId) match {
         case Some(position) => Fox.successful(position)
         case None           => scanPositionForSegmentId(agglomerateFileKey, segmentId, datasetId, dataLayer, loadBucket)
       }

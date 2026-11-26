@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   EagerUpdateBucketVolumeAction,
   LazyBucketMutatingVolumeUpdateAction,
+  UpdateMappingNameVolumeAction,
   VolumeTracingService
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreConversions, TracingDataStore, TracingId}
@@ -292,6 +293,7 @@ class AnnotationTransactionService @Inject() (
       eagerUpdateBucketActions = findEagerUpdateBucketActions(updateActionGroup)
       _ = stats.count("eagerUpdateBucketActions", eagerUpdateBucketActions.length)
       _ <- assertNoInvalidUpdateGroupCombinations(updateActionGroup, eagerUpdateBucketActions)
+      _ <- assertNoChunkedGraphMappingIsMadeEditable(annotationId, updateActionGroup)
       _ <- applyEagerUpdateBucketActions(eagerUpdateBucketActions, annotationId, updateActionGroup.version)
       updateActionsJson = Json.toJson(updateActionsProcessed)
       _ <- stats.time("annotationUpdates.put")(
@@ -326,6 +328,33 @@ class AnnotationTransactionService @Inject() (
         )
       ) ?~> "Cannot mix eager bucket mutating actions with lazily applied bucket mutating actions in the same update group"
     } yield ()
+
+  /* A chunkedgraph (PCG) mapping cannot be proofread in WEBKNOSSOS, so making one editable is refused here, before the
+     group is stored. Refusing it when the action is applied would come too late: the stored action would then fail on
+     every later load of the annotation.
+     The base mapping is the one the volume tracing has right before the action, as in TSAnnotationService.addEditableMapping,
+     so earlier mapping name changes of the same group are taken into account. */
+  private def assertNoChunkedGraphMappingIsMadeEditable(annotationId: ObjectId, updateGroup: UpdateActionGroup)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Unit] = {
+    val mappingNameActions = updateGroup.actions.collect { case a: UpdateMappingNameVolumeAction => a }
+    val tracingIdsMadeEditable = mappingNameActions.filter(_.isEditable.contains(true)).map(_.actionTracingId).distinct
+    Fox
+      .serialCombined(tracingIdsMadeEditable) { tracingId =>
+        for {
+          storedTracing <- annotationService.findVolume(annotationId, tracingId)
+          tracingBeforeAction = mappingNameActions
+            .filter(_.actionTracingId == tracingId)
+            .takeWhile(!_.isEditable.contains(true))
+            .foldLeft(storedTracing)((tracing, action) => action.applyOn(tracing))
+          _ <- Fox.runOptional(tracingBeforeAction.mappingName)(
+            annotationService.assertMappingIsNotChunkedGraph(annotationId, tracingBeforeAction, _)
+          )
+        } yield ()
+      }
+      .map(_ => ())
+  }
 
   private def applyEagerUpdateBucketActions(
       actions: Seq[EagerUpdateBucketVolumeAction],

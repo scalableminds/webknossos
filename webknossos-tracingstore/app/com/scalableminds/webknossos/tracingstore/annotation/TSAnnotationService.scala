@@ -418,7 +418,6 @@ class TSAnnotationService @Inject() (
         !volumeTracing.volumeBucketDataHasChanged.getOrElse(false)
       ) ?~> Msg.Annotation.volumeBucketsNotEmpty
       baseMappingName <- volumeTracing.mappingName.toFox ?~> Msg.Annotation.makeEditableNoBaseMapping
-      _ <- assertBaseMappingIsNotChunkedGraph(annotationId, volumeTracing, baseMappingName)
       editableMappingInfo = editableMappingService.create(baseMappingName)
       updater <- editableMappingUpdaterFor(
         annotationId,
@@ -430,7 +429,7 @@ class TSAnnotationService @Inject() (
       )
     } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo, updater)
 
-  private def assertBaseMappingIsNotChunkedGraph(
+  def assertMappingIsNotChunkedGraph(
       annotationId: ObjectId,
       volumeTracing: VolumeTracing,
       mappingName: String

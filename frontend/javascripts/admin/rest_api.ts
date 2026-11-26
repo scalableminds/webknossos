@@ -28,6 +28,7 @@ import {
   AnnotationLayerEnum,
   type AnnotationViewConfiguration,
   type APIAnnotation,
+  type APIAnnotationBookmark,
   type APIAnnotationInfo,
   type APIAnnotationType,
   type APIAnnotationVisibility,
@@ -1030,6 +1031,61 @@ export async function getAnnotationProto(
     console.log("Parsed protobuf annotation:", annotationProto);
   }
   return annotationProto;
+}
+
+export async function getAnnotationBookmarks(
+  tracingStoreUrl: string,
+  annotationId: string,
+  version?: number | null | undefined,
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIAnnotationBookmark[]>> {
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.set("version", version.toString());
+  }
+  return requestResult(
+    async (adaptedOptions) => {
+      const bookmarksArrayBuffer = await doWithToken((token) => {
+        params.set("token", token);
+        return Request.receiveArraybuffer(
+          `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks?${params}`,
+          {
+            ...adaptedOptions,
+            headers: {
+              Accept: "application/x-protobuf",
+            },
+          },
+        );
+      });
+      const { parseProtoAnnotationBookmarks } = await loadProtoHelpers();
+      return parseProtoAnnotationBookmarks(bookmarksArrayBuffer);
+    },
+    options,
+    retryOptions,
+  );
+}
+
+export function getBookmarkThumbnailUrl(
+  tracingStoreUrl: string,
+  annotationId: string,
+  bookmarkId: number,
+  thumbnailSavedAtVersion: number,
+  size: "small" | "large",
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<string>> {
+  // The thumbnails of a bookmark can be replaced (and an undo or revert can point back to older ones),
+  // so thumbnailSavedAtVersion keeps the cached thumbnails apart.
+  return requestResult(
+    () =>
+      doWithToken(
+        async (token) =>
+          `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks/${bookmarkId}/thumbnail?size=${size}&v=${thumbnailSavedAtVersion}&token=${token}`,
+      ),
+    options,
+    retryOptions,
+  );
 }
 
 export function hasSegmentIndexInDataStore(
@@ -2446,6 +2502,34 @@ export function getAgglomerateTreeAsSkeletonTracing(
       },
     ),
   );
+}
+
+export function getAgglomerateDiffToReference(
+  dataStoreUrl: string,
+  dataset: APIDataset,
+  layerName: string,
+  mappingId: string,
+  agglomerateId: bigint,
+  referenceMappingId: string,
+  // Segment of the agglomerate whose reference agglomerate should be used for the comparison
+  segmentId: bigint,
+): Promise<ArrayBuffer> {
+  return doWithToken((token) => {
+    const params = new URLSearchParams({
+      token,
+      referenceMappingName: referenceMappingId,
+      segmentId: segmentId.toString(),
+    });
+    return Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/diffToReference/${agglomerateId}?${params}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
+      {
+        useWebworkerForArrayBuffer: false,
+        showErrorToast: false,
+      },
+    );
+  });
 }
 
 async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(

@@ -958,7 +958,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         "./__snapshots__/agglomerate_tree_syncing/auto-sync_agglomerate_tree_1340_after_injected_merge_and_splitting_from_all_neighbors.json",
       );
 
-      const splitAndAgglomerateTreeReloadingUpdates = getNestedUpdateActions(context).slice(-5)!;
+      const splitAndAgglomerateTreeReloadingUpdates = getNestedUpdateActions(context).slice(-4)!;
       yield expect(splitAndAgglomerateTreeReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_tree_syncing/split_from_all_neighbors_with_injected_merge_should_refresh_agglomerate_trees.json",
       );

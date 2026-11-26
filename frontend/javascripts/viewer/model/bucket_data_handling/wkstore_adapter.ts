@@ -99,9 +99,12 @@ export type BucketRequestResult =
   | { type: "empty" }
   | { type: "failure" };
 
+// With applyServerMapping: false, the active agglomerate mapping is not applied by the server, so
+// that the unmapped data is returned even if the buckets of the layer are usually requested mapped.
 export async function requestWithFallback(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
+  { applyServerMapping = true }: { applyServerMapping?: boolean } = {},
 ): Promise<Array<BucketRequestResult>> {
   const state = Store.getState();
   const datasetId = state.dataset.id;
@@ -133,6 +136,8 @@ export async function requestWithFallback(
     batch,
     maybeVolumeTracing,
     maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
+    false,
+    applyServerMapping,
   );
   // Only empty buckets are eligible for the fallback lookup below. A failure must not be
   // replaced by fallback-layer data, since that data would lack the annotated changes.
@@ -164,6 +169,7 @@ export async function requestWithFallback(
     maybeVolumeTracing,
     maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
     true,
+    applyServerMapping,
   );
   return bucketResults.map((result, idx) => {
     if (result.type === "empty") {
@@ -181,7 +187,8 @@ async function requestFromStore(
   batch: Array<BucketAddress>,
   maybeVolumeTracing: VolumeTracing | null | undefined,
   maybeAnnotationId: string | undefined,
-  isVolumeFallback: boolean = false,
+  isVolumeFallback: boolean,
+  applyServerMapping: boolean,
 ): Promise<Array<BucketRequestResult>> {
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
@@ -189,7 +196,7 @@ async function requestFromStore(
 
   // Mappings can be applied in the frontend or on the server.
   const agglomerateMappingNameToApplyOnServer = (() => {
-    if (!isSegmentation) {
+    if (!isSegmentation || !applyServerMapping) {
       return null;
     }
     if (needsLocalHdf5Mapping(state, layerInfo.name)) {

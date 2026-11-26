@@ -31,7 +31,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   AdHocMeshRequest,
   AdHocMeshService,
   AdHocMeshServiceHolder,
-  SegmentSurface,
+  SegmentSurfaceWithVolume,
   SegmentSurfaceRequest
 }
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
@@ -457,7 +457,7 @@ class EditableMappingService @Inject() (
       request: WebknossosAdHocMeshRequest,
       interiorStart: Vec3Int,
       interiorEnd: Vec3Int
-  )(using tc: TokenContext): Fox[SegmentSurface] =
+  )(using tc: TokenContext): Fox[SegmentSurfaceWithVolume] =
     adHocMeshService.requestSurfaceViaActor(
       SegmentSurfaceRequest(adHocMeshRequestFor(editableMappingLayer, request), interiorStart, interiorEnd)
     )

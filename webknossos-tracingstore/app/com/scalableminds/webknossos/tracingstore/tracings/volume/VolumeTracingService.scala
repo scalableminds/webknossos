@@ -27,7 +27,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   AdHocMeshRequest,
   AdHocMeshService,
   AdHocMeshServiceHolder,
-  SegmentSurface,
+  SegmentSurfaceWithVolume,
   SegmentSurfaceRequest
 }
 import com.scalableminds.webknossos.tracingstore.annotation.UpdateTimingStats
@@ -724,7 +724,7 @@ class VolumeTracingService @Inject() (
       request: WebknossosAdHocMeshRequest,
       interiorStart: Vec3Int,
       interiorEnd: Vec3Int
-  )(using tc: TokenContext): Fox[SegmentSurface] =
+  )(using tc: TokenContext): Fox[SegmentSurfaceWithVolume] =
     for {
       adHocMeshRequest <- adHocMeshRequestFor(annotationId, tracingId, tracing, request)
       surface <- adHocMeshService.requestSurfaceViaActor(

@@ -30,7 +30,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosDataRequest
 }
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshRequest, MappingType, SegmentSurface}
+import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshRequest, MappingType, SegmentSurfaceWithVolume}
 import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsMath
 import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -443,7 +443,7 @@ class VolumeTracingController @Inject() (
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       annotationVersion: Option[Long]
-  )(using tc: TokenContext): Fox[List[SegmentSurface]] =
+  )(using tc: TokenContext): Fox[List[SegmentSurfaceWithVolume]] =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId, annotationVersion) ?~> Msg.Annotation.notFound
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)

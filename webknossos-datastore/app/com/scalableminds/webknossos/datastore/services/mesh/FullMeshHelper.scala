@@ -50,11 +50,11 @@ trait FullMeshHelper extends LazyLogging {
     * chunks in flight, as each one waits for its buckets to load.
     */
   protected def measureSurfaceInChunks(segmentBuckets: Seq[Vec3Int], parallelism: Int)(
-      measureChunk: SurfaceChunk => Fox[SegmentSurface]
-  )(using ec: ExecutionContext): Fox[SegmentSurface] =
+      measureChunk: SurfaceChunk => Fox[SegmentSurfaceWithVolume]
+  )(using ec: ExecutionContext): Fox[SegmentSurfaceWithVolume] =
     for {
       surfaces <- Fox.batchCombined(SurfaceChunk.forSegmentBuckets(segmentBuckets), parallelism)(measureChunk)
-    } yield surfaces.foldLeft(SegmentSurface.empty)(_ + _)
+    } yield surfaces.foldLeft(SegmentSurfaceWithVolume.empty)(_ + _)
 
   protected def generateNextTopLeftsFromNeighbors(
       oldTopLeft: VoxelPosition,

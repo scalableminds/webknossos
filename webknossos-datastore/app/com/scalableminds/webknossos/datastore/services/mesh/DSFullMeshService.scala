@@ -55,7 +55,7 @@ class DSFullMeshService @Inject() (
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
   // Keyed by requests without a mesh file name: the surface of the segment's ad-hoc mesh and its voxel count.
-  lazy val segmentSurfaceCache: AlfuCache[(ObjectId, String, FullMeshRequest), SegmentSurface] =
+  lazy val segmentSurfaceCache: AlfuCache[(ObjectId, String, FullMeshRequest), SegmentSurfaceWithVolume] =
     AlfuCache(maxCapacity = 10000)
 
   // Keyed by requests with a mesh file name: the surface area of the segment's mesh in that mesh file.
@@ -77,7 +77,7 @@ class DSFullMeshService @Inject() (
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentSurface] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentSurfaceWithVolume] =
     for {
       mag <- adHocMag(fullMeshRequest)
       segmentationLayer <- tryo(

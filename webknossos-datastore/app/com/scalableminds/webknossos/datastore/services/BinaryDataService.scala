@@ -74,15 +74,7 @@ class BinaryDataService(
         // dataSource is None and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
         dataSourceId <- SequenceUtils.findUniqueElement(requests.map(_.dataSourceIdOrVolumeDummy)).toFox
         firstRequest <- requests.headOption.toFox
-        // Requests outside of the layer range can be skipped. They will be answered with Empty below.
-        indicesWhereOutsideRange: Set[Int] = requests.zipWithIndex.collect {
-          case (request, idx) if !request.dataLayer.containsMag(request.cuboid.mag) =>
-            idx
-        }.toSet
-        requestsSelected: Seq[DataServiceDataRequest] = requests.zipWithIndex.collect {
-          case (request, idx) if !indicesWhereOutsideRange.contains(idx) => request
-        }
-        readInstructions = requestsSelected.map(r =>
+        readInstructions = requests.map(r =>
           DataReadInstruction(
             dataSourceId,
             dataLayer,
@@ -90,26 +82,16 @@ class BinaryDataService(
             r.settings.version
           )
         )
-        bucketProvider <- bucketProviderFor(firstRequest)
-        bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
-          firstRequest.datasetId,
-          dataSourceId,
-          s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}",
-          bucketProvider.loadMultiple(readInstructions)
-        )
-        bucketBoxesConverted <- Fox.fromFuture(Fox.serialSequence(requestsSelected.zip(bucketBoxes)) {
+        bucketBoxes <- loadBuckets(
+          firstRequest,
+          readInstructions,
+          s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}"
+        )(_.loadMultiple(_))
+        bucketBoxesConverted <- Fox.fromFuture(Fox.serialSequence(requests.zip(bucketBoxes)) {
           case (request, Full(bucketBytes)) => convertAccordingToRequest(request, bucketBytes)
           case (_, other)                   => other.toFox
         })
-        _ <- Fox.fromBool(
-          bucketBoxesConverted.length + indicesWhereOutsideRange.size == requests.length
-        ) ?~> Msg.Dataset.bucketCountMismatch
-        bucketBoxesIterator = bucketBoxesConverted.iterator
-        allBucketBoxes = requests.indices.map { index =>
-          if (indicesWhereOutsideRange.contains(index)) Empty
-          else bucketBoxesIterator.next()
-        }
-      } yield allBucketBoxes
+      } yield bucketBoxesConverted
     }
 
   private def convertIfNecessary(
@@ -223,20 +205,42 @@ class BinaryDataService(
   private def handleCuboidBucketRequests(request: DataServiceDataRequest, buckets: List[BucketPosition])(using
       tc: TokenContext
   ): Fox[Seq[Box[Array[Byte]]]] =
-    if (buckets.headOption.exists(bucket => request.dataLayer.containsMag(bucket.mag))) {
-      val readInstructions = buckets.map(
+    loadBuckets(
+      request,
+      buckets.map(
         DataReadInstruction(request.dataSourceIdOrVolumeDummy, request.dataLayer, _, request.settings.version)
-      )
+      ),
+      s"loading ${buckets.length} buckets for ${request.datasetId} (${request.dataSourceId}) layer ${request.dataLayer.name}, cuboid: ${request.cuboid}"
+    )(_.loadForCuboid(_))
+
+  /** Loads the buckets with one call to the bucket provider of the request's layer, with error logging. Buckets in mags
+    * the layer does not have are answered with Empty without being loaded.
+    */
+  private def loadBuckets(
+      request: DataServiceDataRequest,
+      readInstructions: Seq[DataReadInstruction],
+      logLabel: String
+  )(
+      load: (BucketProvider, Seq[DataReadInstruction]) => Fox[Seq[Box[Array[Byte]]]]
+  ): Fox[Seq[Box[Array[Byte]]]] = {
+    def isInRange(readInstruction: DataReadInstruction) =
+      readInstruction.dataLayer.containsMag(readInstruction.bucket.mag)
+    val readInstructionsInRange = readInstructions.filter(isInRange)
+    if (readInstructionsInRange.isEmpty) Fox.successful(readInstructions.map(_ => Empty))
+    else
       for {
         bucketProvider <- bucketProviderFor(request)
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
           request.datasetId,
           request.dataSourceIdOrVolumeDummy,
-          s"loading ${buckets.length} buckets for ${request.datasetId} (${request.dataSourceId}) layer ${request.dataLayer.name}, cuboid: ${request.cuboid}",
-          bucketProvider.loadForCuboid(readInstructions)
+          logLabel,
+          load(bucketProvider, readInstructionsInRange)
         )
-      } yield bucketBoxes
-    } else Fox.successful(buckets.map(_ => Empty))
+        _ <- Fox.fromBool(bucketBoxes.length == readInstructionsInRange.length) ?~> Msg.Dataset.bucketCountMismatch
+        bucketBoxesIterator = bucketBoxes.iterator
+      } yield readInstructions
+        .map(readInstruction => if (isInRange(readInstruction)) bucketBoxesIterator.next() else Empty)
+  }
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(using
       tc: TokenContext

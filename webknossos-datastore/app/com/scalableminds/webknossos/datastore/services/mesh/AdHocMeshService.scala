@@ -78,7 +78,8 @@ class AdHocMeshService(
 
   def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[AdHocMesh] = askActor[AdHocMesh](request)
 
-  def requestSurfaceViaActor(request: SegmentSurfaceRequest): Fox[SegmentSurface] = askActor[SegmentSurface](request)
+  def requestSurfaceViaActor(request: SegmentSurfaceRequest): Fox[SegmentSurfaceWithVolume] =
+    askActor[SegmentSurfaceWithVolume](request)
 
   private def askActor[T](request: AdHocMeshRequest | SegmentSurfaceRequest): Fox[T] =
     Fox.fromFutureBox {
@@ -114,7 +115,7 @@ class AdHocMeshService(
     } yield if (request.findNeighbors) mesh else mesh.copy(neighbors = List())
   }
 
-  def measureSurface(request: SegmentSurfaceRequest)(using tc: TokenContext): Fox[SegmentSurface] = {
+  def measureSurface(request: SegmentSurfaceRequest)(using tc: TokenContext): Fox[SegmentSurfaceWithVolume] = {
     val meshRequest = request.meshRequest
     val cuboid = meshRequest.cuboid
     for {

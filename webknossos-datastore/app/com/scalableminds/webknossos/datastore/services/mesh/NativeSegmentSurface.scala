@@ -12,12 +12,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
   * @param voxelCount
   *   in the mag the surface was measured in
   */
-case class SegmentSurface(area: Double, voxelCount: Long) {
-  def +(other: SegmentSurface): SegmentSurface = SegmentSurface(area + other.area, voxelCount + other.voxelCount)
+case class SegmentSurfaceWithVolume(area: Double, voxelCount: Long) {
+  def +(other: SegmentSurfaceWithVolume): SegmentSurfaceWithVolume =
+    SegmentSurfaceWithVolume(area + other.area, voxelCount + other.voxelCount)
 }
 
-object SegmentSurface {
-  val empty: SegmentSurface = SegmentSurface(0.0, 0L)
+object SegmentSurfaceWithVolume {
+  val empty: SegmentSurfaceWithVolume = SegmentSurfaceWithVolume(0.0, 0L)
 }
 
 /** A chunk to measure a segment in: the cuboid at topLeft (in voxels of the mag) of the given size. Only the voxels
@@ -99,7 +100,7 @@ class NativeSegmentSurface {
       interiorStart: Vec3Int,
       interiorEnd: Vec3Int,
       scale: Vec3Double
-  ): SegmentSurface = {
+  ): SegmentSurfaceWithVolume = {
     val result = measure(
       data,
       bytesPerElement,
@@ -109,6 +110,6 @@ class NativeSegmentSurface {
       interiorEnd.toArray,
       Array(scale.x, scale.y, scale.z)
     )
-    SegmentSurface(result(0), result(1).toLong)
+    SegmentSurfaceWithVolume(result(0), result(1).toLong)
   }
 }

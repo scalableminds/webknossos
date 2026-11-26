@@ -2,7 +2,11 @@ package backend
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.services.mesh.{NativeSegmentSurface, SegmentSurface, SurfaceChunk}
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  NativeSegmentSurface,
+  SegmentSurfaceWithVolume,
+  SurfaceChunk
+}
 import org.scalatest.wordspec.AnyWordSpec
 
 // Exercises the JNI glue of the native surface measurement (symbol name, argument order, result). The measurement itself
@@ -44,7 +48,7 @@ class NativeSegmentSurfaceTestSuite extends AnyWordSpec {
           Vec3Int(3, 3, 3),
           Vec3Double(1, 1, 1)
         )
-      assert(outside == SegmentSurface(0.0, 0L))
+      assert(outside == SegmentSurfaceWithVolume(0.0, 0L))
       val other =
         segmentSurface.measureSurface(
           singleVoxel,
@@ -55,7 +59,7 @@ class NativeSegmentSurfaceTestSuite extends AnyWordSpec {
           Vec3Int(3, 3, 3),
           Vec3Double(1, 1, 1)
         )
-      assert(other == SegmentSurface(0.0, 0L))
+      assert(other == SegmentSurfaceWithVolume(0.0, 0L))
     }
 
     "throw a RuntimeException naming the function for invalid arguments" in {

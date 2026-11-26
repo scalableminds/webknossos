@@ -22,7 +22,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   MappingType,
   MeshFileService,
   MeshMappingHelper,
-  SegmentSurface
+  SegmentSurfaceWithVolume
 }
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.segmentstatistics.{
@@ -373,7 +373,7 @@ class SegmentStatisticsController @Inject() (
       mag: Vec3Int,
       mappingName: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
-  )(using tc: TokenContext): Fox[SegmentSurface] = {
+  )(using tc: TokenContext): Fox[SegmentSurfaceWithVolume] = {
     val fullMeshRequest = surfaceFullMeshRequest(segmentId, mag, mappingName, additionalCoordinates)
     fullMeshService.segmentSurfaceCache.getOrLoad(
       (datasetId, dataLayer.name, fullMeshRequest),

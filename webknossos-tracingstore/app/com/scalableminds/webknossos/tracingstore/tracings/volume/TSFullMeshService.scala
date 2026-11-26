@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   FullMeshHelper,
   FullMeshRequest,
   MappingType,
-  SegmentSurface
+  SegmentSurfaceWithVolume
 }
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
@@ -59,7 +59,7 @@ class TSFullMeshService @Inject() (
     } yield data
 
   // Keyed by tracing id, the annotation version and the request: at a fixed version, the buckets do not change.
-  private lazy val segmentSurfaceCache: AlfuCache[(String, Long, FullMeshRequest), SegmentSurface] =
+  private lazy val segmentSurfaceCache: AlfuCache[(String, Long, FullMeshRequest), SegmentSurfaceWithVolume] =
     AlfuCache(maxCapacity = 1000)
 
   /** Measures the surface area and voxel count of a segment in the mag of the request, reading the buckets at the
@@ -73,7 +73,7 @@ class TSFullMeshService @Inject() (
   )(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[SegmentSurface] =
+  ): Fox[SegmentSurfaceWithVolume] =
     for {
       // Temporary tracings are not versioned, so their surfaces cannot be cached.
       isTemporaryTracing <- volumeTracingService.temporaryTracingService.isTemporaryTracing(tracingId)
@@ -91,7 +91,7 @@ class TSFullMeshService @Inject() (
       tracingId: String,
       tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentSurface] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentSurfaceWithVolume] =
     for {
       mag <- adHocMag(fullMeshRequest)
       _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume

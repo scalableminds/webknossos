@@ -2,6 +2,7 @@ import ErrorHandling from "libs/error_handling";
 import { alert } from "libs/window";
 import { race } from "redux-saga/effects";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
+import watchAgglomerateDiffs from "viewer/model/sagas/agglomerate_diff_saga";
 import AnnotationSagas from "viewer/model/sagas/annotation_saga";
 import toolSaga from "viewer/model/sagas/annotation_tool_saga";
 import listenToClipHistogramSaga from "viewer/model/sagas/clip_histogram_saga";
@@ -75,6 +76,7 @@ function* restartableSaga(): Saga<void> {
       call(warnAboutMagRestriction),
       call(SettingsSaga),
       ...SkeletontracingSagas.map((saga) => call(saga)),
+      call(watchAgglomerateDiffs),
       call(listenToClipHistogramSaga),
       call(loadHistogramDataSaga),
       call(watchDataRelevantChanges),

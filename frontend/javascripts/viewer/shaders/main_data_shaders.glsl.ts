@@ -252,7 +252,7 @@ uniform float zoomValue;
 uniform float blendMode;
 uniform vec3 brushCenterPosition;
 uniform bool isMouseInCanvas;
-uniform float brushSizeInPixel;
+uniform vec3 brushDiameterInMag;
 uniform vec3 brushMag;
 uniform float planeID;
 uniform vec3 addressSpaceDimensions;

@@ -1,6 +1,6 @@
 import proofreadingDendrites from "@images/vx/proofreading-dendrites.webp";
 import { Badge, Button, Flex, Typography, theme } from "antd";
-import { ColorWKBlueZircon } from "theme";
+import { ColorWKMint } from "theme";
 import { smallCapsStyle } from "../components/job_started_card";
 
 /** Points to the proofreading tools once a segmentation job has started. Callers gate it to webknossos.org. */
@@ -22,7 +22,7 @@ export function ProofreadingNextStep() {
       />
       <Flex vertical gap="small">
         <Badge
-          color={ColorWKBlueZircon}
+          color={ColorWKMint}
           text={
             <Typography.Text type="secondary" style={smallCapsStyle}>
               Next step · Proofreading

@@ -1,6 +1,7 @@
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import type { AnnotationIdDomain } from "types/api_types";
+import type { AgglomerateDiffAction } from "viewer/model/actions/agglomerate_diff_actions";
 import type { AnnotationActionTypes } from "viewer/model/actions/annotation_actions";
 import type { ConnectomeAction } from "viewer/model/actions/connectome_actions";
 import type { DatasetAction } from "viewer/model/actions/dataset_actions";
@@ -42,6 +43,7 @@ export type Action =
   | UiAction
   | SegmentationAction
   | ConnectomeAction
+  | AgglomerateDiffAction
   | ProofreadAction
   | OrganizationAction
   | OperationContextAction
@@ -116,7 +118,13 @@ export const getNewIdAction = (
 // Domains for which the id reservation mechanism is actually implemented (as opposed to
 // AnnotationIdDomain, which lists all domains the back-end knows about, including ones that
 // aren't wired up on the frontend, yet).
-export type ReservableIdDomain = "SegmentGroup" | "BoundingBox";
+export type ReservableIdDomain = "SegmentGroup" | "BoundingBox" | "Bookmark";
+
+// Bookmarks belong to the annotation rather than a tracing. Their id reservations use
+// this value in place of a tracing id. It is an empty string rather than null, because
+// tracingId is part of the primary key of annotation_reserved_ids (see schema.sql) and
+// therefore cannot be NULL.
+export const ANNOTATION_SCOPED_TRACING_ID = "";
 
 export const dispatchGetNewIdAsync = async (
   dispatch: Dispatch<any>,

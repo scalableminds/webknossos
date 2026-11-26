@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Float, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -91,28 +91,44 @@ trait FullMeshHelper extends LazyLogging {
       chunkSize.z * topLeft.mag.z
     ).intersects(layerBoundingBox)
 
-  protected def adHocMeshToStl(vertexBuffer: Array[Float]): Array[Byte] = {
-    val numFaces = vertexBuffer.length / (3 * 3) // a face has three vertices, a vertex has three floats.
+  protected def adHocMeshToStl(mesh: AdHocMesh): Array[Byte] = {
+    val vertices = mesh.vertices
+    val indices = mesh.indices
+    val numFaces = indices.length / 3
     val outputNumBytesLong = numFaces.toLong * 50L
     if (outputNumBytesLong > Int.MaxValue)
       throw new IllegalStateException(
         s"Single mesh chunk is too large to encode as STL: $outputNumBytesLong bytes ($numFaces faces)"
       )
     val output = ByteBuffer.allocate(outputNumBytesLong.toInt).order(ByteOrder.LITTLE_ENDIAN)
-    val unused = Array.fill[Byte](2)(0)
+    def putVertex(offset: Int): Unit = {
+      output.putFloat(vertices(offset))
+      output.putFloat(vertices(offset + 1))
+      output.putFloat(vertices(offset + 2))
+    }
+    // Without allocations per face. The normal is computed with the same float operations as
+    // Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize.
     for (faceIndex <- 0 until numFaces) {
-      val base = 9 * faceIndex
-      val v1 = Vec3Float(vertexBuffer(base), vertexBuffer(base + 1), vertexBuffer(base + 2))
-      val v2 = Vec3Float(vertexBuffer(base + 3), vertexBuffer(base + 4), vertexBuffer(base + 5))
-      val v3 = Vec3Float(vertexBuffer(base + 6), vertexBuffer(base + 7), vertexBuffer(base + 8))
-      val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize
-      output.putFloat(norm.x)
-      output.putFloat(norm.y)
-      output.putFloat(norm.z)
-      for (vertexIndex <- 0 until 3)
-        for (dimIndex <- 0 until 3)
-          output.putFloat(vertexBuffer(base + 3 * vertexIndex + dimIndex))
-      output.put(unused)
+      val v1 = 3 * indices(3 * faceIndex)
+      val v2 = 3 * indices(3 * faceIndex + 1)
+      val v3 = 3 * indices(3 * faceIndex + 2)
+      val e1x = vertices(v2) - vertices(v1)
+      val e1y = vertices(v2 + 1) - vertices(v1 + 1)
+      val e1z = vertices(v2 + 2) - vertices(v1 + 2)
+      val e2x = vertices(v3) - vertices(v1)
+      val e2y = vertices(v3 + 1) - vertices(v1 + 1)
+      val e2z = vertices(v3 + 2) - vertices(v1 + 2)
+      val nx = e1y * e2z - e1z * e2y
+      val ny = e1z * e2x - e1x * e2z
+      val nz = e1x * e2y - e1y * e2x
+      val inverseLength = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz).toFloat
+      output.putFloat(nx * inverseLength)
+      output.putFloat(ny * inverseLength)
+      output.putFloat(nz * inverseLength)
+      putVertex(v1)
+      putVertex(v2)
+      putVertex(v3)
+      output.putShort(0) // attribute byte count, unused
     }
     output.array()
   }

@@ -73,7 +73,7 @@ services:
     command:
       - fossildb
       - -c
-      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
+      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates,annotationBookmarks,annotationBookmarkThumbnails
     ports:
       - "7156:7155" # host port differs from 7155 so that e2e tests can run while a local dev fossildb is running
     volumes:

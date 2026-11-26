@@ -44,11 +44,18 @@ class TracingDataStore @Inject() (
 
   lazy val annotationUpdates = new FossilDBClient("annotationUpdates", config, slackNotificationService)
 
+  lazy val annotationBookmarks = new FossilDBClient("annotationBookmarks", config, slackNotificationService)
+
+  lazy val annotationBookmarkThumbnails =
+    new FossilDBClient("annotationBookmarkThumbnails", config, slackNotificationService)
+
   private def shutdown(): Unit = {
     healthClient.shutdown()
     skeletons.shutdown()
     skeletonTreeBodies.shutdown()
     annotationUpdates.shutdown()
+    annotationBookmarks.shutdown()
+    annotationBookmarkThumbnails.shutdown()
     annotations.shutdown()
     volumes.shutdown()
     volumeData.shutdown()

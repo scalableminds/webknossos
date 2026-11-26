@@ -75,7 +75,7 @@ services:
     command:
       - fossildb
       - -c
-      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
+      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates,annotationBookmarks,annotationBookmarkThumbnails
     user: 0:0
     volumes:
       - "./persistent/fossildb/data:/fossildb/data"

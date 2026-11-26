@@ -170,7 +170,7 @@ class TSFullMeshService @Inject() (
       voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(
         annotationId
       ) ?~> Msg.Dataset.voxelSizeFailedToFetch
-      verticesForChunks <-
+      meshChunks <-
         if (tracing.hasSegmentIndex.getOrElse(false))
           getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
         else
@@ -184,7 +184,7 @@ class TSFullMeshService @Inject() (
             fullMeshRequest.seedPosition.map(sp => VoxelPosition(sp.x, sp.y, sp.z, mag)),
             adHocChunkSize
           )
-      encoded = verticesForChunks.map(adHocMeshToStl)
+      encoded = meshChunks.map(adHocMeshToStl)
       array = combineEncodedChunksToStl(encoded)
       _ = logMeshingDuration(before, "ad-hoc meshing (tracingstore)", array.length)
     } yield array
@@ -196,7 +196,7 @@ class TSFullMeshService @Inject() (
       mag: Vec3Int,
       voxelSize: VoxelSize,
       fullMeshRequest: FullMeshRequest
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[AdHocMesh]] =
     for {
       segmentBuckets <- segmentIndexBucketPositions(annotationId, tracingId, tracing, mag, fullMeshRequest)
       bucketsWithNeighbors = bucketsToMesh(segmentBuckets)
@@ -221,7 +221,7 @@ class TSFullMeshService @Inject() (
         )
         loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
       }
-    } yield meshChunks.map(_.triangleSoup)
+    } yield meshChunks
 
   // The buckets (in buckets of mag) with a voxel of the segment, from the segment index.
   private def segmentIndexBucketPositions(
@@ -260,7 +260,7 @@ class TSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest,
       topLeftOpt: Option[VoxelPosition],
       chunkSize: Vec3Int
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[AdHocMesh]] = {
     // visited does not need to be thread-safe: it is mutated only at the start of each
     // processFrontier call (before any concurrent work begins); Fox.combined only reads it
     // (via generateNextTopLeftsFromNeighbors), and waves execute sequentially
@@ -269,9 +269,9 @@ class TSFullMeshService @Inject() (
 
     def processFrontier(
         frontier: List[VoxelPosition],
-        acc: List[Array[Float]],
+        acc: List[AdHocMesh],
         datasetBoundingBox: BoundingBox
-    ): Fox[List[Array[Float]]] =
+    ): Fox[List[AdHocMesh]] =
       if (frontier.isEmpty) Fox.successful(acc)
       else if (visited.size + frontier.size > maxAdHocFullMeshChunks)
         Fox.failure(Msg.Mesh.tooManyAdHocMeshRequests(maxAdHocFullMeshChunks))
@@ -294,7 +294,7 @@ class TSFullMeshService @Inject() (
               )
               loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map { mesh =>
                 (
-                  mesh.triangleSoup,
+                  mesh,
                   generateNextTopLeftsFromNeighbors(
                     position,
                     mesh.neighbors,
@@ -307,10 +307,10 @@ class TSFullMeshService @Inject() (
             })
           }
           results = batchResults.flatten
-          newVertices = results.map(_._1)
+          newMeshChunks = results.map(_._1)
           nextFrontier = results.flatMap(_._2).distinct
-          allVertices <- processFrontier(nextFrontier, newVertices ::: acc, datasetBoundingBox)
-        } yield allVertices
+          allMeshChunks <- processFrontier(nextFrontier, newMeshChunks ::: acc, datasetBoundingBox)
+        } yield allMeshChunks
       }
 
     for {

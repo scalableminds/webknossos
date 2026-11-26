@@ -30,13 +30,15 @@ export function useDeleteDatasetsModal({
   const updateQueryCaches = (datasets: APIDatasetCompact[], deletedIds: string[]) => {
     const deletedDatasets = datasets.filter((ds) => deletedIds.includes(ds.id));
     for (const folderId of uniq(deletedDatasets.map((ds) => ds.folderId))) {
-      queryClient.setQueryData(
-        ["datasetsByFolder", folderId],
+      queryClient.setQueriesData(
+        { queryKey: ["datasetsByFolder", folderId] },
         (oldItems: APIDatasetCompact[] | undefined) =>
           oldItems?.filter((item) => !deletedIds.includes(item.id)),
       );
     }
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+    // A folder may be empty now.
+    queryClient.invalidateQueries({ queryKey: ["datasetsExistInFolder"] });
   };
 
   const deleteDatasetsMutation = useMutation({

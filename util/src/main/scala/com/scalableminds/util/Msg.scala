@@ -850,6 +850,8 @@ object Msg {
     val segmentIndexNeededForSurface: String =
       "Measuring the surface of a segment requires a segment index."
     val measureSurfaceFailed: String = "Could not measure the surface of the segment."
+    def surfaceNeedsAgglomerateMapping(mappingName: String): String =
+      s"Measuring the surface of a segment supports only agglomerate mappings, but “$mappingName” is not an agglomerate file of the layer."
     object File {
       val meshFileNameRequired: String =
         "Trying to load mesh from mesh file, but no mesh file name was supplied."

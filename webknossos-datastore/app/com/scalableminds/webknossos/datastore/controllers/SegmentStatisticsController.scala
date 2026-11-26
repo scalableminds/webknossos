@@ -365,6 +365,8 @@ class SegmentStatisticsController @Inject() (
     } yield surfaceAreas
 
   // The surface of the segment's ad-hoc mesh and its voxel count, shared by the surface area and sphericity requests.
+  // Only agglomerate mappings can be applied here. Other mapping names (e.g. JSON mappings, which only the frontend
+  // applies) are rejected rather than measuring the unmapped segment.
   private def adHocSurface(
       datasetId: ObjectId,
       dataSource: UsableDataSource,
@@ -375,12 +377,19 @@ class SegmentStatisticsController @Inject() (
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
   )(using tc: TokenContext): Fox[SegmentSurfaceWithVolume] = {
     val fullMeshRequest = surfaceFullMeshRequest(segmentId, mag, mappingName, additionalCoordinates)
-    fullMeshService.segmentSurfaceCache.getOrLoad(
-      (datasetId, dataLayer.name, fullMeshRequest),
-      _ =>
-        fullMeshService
-          .measureSurface(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.measureSurfaceFailed
-    )
+    for {
+      _ <- Fox.runOptional(mappingName) { name =>
+        Fox.fromBool(
+          agglomerateService.listAgglomeratesFiles(dataLayer).contains(name)
+        ) ?~> Msg.Mesh.surfaceNeedsAgglomerateMapping(name) ~> BAD_REQUEST
+      }
+      surface <- fullMeshService.segmentSurfaceCache.getOrLoad(
+        (datasetId, dataLayer.name, fullMeshRequest),
+        _ =>
+          fullMeshService
+            .measureSurface(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.measureSurfaceFailed
+      )
+    } yield surface
   }
 
   private def surfaceFullMeshRequest(

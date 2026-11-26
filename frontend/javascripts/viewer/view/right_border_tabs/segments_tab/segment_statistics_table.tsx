@@ -340,7 +340,7 @@ export function SegmentStatisticsTable({
     [groupRows, collapsedKeys],
   );
 
-  const columns = useMemo((): TableColumnType<StatisticsTableRow>[] => {
+  const baseColumns = useMemo((): TableColumnType<StatisticsTableRow>[] => {
     const segmentColumn: TableColumnType<StatisticsTableRow> = {
       key: SEGMENT_COLUMN_KEY,
       title: <ColumnTitle title="Segment" unit="name · ID" align="start" />,
@@ -363,16 +363,23 @@ export function SegmentStatisticsTable({
     const statisticColumns = columnSpecs.map((spec) =>
       getStatisticColumn(spec, units[spec.key], rows, layerName),
     );
-    // The sorting is controlled, so that it can also be changed from outside of the table.
-    return [segmentColumn, ...statisticColumns].map((column) =>
-      column.sorter != null
-        ? {
-            ...column,
-            sortOrder: sort != null && sort.key === column.key ? sort.order : null,
-          }
-        : column,
-    );
-  }, [columnSpecs, units, rows, layerName, sort]);
+    return [segmentColumn, ...statisticColumns];
+  }, [columnSpecs, units, rows, layerName]);
+
+  // The sorting is controlled, so that it can also be changed from outside of the table.
+  // Applied separately from baseColumns so sort clicks don't rescan all rows for min/max bars.
+  const columns = useMemo(
+    () =>
+      baseColumns.map((column) =>
+        column.sorter != null
+          ? {
+              ...column,
+              sortOrder: sort != null && sort.key === column.key ? sort.order : null,
+            }
+          : column,
+      ),
+    [baseColumns, sort],
+  );
   const totalColumnWidth = columns.reduce((sum, column) => sum + Number(column.width), 0);
 
   return (

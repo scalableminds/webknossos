@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat
 import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingLayer,
@@ -467,6 +468,25 @@ class TSAnnotationService @Inject() (
         targetVersion
       )
     } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo, updater)
+
+  def assertMappingIsNotChunkedGraph(
+      annotationId: ObjectId,
+      volumeTracing: VolumeTracing,
+      mappingName: String
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    volumeTracing.fallbackLayer match {
+      case None            => Fox.successful(())
+      case Some(layerName) =>
+        for {
+          dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
+          isChunkedGraph = (for {
+            layer <- dataSource.getDataLayer(layerName)
+            attachments <- layer.attachments
+            agglomerate <- attachments.agglomerates.find(_.name == mappingName)
+          } yield agglomerate.dataFormat == LayerAttachmentDataformat.pcg).getOrElse(false)
+          _ <- Fox.fromBool(!isChunkedGraph) ?~> Msg.Annotation.makeEditableChunkedGraphMapping
+        } yield ()
+    }
 
   private def assertMappingIsNotLocked(volumeTracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.fromBool(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> Msg.Annotation.ApplyUpdate.mappingIsLocked

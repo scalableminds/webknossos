@@ -105,6 +105,42 @@ fn extends_the_bounding_box() {
 }
 
 #[test]
+fn finds_the_first_position_of_a_segment() {
+    let length = 4;
+    let mut values = vec![0i64; length * length * length];
+    let index = |x: usize, y: usize, z: usize| x + length * (y + length * z);
+    values[index(3, 0, 1)] = 9;
+    values[index(1, 2, 3)] = 9;
+    values[index(2, 1, 0)] = -1;
+    let find = |input: &[u8], bytes_per_element, is_signed, segment_id| {
+        find_segment_id_position(input, bytes_per_element, is_signed, 4, segment_id)
+    };
+    // the first one in x-fastest order, not the bounding box corner (1, 0, 1), which holds no 9
+    assert_eq!(
+        find(&bucket::<u16>(&values), 2, false, 9).unwrap(),
+        Some([3, 0, 1])
+    );
+    assert_eq!(find(&bucket::<u16>(&values), 2, false, 7).unwrap(), None);
+    // ids are compared after sign- or zero-extension
+    assert_eq!(
+        find(&bucket::<u16>(&values), 2, false, 65535).unwrap(),
+        Some([2, 1, 0])
+    );
+    assert_eq!(find(&bucket::<u16>(&values), 2, false, -1).unwrap(), None);
+    assert_eq!(
+        find(&bucket::<i16>(&values), 2, true, -1).unwrap(),
+        Some([2, 1, 0])
+    );
+    assert_eq!(
+        find(&bucket::<u64>(&values), 8, false, -1).unwrap(),
+        Some([2, 1, 0])
+    );
+    assert!(find_segment_id_position(&bucket::<u16>(&values), 2, false, 3, 9).is_err());
+    assert!(find_segment_id_position(&[0u8; 3 * 8], 3, false, 2, 9).is_err());
+    assert_eq!(find_segment_id_position(&[], 3, false, 0, 9).unwrap(), None);
+}
+
+#[test]
 fn applies_a_segment_id_mapping() {
     let values = [0, 1, 1, 2, 3, -1];
     let input = bucket::<i16>(&values);

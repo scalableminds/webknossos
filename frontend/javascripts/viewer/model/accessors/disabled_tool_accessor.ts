@@ -15,6 +15,7 @@ import {
   getActiveSegmentationTracing,
   getRenderableMagForSegmentationTracing,
   hasAgglomerateMapping,
+  isChunkedGraphMappingActive,
   isVolumeAnnotationDisallowedForZoom,
   type VolumeAnnotationZoomState,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -68,6 +69,8 @@ export const DISABLED_EXPLANATION = {
     "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation.",
   UNEDITABLE_MAPPING_LOCKED:
     "A mapping that does not support proofreading actions is locked to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).",
+  CHUNKEDGRAPH_MAPPING_ACTIVE:
+    "Proofreading is disabled because the active mapping is served by a chunkedgraph (CAVE), whose agglomerations WEBKNOSSOS cannot change.",
   SKELETON_LAYER_TRANSFORMED:
     "Skeleton annotation is disabled because the skeleton layer is transformed. Use the left sidebar to render the skeleton layer without any transformations.",
   BOUNDING_BOX_TRANSFORMED_WITH_SKELETON:
@@ -95,6 +98,7 @@ type Params = {
   zoomStateForFilling: VolumeAnnotationZoomState;
   agglomerateState: AgglomerateState;
   isUneditableMappingLocked: boolean;
+  isChunkedGraphMappingActive: boolean;
   activeOrganization: APIOrganization | null;
   activeUser: APIUser | null | undefined;
   isUpdatingCurrentlyAllowed: boolean;
@@ -206,7 +210,13 @@ const fillZoomRule = new DisableRule(
 );
 
 const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
-  const { agglomerateState, isUneditableMappingLocked, activeOrganization, activeUser } = params;
+  const {
+    agglomerateState,
+    isUneditableMappingLocked,
+    isChunkedGraphMappingActive,
+    activeOrganization,
+    activeUser,
+  } = params;
 
   const isAllowedByPricingPlan = isFeatureAllowedByPricingPlan(
     activeOrganization,
@@ -215,6 +225,9 @@ const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
 
   if (isUneditableMappingLocked) {
     return DISABLED_EXPLANATION.UNEDITABLE_MAPPING_LOCKED;
+  }
+  if (isChunkedGraphMappingActive) {
+    return DISABLED_EXPLANATION.CHUNKEDGRAPH_MAPPING_ACTIVE;
   }
   if (!agglomerateState.value) return agglomerateState.reason;
   if (!isAllowedByPricingPlan) {
@@ -390,6 +403,7 @@ const _getDisabledInfoForTools = (
     zoomStateForFilling: isVolumeAnnotationDisallowedForZoom(AnnotationTool.FILL_CELL, state),
     agglomerateState: hasAgglomerateMapping(state),
     isUneditableMappingLocked,
+    isChunkedGraphMappingActive: isChunkedGraphMappingActive(state),
     activeOrganization: state.activeOrganization,
     activeUser: state.activeUser,
     isUpdatingCurrentlyAllowed: annotation.isUpdatingCurrentlyAllowed,

@@ -1,7 +1,7 @@
 package com.scalableminds.util.cache
 
 import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine, RemovalCause, RemovalListener, Weigher}
-import com.scalableminds.util.box.{Box, Failure}
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 
@@ -27,6 +27,11 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) {
 
   private def getOrLoadAdapter(key: K, loadValue: K => Future[Box[V]]): Future[Box[V]] =
     store.get(key, AlfuCache.toJavaMappingFunction[K, Box[V]](loadValue)).asScala
+
+  /** A cached value, if present and not expired, without loading it on a miss. */
+  def get(key: K): Option[V] = Option(store.synchronous().getIfPresent(key)).flatMap(_.toOption)
+
+  def put(key: K, value: V): Unit = store.synchronous().put(key, Full(value))
 
   def remove(key: K): Unit = store.synchronous().invalidate(key)
 

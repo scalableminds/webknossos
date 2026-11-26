@@ -247,6 +247,44 @@ pub fn extend_segment_bounding_box(
     )
 }
 
+fn find_segment_id_position_typed<T: Element>(
+    bucket: &[u8],
+    bucket_length: usize,
+    segment_id: i64,
+) -> Option<[i32; 3]> {
+    let index = bucket
+        .chunks_exact(T::SIZE)
+        .position(|element| T::read(element) == segment_id)?;
+    Some([
+        (index % bucket_length) as i32,
+        ((index / bucket_length) % bucket_length) as i32,
+        (index / (bucket_length * bucket_length)) as i32,
+    ])
+}
+
+/// The position `[x, y, z]`, relative to the bucket, of the first element that equals `segment_id` in the
+/// bucket's x-fastest order, or `None` if no element does. The bucket is a cube of `bucket_length`^3 elements.
+pub fn find_segment_id_position(
+    bucket: &[u8],
+    bytes_per_element: i32,
+    is_signed: bool,
+    bucket_length: i32,
+    segment_id: i64,
+) -> NativeResult<Option<[i32; 3]>> {
+    let count = element_count(bucket.len(), bytes_per_element)?;
+    if (bucket_length as i128).pow(3) != count as i128 {
+        return invalid_argument("elementCount must match exactly one bucket.");
+    }
+    if count == 0 {
+        return Ok(None); // an unsupported element size is only an error once an element is read
+    }
+    with_element_type!(
+        bytes_per_element,
+        is_signed,
+        find_segment_id_position_typed(bucket, bucket_length as usize, segment_id)
+    )
+}
+
 fn apply_segment_id_mapping_typed<T: Element>(
     bucket: &[u8],
     mapping: &FxHashMap<i64, i64>,
@@ -443,6 +481,32 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_helpers_Nativ
             ],
         )?;
         jni_util::new_int_array(env, &bbox)
+    })
+}
+
+/// Returns the position as `int[3]`, or an empty `int[]` if the bucket does not contain the segment.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_findSegmentIdPosition<
+    'local,
+>(
+    env: EnvUnowned<'local>,
+    _this: JObject<'local>,
+    bucket_bytes: JByteArray<'local>,
+    bytes_per_element: jint,
+    is_signed: jboolean,
+    bucket_length: jint,
+    segment_id: jlong,
+) -> JIntArray<'local> {
+    jni_util::run(env, "BucketScanner findSegmentIdPosition", |env| {
+        let bucket = jni_util::read_bytes(env, &bucket_bytes)?;
+        let position = find_segment_id_position(
+            &bucket,
+            bytes_per_element,
+            is_signed,
+            bucket_length,
+            segment_id,
+        )?;
+        jni_util::new_int_array(env, position.as_ref().map_or(&[], |position| position))
     })
 }
 

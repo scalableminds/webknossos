@@ -7,8 +7,9 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.JsonAutoFormat
-import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
+import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
+import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, XAuthTokenCredential}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsObject, JsSuccess, Json, Reads}
 
@@ -108,7 +109,23 @@ object PcgSubgraph {
   )
 }
 
-class PcgClient @Inject() (rpc: RPC) extends LazyLogging {
+class PcgClient @Inject() (rpc: RPC, remoteWebknossosClient: DSRemoteWebknossosClient) extends LazyLogging {
+
+  /** A request to the attachment's PCG. A CAVE instance answers only requests that carry a CAVE token, which the
+    * attachment references as a token credential and which is sent as a bearer token.
+    */
+  private def request(agglomerateFileKey: AgglomerateFileKey, url: String)(using
+      ec: ExecutionContext
+  ): Fox[RPCRequest] =
+    agglomerateFileKey.attachment.credentialId match {
+      case None               => Fox.successful(rpc(url))
+      case Some(credentialId) =>
+        remoteWebknossosClient.getCredential(credentialId).flatMap {
+          case token: XAuthTokenCredential =>
+            Fox.successful(rpc(url).addHttpHeader("Authorization", s"Bearer ${token.tokenValue}"))
+          case _ => Fox.failure(Msg.AgglomerateFile.Pcg.credentialNotAToken)
+        }
+    }
 
   private def baseUrl(agglomerateFileKey: AgglomerateFileKey): String =
     agglomerateFileKey.attachment.path.toString.stripSuffix("/")
@@ -117,8 +134,8 @@ class PcgClient @Inject() (rpc: RPC) extends LazyLogging {
   private def infoUrl(agglomerateFileKey: AgglomerateFileKey): String =
     s"${baseUrl(agglomerateFileKey).replace("/api/v1/table/", "/table/")}/info"
 
-  def getGraphInfo(agglomerateFileKey: AgglomerateFileKey): Fox[PcgGraphInfo] =
-    rpc(infoUrl(agglomerateFileKey)).silent.getWithJsonResponse[PcgGraphInfo]
+  def getGraphInfo(agglomerateFileKey: AgglomerateFileKey)(using ec: ExecutionContext): Fox[PcgGraphInfo] =
+    request(agglomerateFileKey, infoUrl(agglomerateFileKey)).flatMap(_.silent.getWithJsonResponse[PcgGraphInfo])
 
   def postRootsBinary(agglomerateFileKey: AgglomerateFileKey, supervoxelIds: Array[Long])(using
       ec: ExecutionContext
@@ -126,7 +143,8 @@ class PcgClient @Inject() (rpc: RPC) extends LazyLogging {
     val body = ByteBuffer.allocate(supervoxelIds.length * 8).order(ByteOrder.LITTLE_ENDIAN)
     supervoxelIds.foreach(body.putLong)
     for {
-      responseBytes <- rpc(s"${baseUrl(agglomerateFileKey)}/roots_binary").silent
+      rootsRequest <- request(agglomerateFileKey, s"${baseUrl(agglomerateFileKey)}/roots_binary")
+      responseBytes <- rootsRequest.silent
         .addHttpHeader("Content-Type", "application/octet-stream")
         .postBytesWithBytesResponse(body.array)
       roots <- tryo(PcgClient.decodeUint64Array(responseBytes)).toFox
@@ -142,9 +160,8 @@ class PcgClient @Inject() (rpc: RPC) extends LazyLogging {
   ): Fox[PcgChunkMapping] = {
     val chunk = java.lang.Long.toUnsignedString(chunkId)
     for {
-      responseBytes <- rpc(
-        s"${baseUrl(agglomerateFileKey)}/chunk_root_mapping_binary/$chunk"
-      ).silentEvenOnFailure.getWithBytesResponse
+      chunkRequest <- request(agglomerateFileKey, s"${baseUrl(agglomerateFileKey)}/chunk_root_mapping_binary/$chunk")
+      responseBytes <- chunkRequest.silentEvenOnFailure.getWithBytesResponse
       pairs <- tryo(PcgClient.decodeUint64Array(responseBytes)).toFox
       _ <- Fox.fromBool(pairs.length % 2 == 0) ?~>
         Msg.AgglomerateFile.Pcg.chunkMappingNotPaired(pairs.length, chunk)
@@ -152,17 +169,20 @@ class PcgClient @Inject() (rpc: RPC) extends LazyLogging {
     } yield mapping
   }
 
-  def getLeaves(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Fox[Seq[Long]] =
-    rpc(s"${baseUrl(agglomerateFileKey)}/node/$agglomerateId/leaves").silent
-      .getWithJsonResponse[PcgLeaves]
-      .map(_.leaf_ids)
+  def getLeaves(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(using
+      ec: ExecutionContext
+  ): Fox[Seq[Long]] =
+    for {
+      leavesRequest <- request(agglomerateFileKey, s"${baseUrl(agglomerateFileKey)}/node/$agglomerateId/leaves")
+      leaves <- leavesRequest.silent.getWithJsonResponse[PcgLeaves]
+    } yield leaves.leaf_ids
 
   def getSubgraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(using
       ec: ExecutionContext
   ): Fox[PcgSubgraph] =
     for {
-      response <- rpc(s"${baseUrl(agglomerateFileKey)}/node/$agglomerateId/subgraph").silent
-        .getWithJsonResponse[PcgSubgraph]
+      subgraphRequest <- request(agglomerateFileKey, s"${baseUrl(agglomerateFileKey)}/node/$agglomerateId/subgraph")
+      response <- subgraphRequest.silent.getWithJsonResponse[PcgSubgraph]
       _ <- Fox.fromBool(response.edges.length == response.affinities.length) ?~>
         Msg.AgglomerateFile.Pcg.subgraphAffinityCountMismatch(response.edges.length, response.affinities.length)
       folded <- tryo(foldEdgeDirections(response)).toFox
@@ -192,7 +212,8 @@ class PcgClient @Inject() (rpc: RPC) extends LazyLogging {
     if (segmentIds.isEmpty) Fox.successful(Map.empty)
     else
       for {
-        responseBox <- rpc(s"${baseUrl(agglomerateFileKey)}/node_positions").silentEvenOnFailure
+        positionsRequest <- request(agglomerateFileKey, s"${baseUrl(agglomerateFileKey)}/node_positions")
+        responseBox <- positionsRequest.silentEvenOnFailure
           .postJsonWithJsonResponse[JsObject, Map[String, Seq[Int]]](Json.obj("node_ids" -> segmentIds))
           .shiftBox
         positions <- responseBox match {

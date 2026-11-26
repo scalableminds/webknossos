@@ -884,6 +884,8 @@ object Msg {
     object Pcg {
       def rootCountMismatch(returned: Int, requested: Int): String =
         s"PCG returned $returned roots for $requested supervoxels"
+      val credentialNotAToken =
+        "The credential of a PCG attachment must be a token (a CAVE token), not a username/password or cloud key"
       def chunkMappingNotPaired(valueCount: Int, chunk: String): String =
         s"PCG returned $valueCount values for chunk $chunk, which is not a list of pairs"
       def subgraphAffinityCountMismatch(edgeCount: Int, affinityCount: Int): String =

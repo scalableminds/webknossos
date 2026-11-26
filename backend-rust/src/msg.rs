@@ -317,6 +317,9 @@ pub mod dataset {
     pub fn not_usable(id: impl Display) -> String {
         format!("Dataset “{id}” is not imported or incomplete.")
     }
+    pub fn invalid_sort_by(value: impl Display) -> String {
+        format!("Invalid sortBy value: “{value}”.")
+    }
     pub const NO_LAYERS: &str = "Dataset has no data layers.";
     pub const NO_MAGS: &str = "Data layer does not contain any mags.";
     pub const NO_LAYERS_RENDERABLE_AT_ZOOM: &str =

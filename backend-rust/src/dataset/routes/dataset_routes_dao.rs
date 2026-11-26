@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::Value;
 use sqlx::{FromRow, PgConnection, PgPool};
 
-use super::{CompactDataset, DELETED_BY_USER, ListQuery, UNREPORTED};
+use super::{CompactDataset, DELETED_BY_USER, DatasetSortBy, ListQuery, UNREPORTED};
 use crate::{
     auth::AuthUser,
     dataset::dataset_dao::{push_edit_predicate, push_read_predicate},
@@ -399,16 +399,36 @@ pub(crate) async fn find_attachments_json(
 
 /// DatasetDAO.findAllCompactWithSearch: the readable datasets matching the list filters.
 /// `organization`, the search `tokens` and the single `searched_id` are derived from `query` by the caller.
+/// The filters and the order of [`find_all_compact`] derived from its [`ListQuery`].
+pub(crate) struct CompactFilter<'a> {
+    pub organization: Option<&'a str>,
+    /// Lowercased search tokens; each must occur in the name or directory name.
+    pub tokens: &'a [String],
+    /// The single search token, if it is an id: then only that dataset matches.
+    pub searched_id: Option<&'a String>,
+    /// Non-empty tags; the dataset must have all of them.
+    pub tags: &'a [String],
+    pub sort_by: Option<DatasetSortBy>,
+    /// The normalized search query for [`DatasetSortBy::SearchRelevance`].
+    pub relevance_query: Option<&'a str>,
+}
+
 pub(crate) async fn find_all_compact(
     pool: &PgPool,
     user: Option<&AuthUser>,
     query: &ListQuery,
-    organization: Option<&str>,
-    tokens: &[String],
-    searched_id: Option<&String>,
+    filter: CompactFilter<'_>,
 ) -> sqlx::Result<Vec<CompactDataset>> {
-    // Set-based like DatasetDAO.findAllCompactWithSearch: the selection (with its limit) is
-    // filtered first, then layer names and storage are joined, and the JSON is built here
+    let CompactFilter {
+        organization,
+        tokens,
+        searched_id,
+        tags,
+        sort_by,
+        relevance_query,
+    } = filter;
+    // Set-based like DatasetDAO.findAllCompactWithSearch: the selection is filtered first,
+    // then layer names and storage are joined, and the JSON is built here
     // instead of with jsonb_build_object (together ~3x faster for thousands of datasets).
     // Grouped joins aggregate whole tables once, which only pays off for large selections;
     // small limits (search-as-you-type) use per-dataset lateral lookups instead.
@@ -543,12 +563,58 @@ pub(crate) async fn find_all_compact(
             "::text[]) t WHERE position(t IN lower(d.name)) = 0 \
              AND position(t IN lower(d.directoryName)) = 0) END)",
         );
-    q.push(" LIMIT ").push_bind(query.limit).push(
+    if !tags.is_empty() {
+        q.push(" AND d.tags @> ").push_bind(tags).push("::text[]");
+    }
+    // Without an order, any `limit` datasets will do, so the limit applies before the joins.
+    // With one, it applies after the order (Scala sorts before applying the limit).
+    if sort_by.is_none() {
+        q.push(" LIMIT ").push_bind(query.limit);
+    }
+    q.push(
         ") d
       LEFT JOIN webknossos.dataset_lastUsedTimes lu ON lu._dataset = d._id AND lu._user = ",
     );
     q.push_bind(user_id).push("\n      ").push(joins);
+    if let Some(sort_by) = sort_by {
+        q.push("\n      ORDER BY ");
+        push_order_by(&mut q, sort_by, relevance_query);
+        q.push(", d._id LIMIT ").push_bind(query.limit);
+    }
     q.build_query_as::<CompactDataset>().fetch_all(pool).await
+}
+
+/// DatasetDAO.buildOrderBy, without the trailing `d._id` tie-breaker. `used_storage_bytes`
+/// (0 for datasets of other organizations) and `annotation_count` are output columns of
+/// [`find_all_compact`].
+fn push_order_by(q: &mut Sql, sort_by: DatasetSortBy, relevance_query: Option<&str>) {
+    const LAST_USED: &str = "COALESCE(lu.lastUsedTime, 'epoch'::timestamptz) DESC, d.created DESC";
+    match sort_by {
+        DatasetSortBy::CreatedDesc => q.push("d.created DESC"),
+        DatasetSortBy::CreatedAsc => q.push("d.created ASC"),
+        DatasetSortBy::Name => q.push("d.name COLLATE webknossos.natural_sort, d.name"),
+        DatasetSortBy::Storage => q.push("used_storage_bytes DESC, ").push(LAST_USED),
+        DatasetSortBy::AnnotationCount => {
+            q.push("annotation_count DESC NULLS LAST, ").push(LAST_USED)
+        }
+        DatasetSortBy::SearchRelevance => match relevance_query {
+            // Exact name match first, then prefix, then substring, then matches of only the
+            // individual query tokens.
+            Some(search) => q
+                .push("CASE WHEN lower(d.name) = ")
+                .push_bind(search.to_owned())
+                .push(" THEN 0 WHEN position(")
+                .push_bind(search.to_owned())
+                .push(" IN lower(d.name)) = 1 THEN 1 WHEN position(")
+                .push_bind(search.to_owned())
+                .push(" IN lower(d.name)) > 0 THEN 2 ELSE 3 END, position(")
+                .push_bind(search.to_owned())
+                .push(" IN lower(d.name)), length(d.name), ")
+                .push(LAST_USED),
+            None => q.push(LAST_USED),
+        },
+        DatasetSortBy::LastUsed => q.push(LAST_USED),
+    };
 }
 
 /// `(d.status IN (...))`: the dataset is no longer reported by its datastore.

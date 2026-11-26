@@ -1543,3 +1543,113 @@ async fn typed_dataset_responses_match_on_current_and_legacy_api_versions() {
     );
     db.cleanup().await;
 }
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL database with CREATEDB"]
+async fn dataset_list_filters_tags_and_sorts_before_the_limit() {
+    let db = TestDb::new().await;
+    let fixture = db.fixture().await;
+    let application = app(&db);
+    let mut ids = Vec::new();
+    for (index, name) in ["ds10", "ds2", "Sample_ds", "ds", "my_ds_1"]
+        .iter()
+        .enumerate()
+    {
+        let id = seed_dataset(&db, &fixture, name, false).await;
+        sqlx::query(
+            "UPDATE webknossos.datasets SET created = TIMESTAMPTZ '2026-01-01' + $2 * INTERVAL '1 day' \
+             WHERE _id = $1",
+        )
+        .bind(&id)
+        .bind(index as i32)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+        ids.push(id);
+    }
+    sqlx::query("UPDATE webknossos.datasets SET tags = $2 WHERE _id = $1")
+        .bind(&ids[0])
+        .bind(vec!["with space", "a&b=c?d#e", "100%"])
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let names = |value: &Value| -> Vec<String> {
+        value
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| d["name"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let list = |query: &'static str| {
+        let application = application.clone();
+        let token = fixture.token.clone();
+        async move {
+            let (status, body) = request(
+                &application,
+                "GET",
+                &format!("/datasets?{query}"),
+                Some(&token),
+                None,
+            )
+            .await;
+            assert_eq!(status, StatusCode::OK, "{query}: {body}");
+            body
+        }
+    };
+    // Every tag must be present; the parameter is repeated once per tag, empty ones are ignored.
+    let tagged = list("tags=with%20space&tags=a%26b%3Dc%3Fd%23e&tags=").await;
+    assert_eq!(names(&tagged), ["ds10"]);
+    assert_eq!(
+        names(&list("tags=with%20space&tags=with").await),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        names(&list("sortBy=createdAsc&limit=2").await),
+        ["ds10", "ds2"]
+    );
+    assert_eq!(
+        names(&list("sortBy=createdDesc&limit=1").await),
+        ["my_ds_1"]
+    );
+    assert_eq!(
+        names(&list("sortBy=name").await),
+        ["ds", "ds2", "ds10", "my_ds_1", "Sample_ds"]
+    );
+    // Exact match, then prefix (shorter first), then substring.
+    assert_eq!(
+        names(&list("searchQuery=%20DS%20&sortBy=searchRelevance").await),
+        ["ds", "ds2", "ds10", "my_ds_1", "Sample_ds"]
+    );
+    assert_eq!(
+        names(&list("searchQuery=ds&sortBy=searchRelevance&limit=2").await),
+        ["ds", "ds2"]
+    );
+    for sort_by in ["lastUsed", "storage", "annotationCount"] {
+        let query = format!("sortBy={sort_by}&includeAnnotationInfo=true");
+        let (status, body) = request(
+            &application,
+            "GET",
+            &format!("/datasets?{query}"),
+            Some(&fixture.token),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{query}: {body}");
+        assert_eq!(body.as_array().unwrap().len(), 5);
+    }
+    let (status, body) = request(
+        &application,
+        "GET",
+        "/datasets?sortBy=Name",
+        Some(&fixture.token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        body,
+        json!({"messages": [{"error": "Invalid sortBy value: “Name”."}]})
+    );
+    db.cleanup().await;
+}

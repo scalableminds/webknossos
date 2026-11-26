@@ -36,6 +36,8 @@ async fn list(
 ) -> ApiResult<Json<Vec<Value>>> {
     // This parameter is only part of the latest compact API contract.
     query.include_annotation_info = None;
+    // LegacyApiController.listDatasets passes no tags and no sortBy.
+    query.sort_by = None;
     let rows = crate::dataset::routes::list_rows(&state.pool, user.as_ref(), &query).await?;
     let mut values = Vec::with_capacity(rows.len());
     for row in rows {

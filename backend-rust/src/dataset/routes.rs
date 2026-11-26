@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{RawQuery, State},
     routing::{get, patch},
 };
 use serde::{Deserialize, Serialize};
@@ -749,16 +749,62 @@ pub(crate) struct ListQuery {
     folder_id: Option<ObjectId>,
     include_subfolders: Option<bool>,
     search_query: Option<String>,
+    /// Play `tags: List[String]`: the parameter is repeated once per tag, which the urlencoded
+    /// deserializer cannot collect, so [`list`] reads it from the raw query.
+    #[serde(skip)]
+    tags: Vec<String>,
+    pub(crate) sort_by: Option<String>,
     limit: Option<i64>,
     pub(crate) include_annotation_info: Option<bool>,
     pub(crate) compact: Option<bool>,
 }
 
+/// Scala `DatasetSortBy`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum DatasetSortBy {
+    LastUsed,
+    CreatedDesc,
+    CreatedAsc,
+    Name,
+    Storage,
+    AnnotationCount,
+    SearchRelevance,
+}
+
+impl DatasetSortBy {
+    /// `ExtendedEnumeration.fromString`: exact, case-sensitive names.
+    pub(crate) fn parse(value: &str) -> Option<Self> {
+        Some(match value {
+            "lastUsed" => Self::LastUsed,
+            "createdDesc" => Self::CreatedDesc,
+            "createdAsc" => Self::CreatedAsc,
+            "name" => Self::Name,
+            "storage" => Self::Storage,
+            "annotationCount" => Self::AnnotationCount,
+            "searchRelevance" => Self::SearchRelevance,
+            _ => return None,
+        })
+    }
+}
+
+/// The values of a repeated query parameter, like Play's `List[String]` binder.
+fn repeated_query_values(raw: Option<&str>, name: &str) -> Vec<String> {
+    raw.map(|raw| {
+        url::form_urlencoded::parse(raw.as_bytes())
+            .filter(|(key, _)| key == name)
+            .map(|(_, value)| value.into_owned())
+            .collect()
+    })
+    .unwrap_or_default()
+}
+
 async fn list(
     State(state): State<AppState>,
     OptionalAuthUser(user): OptionalAuthUser,
-    Query(query): Query<ListQuery>,
+    Query(mut query): Query<ListQuery>,
+    RawQuery(raw_query): RawQuery,
 ) -> ApiResult<Json<Vec<CompactDataset>>> {
+    query.tags = repeated_query_values(raw_query.as_deref(), "tags");
     let rows = list_rows(&state.pool, user.as_ref(), &query).await?;
     if let Some(user) = user {
         crate::dataset::dataset_dao::touch_user_last_activity(&state.pool, user.id).await?;
@@ -771,6 +817,14 @@ pub(crate) async fn list_rows(
     user: Option<&AuthUser>,
     query: &ListQuery,
 ) -> ApiResult<Vec<CompactDataset>> {
+    let sort_by = query
+        .sort_by
+        .as_deref()
+        .map(|s| {
+            DatasetSortBy::parse(s)
+                .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::invalid_sort_by(s)))
+        })
+        .transpose()?;
     if query.limit.is_some_and(|n| n < 0) {
         return Err(ApiError::bad_request(crate::msg::request::INVALID_LIMIT));
     }
@@ -794,10 +848,39 @@ pub(crate) async fn list_rows(
     let searched_id = tokens
         .first()
         .filter(|s| tokens.len() == 1 && ObjectId::parse(s).is_ok());
-    Ok(
-        dataset_routes_dao::find_all_compact(pool, user, query, organization, &tokens, searched_id)
-            .await?,
+    let tags: Vec<String> = query
+        .tags
+        .iter()
+        .filter(|t| !t.is_empty())
+        .cloned()
+        .collect();
+    // DatasetDAO.buildOrderBy: the search query lowercased, trimmed, runs of spaces collapsed.
+    let relevance_query = query
+        .search_query
+        .as_deref()
+        .map(|s| {
+            s.to_lowercase()
+                .trim()
+                .split(' ')
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .filter(|s| !s.is_empty());
+    Ok(dataset_routes_dao::find_all_compact(
+        pool,
+        user,
+        query,
+        dataset_routes_dao::CompactFilter {
+            organization,
+            tokens: &tokens,
+            searched_id,
+            tags: &tags,
+            sort_by,
+            relevance_query: relevance_query.as_deref(),
+        },
     )
+    .await?)
 }
 
 /// DatasetCompactInfo as serialized by DatasetController.list (compact).

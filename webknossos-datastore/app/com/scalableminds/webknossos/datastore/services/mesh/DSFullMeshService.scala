@@ -305,7 +305,7 @@ class DSFullMeshService @Inject() (
       chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(
         meshFileKey,
         segmentIds,
-        fullMeshRequest.mappingName
+        segmentIdsFromAgglomerate = fullMeshRequest.mappingName.isDefined
       )
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.lods(selectedLod).chunks

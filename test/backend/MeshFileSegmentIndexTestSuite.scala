@@ -92,10 +92,8 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
     }
   }
 
-  /* The run of a mapping level around index in segment mesh metadata with the given levels, in chunks of 4 segments,
-   * and the chunk spans read for it, starting with initialRunChunks like readRunChunks.
-   */
-  private def findRun(levels: Array[Long], index: Long, level: Int): ((Long, Long), List[(Long, Long)]) = {
+  // Segment mesh metadata with the given levels in chunks of 4 segments, of width 5 whose last column is the level.
+  private def meshMetadata(levels: Array[Long]): (ZarrMeshFileService.MeshMetadataLayout, Map[Long, Array[Long]]) = {
     val chunks = levels
       .grouped(4)
       .zipWithIndex
@@ -104,22 +102,20 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
       }
       .toMap
     val maxSegmentLevelPerChunk = levels.grouped(4).map(_.max.toByte).toArray
+    (ZarrMeshFileService.MeshMetadataLayout(maxSegmentLevelPerChunk, 4, 5, levels.length), chunks)
+  }
+
+  /* The run of a mapping level around index and the chunk spans read for it, starting with the chunk of index and its
+   * neighbors like readAgglomerateRuns.
+   */
+  private def findRun(levels: Array[Long], index: Long, level: Int): ((Long, Long), List[(Long, Long)]) = {
+    val (layout, chunks) = meshMetadata(levels)
     def readSpans(span: (Long, Long), spansRead: List[(Long, Long)]): ((Long, Long), List[(Long, Long)]) =
-      ZarrMeshFileService.runAround(
-        chunks,
-        maxSegmentLevelPerChunk,
-        4,
-        5,
-        levels.length,
-        span._1,
-        span._2,
-        index,
-        level
-      ) match {
+      ZarrMeshFileService.runAround(layout, chunks, span._1, span._2, index, level) match {
         case Right(run)     => (run, (span :: spansRead).reverse)
         case Left(nextSpan) => readSpans(nextSpan, span :: spansRead)
       }
-    readSpans(ZarrMeshFileService.initialRunChunks(maxSegmentLevelPerChunk, index / 4, level), Nil)
+    readSpans(layout.chunksAround(index), Nil)
   }
 
   "ZarrMeshFileService.runAround" should {
@@ -136,23 +132,44 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
     // Runs start at indices 0, 13 and 15, so chunk 3 holds a run of two segments between runs over several chunks.
     val levelsWithLongNeighbors = Array.tabulate(28)(i => if (i == 0) 255L else if (i == 13 || i == 15) 1L else 0L)
 
-    "read only the seed's chunk for a short run between long ones" in
-      assert(findRun(levelsWithLongNeighbors, 14, 0) == ((13L, 15L), List((3L, 3L))))
+    "find a short run between long ones in the chunks around its seed" in
+      assert(findRun(levelsWithLongNeighbors, 14, 0) == ((13L, 15L), List((2L, 4L))))
 
     "read further chunks only once the run continues into them" in {
-      assert(findRun(levelsWithLongNeighbors, 12, 0) == ((0L, 13L), List((3L, 3L), (0L, 3L))))
-      assert(findRun(levelsWithLongNeighbors, 15, 0) == ((15L, 28L), List((3L, 3L), (3L, 6L))))
-      assert(findRun(levelsWithLongNeighbors, 6, 0) == ((0L, 13L), List((0L, 3L))))
+      assert(findRun(levelsWithLongNeighbors, 12, 0) == ((0L, 13L), List((2L, 4L), (0L, 4L))))
+      assert(findRun(levelsWithLongNeighbors, 15, 0) == ((15L, 28L), List((2L, 4L), (2L, 6L))))
+      assert(findRun(levelsWithLongNeighbors, 6, 0) == ((0L, 13L), List((0L, 2L), (0L, 3L))))
     }
   }
 
-  "ZarrMeshFileService.percentileOfMappingName" should {
-    "parse percentile mapping names" in {
-      assert(ZarrMeshFileService.percentileOfMappingName("agglomerate_view_90").contains(90))
-      assert(ZarrMeshFileService.percentileOfMappingName("agglomerate_view_65_zarr").contains(65))
-      assert(ZarrMeshFileService.percentileOfMappingName("dataset-agglomerate_view_5").contains(5))
-      assert(ZarrMeshFileService.percentileOfMappingName("agglomerate_view_custom").isEmpty)
-      assert(ZarrMeshFileService.percentileOfMappingName("mapping_90").isEmpty)
+  "ZarrMeshFileService.chooseRunLevel" should {
+    // Agglomerates [0, 20) and [20, 32) at level 2, which level 1 splits at 6, 14 and 27 and level 0 further at 3, 9,
+    // 11, 17, 24 and 30.
+    val levels = Array.fill(32)(0L)
+    Seq(0, 20).foreach(levels(_) = 255L)
+    Seq(6, 14, 27).foreach(levels(_) = 2L)
+    Seq(3, 9, 11, 17, 24, 30).foreach(levels(_) = 1L)
+    val (layout, chunks) = meshMetadata(levels)
+    def choose(seedIndex: Long, maxChunks: Long) = {
+      val (firstChunk, lastChunk) = layout.chunksAround(seedIndex)
+      ZarrMeshFileService.chooseRunLevel(layout, chunks, firstChunk, lastChunk, seedIndex, nLevels = 3, maxChunks)
+    }
+
+    "choose the coarsest level whose run fits" in {
+      assert(choose(9, maxChunks = 3).contains((1, Right((6L, 14L)))))
+      assert(choose(9, maxChunks = 6).contains((2, Left((0L, 5L)))))
+    }
+
+    "find parts of a coarser agglomerate in finer runs" in {
+      assert(choose(4, maxChunks = 3).contains((1, Right((0L, 6L)))))
+      assert(choose(7, maxChunks = 3).contains((0, Right((6L, 9L)))))
+    }
+
+    "find no run if the finest one is too long" in {
+      val (oneRunLayout, oneRunChunks) = meshMetadata(Array.tabulate(32)(i => if (i == 0) 255L else 0L))
+      assert(
+        ZarrMeshFileService.chooseRunLevel(oneRunLayout, oneRunChunks, 3, 5, 17, nLevels = 1, maxChunks = 3).isEmpty
+      )
     }
   }
 

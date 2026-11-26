@@ -70,7 +70,11 @@ class DSMeshController @Inject() (
             mappingNameForMeshFile,
             omitMissing = false
           )
-          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds, targetMappingName)
+          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(
+            meshFileKey,
+            segmentIds,
+            segmentIdsFromAgglomerate = targetMappingName.isDefined
+          )
           // Clients only use segmentIdsWithoutMesh to cache the chunk lists of unmapped segments while proofreading.
           isProofreadingWithUnmappedMeshFile = editableMappingTracingId.isDefined && mappingNameForMeshFile.isEmpty
         } yield Ok(
@@ -84,7 +88,8 @@ class DSMeshController @Inject() (
   /** Lists the mesh chunks of several unmapped segment ids at once. Unlike listMeshChunksForSegment, segments without a
     * mesh don't make the request fail. They are listed in segmentIdsWithoutMesh instead. Segments whose lookup failed,
     * e.g. because of a read error, are neither listed with chunks nor in segmentIdsWithoutMesh. In mesh files with a
-    * B-tree, an error reading the B-tree fails the request.
+    * B-tree, an error reading the B-tree fails the request. Clients request segments of one agglomerate, e.g. those of
+    * an agglomerate of an editable mapping whose chunk lists they haven't cached yet.
     */
   def listMeshChunksForSegments(
       datasetId: ObjectId,
@@ -100,7 +105,7 @@ class DSMeshController @Inject() (
           chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(
             meshFileKey,
             segmentIds,
-            mergeTreeOrderMappingName = None,
+            segmentIdsFromAgglomerate = true,
             failOnZeroChunks = false
           )
         } yield Ok(Json.toJson(chunkInfos))

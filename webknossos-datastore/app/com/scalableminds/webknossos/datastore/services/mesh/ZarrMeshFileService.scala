@@ -220,13 +220,13 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       lod: Int
   ): Array[Array[Double]] = transform
 
-  /** Lists the mesh chunks of the segments. If they were looked up from an agglomerate of mergeTreeOrderMappingName (or
-    * of an editable mapping based on it), mesh files with segment mesh metadata in merge-tree order find them as runs.
+  /** Lists the mesh chunks of the segments. If they belong to one agglomerate, e.g. of a mapping or an editable
+    * mapping, mesh files with segment mesh metadata in merge-tree order find them as runs.
     */
   def listMeshChunksForMultipleSegments(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
-      mergeTreeOrderMappingName: Option[String],
+      segmentIdsFromAgglomerate: Boolean,
       failOnZeroChunks: Boolean
   )(using
       ec: ExecutionContext,
@@ -238,7 +238,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
         meshFileKey,
         segmentIds,
         meshFileAttributes,
-        mergeTreeOrderMappingName
+        segmentIdsFromAgglomerate
       ) ?~> Msg.Mesh.File.listChunksFailed(segmentIds.mkString(","), meshFileKey.attachment.name)
       _ <- Fox.fromBool(lookups.exists(_.hasEntry) || !failOnZeroChunks) ?~> Msg.Mesh.File
         .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
@@ -249,11 +249,11 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
       meshFileAttributes: MeshFileAttributes,
-      mergeTreeOrderMappingName: Option[String]
+      segmentIdsFromAgglomerate: Boolean
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[SegmentMeshLookup]] =
     // From format version 10, segments are looked up in a static B-tree instead of a hash table.
     if (meshFileAttributes.formatVersion >= 10)
-      lookUpSegmentsInBTree(meshFileKey, segmentIds, meshFileAttributes, mergeTreeOrderMappingName)
+      lookUpSegmentsInBTree(meshFileKey, segmentIds, meshFileAttributes, segmentIdsFromAgglomerate)
     else lookUpSegmentsSkippingFailed(meshFileKey, segmentIds, meshFileAttributes)
 
   // Leaves out the segments whose lookup failed, e.g. because of a read error.
@@ -292,22 +292,15 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
       meshFileAttributes: MeshFileAttributes,
-      mergeTreeOrderMappingName: Option[String]
+      segmentIdsFromAgglomerate: Boolean
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[SegmentMeshLookup]] = {
-    val level = for {
-      mappingName <- mergeTreeOrderMappingName
-      percentile <- ZarrMeshFileService.percentileOfMappingName(mappingName)
-      mappings <- meshFileAttributes.mergeTreeOrderMappings
-      level = mappings.indexOf(percentile)
-      if level >= 0
-    } yield level
+    val nLevels = meshFileAttributes.mergeTreeOrderMappings.map(_.length).getOrElse(0)
     for {
       _ <- prepareBTreeArrays(meshFileKey, meshFileAttributes)
-      allMeshMetadata <- level match {
-        case Some(l) if segmentIds.distinct.length > 1 =>
-          lookUpSegmentMeshMetadataByAgglomerateRuns(meshFileKey, meshFileAttributes, segmentIds, l)
-        case _ => lookUpSegmentMeshMetadataBySegmentIds(meshFileKey, meshFileAttributes, segmentIds)
-      }
+      allMeshMetadata <-
+        if (segmentIdsFromAgglomerate && nLevels > 0 && segmentIds.distinct.length > 1)
+          lookUpSegmentMeshMetadataByAgglomerateRuns(meshFileKey, meshFileAttributes, segmentIds, nLevels)
+        else lookUpSegmentMeshMetadataBySegmentIds(meshFileKey, meshFileAttributes, segmentIds)
       // Segments without a mesh have empty segment mesh metadata.
       segmentMeshMetadata = allMeshMetadata.filter(_.manifestLength > 0)
       manifestsArray <- openZarrArray(meshFileKey, keyManifests)
@@ -362,15 +355,14 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
 
   /* The segments of an agglomerate of a merge-tree order mapping form one run. Runs are found from a few seed segments
    * and only the segment mesh metadata of the requested segments is kept, so that agglomerates of editable mappings,
-   * which are unions of parts of such agglomerates, are found as well. Runs that are much longer than the request, e.g.
-   * of a large agglomerate that a few requested segments were split off from, are not read. Segments that no read run
+   * which are unions of parts of such agglomerates, and of other mappings are found as well. Segments that no read run
    * covers are looked up individually.
    */
   private def lookUpSegmentMeshMetadataByAgglomerateRuns(
       meshFileKey: MeshFileKey,
       meshFileAttributes: MeshFileAttributes,
       segmentIds: Seq[Long],
-      level: Int
+      nLevels: Int
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[SegmentMeshMetadata]] = {
     val requested = segmentIds.toSet
     def lookUpRounds(
@@ -386,7 +378,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
             runMeshMetadata <- readAgglomerateRuns(
               meshFileKey,
               seedIndices.values.toSeq.distinct,
-              level,
+              nLevels,
               requested.size
             )
             newMeshMetadata = runMeshMetadata.filter(meshMetadata => remaining.contains(meshMetadata.segmentId))
@@ -463,86 +455,90 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       .toMap
   }
 
-  // Reads the runs of the merge-tree order mapping at level that contain the seed indices, except for runs that are too
-  // long for the number of requested segments.
+  /* Reads a run around each seed index, of the coarsest of the nLevels merge-tree order mappings whose run fits the
+   * number of requested segments. The chunk of the seed and its neighbors are read first. They show where the seed's
+   * runs of all levels end, unless a run continues past them over whole chunks.
+   */
   private def readAgglomerateRuns(
       meshFileKey: MeshFileKey,
       seedIndices: Seq[Long],
-      level: Int,
+      nLevels: Int,
       requestedCount: Int
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[SegmentMeshMetadata]] =
     for {
       meshMetadataArray <- openZarrArray(meshFileKey, keySegmentMeshMetadata)
       nSegments <- arrayLength(meshMetadataArray)
       maxLevels <- maxSegmentLevelPerChunkCache.getOrLoad(meshFileKey, readMaxSegmentLevelPerChunk)
-      segmentsPerChunk = meshMetadataArray.chunkShape(0).toLong
-      meshMetadataWidth = meshMetadataArray.chunkShape(1)
+      layout = ZarrMeshFileService.MeshMetadataLayout(
+        maxLevels,
+        meshMetadataArray.chunkShape(0).toLong,
+        meshMetadataArray.chunkShape(1),
+        nSegments
+      )
+      maxChunks = ZarrMeshFileService.maxRunChunks(requestedCount, layout.segmentsPerChunk)
+      seedChunks = seedIndices.map(index => index -> layout.chunksAround(index))
+      chunksAroundSeeds <- readChunks[Long](
+        meshMetadataArray,
+        seedChunks.flatMap { case (_, (first, last)) => first to last }.distinct.sorted,
+        rank = 2
+      )
+      seedRuns = seedChunks.flatMap { case (seedIndex, (firstChunk, lastChunk)) =>
+        ZarrMeshFileService
+          .chooseRunLevel(layout, chunksAroundSeeds, firstChunk, lastChunk, seedIndex, nLevels, maxChunks)
+          .map { case (level, runOrSpan) => (seedIndex, level, runOrSpan) }
+      }
       (chunks, runs) <- readRunChunks(
         meshMetadataArray,
-        maxLevels,
-        nSegments,
-        level,
-        requestedCount,
-        seedIndices.map(index =>
-          index -> ZarrMeshFileService.initialRunChunks(maxLevels, index / segmentsPerChunk, level)
+        layout,
+        maxChunks,
+        seedRuns.collect { case (seedIndex, level, Left(span)) => (seedIndex, level, span) },
+        chunksAroundSeeds,
+        seedRuns.collect { case (_, _, Right(run)) => run }
+      )
+    } yield {
+      // Runs of different levels may overlap.
+      val indices = runs.flatMap { case (start, end) => start until end }.distinct
+      indices.map { index =>
+        ZarrMeshFileService.segmentMeshMetadataAt(
+          chunks(index / layout.segmentsPerChunk),
+          layout.width,
+          index % layout.segmentsPerChunk
         )
-      )
-    } yield runs.distinct.flatMap { case (start, end) =>
-      (start until end).map(index =>
-        ZarrMeshFileService
-          .segmentMeshMetadataAt(chunks(index / segmentsPerChunk), meshMetadataWidth, index % segmentsPerChunk)
-      )
+      }
     }
 
-  /* Reads the chunks [first, last] of the segment mesh metadata for each seed and finds its run in them. A run that
-   * continues past these chunks is read further in another round. Runs that are too long for the number of requested
-   * segments are not read. Returns all chunks read and the runs [start, end).
+  /* Reads the chunks [first, last] of the segment mesh metadata for each seed and finds its run of the given level in
+   * them. A run that continues past these chunks is read further in another round, unless it spans more than maxChunks
+   * chunks. Returns all chunks read and the runs [start, end).
    */
   private def readRunChunks(
       meshMetadataArray: DatasetArray,
-      maxSegmentLevelPerChunk: Array[Byte],
-      nSegments: Long,
-      level: Int,
-      requestedCount: Int,
-      seedSpans: Seq[(Long, (Long, Long))],
-      chunks: Map[Long, Array[Long]] = Map.empty,
-      runs: Seq[(Long, Long)] = Seq.empty
+      layout: ZarrMeshFileService.MeshMetadataLayout,
+      maxChunks: Long,
+      seedSpans: Seq[(Long, Int, (Long, Long))],
+      chunks: Map[Long, Array[Long]],
+      runs: Seq[(Long, Long)]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[(Map[Long, Array[Long]], Seq[(Long, Long)])] = {
-    val segmentsPerChunk = meshMetadataArray.chunkShape(0).toLong
-    val readable = seedSpans.filter { case (_, (first, last)) =>
-      ZarrMeshFileService.runFitsRequest(last - first + 1, segmentsPerChunk, requestedCount)
-    }
+    val readable = seedSpans.filter { case (_, _, (first, last)) => last - first + 1 <= maxChunks }
     if (readable.isEmpty) Fox.successful((chunks, runs))
     else
       for {
         newChunks <- readChunks[Long](
           meshMetadataArray,
-          readable.flatMap { case (_, (first, last)) => first to last }.distinct.filterNot(chunks.contains).sorted,
+          readable.flatMap { case (_, _, (first, last)) => first to last }.distinct.filterNot(chunks.contains).sorted,
           rank = 2
         )
         allChunks = chunks ++ newChunks
-        runsOrSpans = readable.map { case (seedIndex, (firstChunk, lastChunk)) =>
-          seedIndex -> ZarrMeshFileService.runAround(
-            allChunks,
-            maxSegmentLevelPerChunk,
-            segmentsPerChunk,
-            meshMetadataArray.chunkShape(1),
-            nSegments,
-            firstChunk,
-            lastChunk,
-            seedIndex,
-            level
-          )
+        runsOrSpans = readable.map { case (seedIndex, level, (firstChunk, lastChunk)) =>
+          (seedIndex, level, ZarrMeshFileService.runAround(layout, allChunks, firstChunk, lastChunk, seedIndex, level))
         }
         result <- readRunChunks(
           meshMetadataArray,
-          maxSegmentLevelPerChunk,
-          nSegments,
-          level,
-          requestedCount,
-          runsOrSpans.collect { case (seedIndex, Left(span)) => seedIndex -> span },
+          layout,
+          maxChunks,
+          runsOrSpans.collect { case (seedIndex, level, Left(span)) => (seedIndex, level, span) },
           allChunks,
-          runs ++ runsOrSpans.collect { case (_, Right(run)) => run }
+          runs ++ runsOrSpans.collect { case (_, _, Right(run)) => run }
         )
       } yield result
   }
@@ -680,18 +676,11 @@ object ZarrMeshFileService {
   // round finds the parts of agglomerates of editable mappings.
   val seedCountsPerRound: List[Int] = List(1, 8)
 
-  // A run is read if it spans at most this many segments per requested segment, or at most minRunChunks chunks.
-  private val maxRunSegmentsPerRequestedSegment = 4L
-  private val minRunChunks = 4L
-
-  private def runFitsRequest(spanChunks: Long, segmentsPerChunk: Long, requestedCount: Int): Boolean =
-    spanChunks <= minRunChunks || spanChunks * segmentsPerChunk <= maxRunSegmentsPerRequestedSegment * requestedCount
-
-  private val percentileMappingName = "agglomerate_view_(\\d+)".r
-
-  // The percentile of mappings named like agglomerate_view_90.
-  def percentileOfMappingName(mappingName: String): Option[Int] =
-    percentileMappingName.findFirstMatchIn(mappingName).flatMap(m => m.group(1).toIntOption)
+  /* The most chunks of segment mesh metadata a run may span to be read: as many as a run of the requested segments can
+   * span, or the chunk of the seed and its neighbors, which are read anyway.
+   */
+  def maxRunChunks(requestedCount: Int, segmentsPerChunk: Long): Long =
+    Math.max(3L, (requestedCount + segmentsPerChunk - 1) / segmentsPerChunk + 1)
 
   // At most count segment ids, evenly spaced in sorted order.
   def evenlySpaced(segmentIds: Set[Long], count: Int): Seq[Long] = {
@@ -714,78 +703,94 @@ object ZarrMeshFileService {
     )
   }
 
-  private def maxLevelAt(maxSegmentLevelPerChunk: Array[Byte], chunk: Long): Int =
-    maxSegmentLevelPerChunk(Math.toIntExact(chunk)) & 0xff
-
-  // The nearest chunk before chunk that contains a run start at level, or 0.
-  private def runStartChunkBefore(maxSegmentLevelPerChunk: Array[Byte], chunk: Long, level: Int): Long = {
-    var c = Math.max(chunk - 1, 0)
-    while (c > 0 && maxLevelAt(maxSegmentLevelPerChunk, c) <= level) c -= 1
-    c
-  }
-
-  // The nearest chunk after chunk that contains a run start at level, or the last chunk.
-  private def runStartChunkAfter(maxSegmentLevelPerChunk: Array[Byte], chunk: Long, level: Int): Long = {
-    val lastChunk = maxSegmentLevelPerChunk.length - 1L
-    var c = Math.min(chunk + 1, lastChunk)
-    while (c < lastChunk && maxLevelAt(maxSegmentLevelPerChunk, c) <= level) c += 1
-    c
-  }
-
-  /** The chunks [first, last] to read first for the run of the merge-tree order mapping at level around an index in
-    * chunk. A segment whose level is greater than level starts a run, so a chunk whose maximum segment level is at most
-    * level lies within one run. If chunk contains no run start, its run reaches from the nearest chunk before it with a
-    * run start to the nearest one after it. Otherwise the run may continue into a neighboring chunk, depending on where
-    * the run starts in chunk lie: neighbors with a run start are read along, others only once the run turns out to
-    * continue into them.
-    */
-  def initialRunChunks(maxSegmentLevelPerChunk: Array[Byte], chunk: Long, level: Int): (Long, Long) =
-    if (maxLevelAt(maxSegmentLevelPerChunk, chunk) <= level)
-      (
-        runStartChunkBefore(maxSegmentLevelPerChunk, chunk, level),
-        runStartChunkAfter(maxSegmentLevelPerChunk, chunk, level)
-      )
-    else {
-      def hasRunStart(c: Long) =
-        c >= 0 && c < maxSegmentLevelPerChunk.length && maxLevelAt(maxSegmentLevelPerChunk, c) > level
-      (if (hasRunStart(chunk - 1)) chunk - 1 else chunk, if (hasRunStart(chunk + 1)) chunk + 1 else chunk)
-    }
-
-  /** The run [start, end) of indices around seedIndex as Right if the loaded chunks [firstChunk, lastChunk] contain all
-    * of it. Otherwise the chunks that do as Left: the run continues past the loaded chunks up to the nearest chunk with
-    * a run start.
-    */
-  def runAround(
-      chunks: Map[Long, Array[Long]],
+  /* The segment mesh metadata: chunks of segmentsPerChunk rows of width columns, nSegments rows in all, and the maximum
+   * segment level of each chunk. A segment whose level is greater than a mapping's level starts a run of that mapping,
+   * so a chunk whose maximum segment level is at most the mapping's level lies within one run.
+   */
+  case class MeshMetadataLayout(
       maxSegmentLevelPerChunk: Array[Byte],
       segmentsPerChunk: Long,
-      meshMetadataWidth: Int,
-      nSegments: Long,
+      width: Int,
+      nSegments: Long
+  ) {
+    private def lastChunk: Long = maxSegmentLevelPerChunk.length - 1L
+
+    private def hasRunStart(chunk: Long, level: Int): Boolean =
+      (maxSegmentLevelPerChunk(Math.toIntExact(chunk)) & 0xff) > level
+
+    // The chunk of index and its neighbors.
+    def chunksAround(index: Long): (Long, Long) = {
+      val chunk = index / segmentsPerChunk
+      (Math.max(chunk - 1, 0), Math.min(chunk + 1, lastChunk))
+    }
+
+    // The nearest chunk before chunk that contains a run start at level, or 0.
+    def runStartChunkBefore(chunk: Long, level: Int): Long = {
+      var c = Math.max(chunk - 1, 0)
+      while (c > 0 && !hasRunStart(c, level)) c -= 1
+      c
+    }
+
+    // The nearest chunk after chunk that contains a run start at level, or the last chunk.
+    def runStartChunkAfter(chunk: Long, level: Int): Long = {
+      var c = Math.min(chunk + 1, lastChunk)
+      while (c < lastChunk && !hasRunStart(c, level)) c += 1
+      c
+    }
+  }
+
+  /** The run [start, end) of indices around seedIndex of the mapping at level as Right if the loaded chunks
+    * [firstChunk, lastChunk] contain all of it. Otherwise the chunks that do as Left: the run continues past the loaded
+    * chunks up to the nearest chunk with a run start.
+    */
+  def runAround(
+      layout: MeshMetadataLayout,
+      chunks: Map[Long, Array[Long]],
       firstChunk: Long,
       lastChunk: Long,
       seedIndex: Long,
       level: Int
   ): Either[(Long, Long), (Long, Long)] = {
+    val segmentsPerChunk = layout.segmentsPerChunk
     def levelAt(index: Long): Long =
-      chunks(index / segmentsPerChunk)(
-        Math.toIntExact(index % segmentsPerChunk) * meshMetadataWidth + meshMetadataLevel
-      )
+      chunks(index / segmentsPerChunk)(Math.toIntExact(index % segmentsPerChunk) * layout.width + meshMetadataLevel)
     var start = seedIndex
     while (start > firstChunk * segmentsPerChunk && levelAt(start) <= level) start -= 1
     var end = seedIndex + 1
-    val upperBound = Math.min((lastChunk + 1) * segmentsPerChunk, nSegments)
+    val upperBound = Math.min((lastChunk + 1) * segmentsPerChunk, layout.nSegments)
     while (end < upperBound && levelAt(end) <= level) end += 1
     val startFound = start == 0 || levelAt(start) > level
-    val endFound = end < upperBound || end == nSegments
+    val endFound = end < upperBound || end == layout.nSegments
     if (startFound && endFound) Right((start, end))
     else
       Left(
         (
-          if (startFound) firstChunk else runStartChunkBefore(maxSegmentLevelPerChunk, firstChunk, level),
-          if (endFound) lastChunk else runStartChunkAfter(maxSegmentLevelPerChunk, lastChunk, level)
+          if (startFound) firstChunk else layout.runStartChunkBefore(firstChunk, level),
+          if (endFound) lastChunk else layout.runStartChunkAfter(lastChunk, level)
         )
       )
   }
+
+  /** The coarsest of the nLevels merge-tree order mappings whose run around seedIndex spans at most maxChunks chunks,
+    * with runAround of it in the loaded chunks [firstChunk, lastChunk]. The runs of coarser mappings contain those of
+    * finer ones. So the run of the mapping the requested segments are an agglomerate of fits, and a coarser one only
+    * adds segments that are dropped later. Parts of agglomerates of other mappings are found in finer runs.
+    */
+  def chooseRunLevel(
+      layout: MeshMetadataLayout,
+      chunks: Map[Long, Array[Long]],
+      firstChunk: Long,
+      lastChunk: Long,
+      seedIndex: Long,
+      nLevels: Int,
+      maxChunks: Long
+  ): Option[(Int, Either[(Long, Long), (Long, Long)])] =
+    (nLevels - 1 to 0 by -1).iterator
+      .map(level => level -> runAround(layout, chunks, firstChunk, lastChunk, seedIndex, level))
+      .find {
+        case (_, Right(_))            => true
+        case (_, Left((first, last))) => last - first + 1 <= maxChunks
+      }
 
   /* Index of the last of the first `length` sorted values at most segmentId (unsigned), -1 if there is none. Value i is
    * at sortedValues(i * stride), e.g. the first column of a C-ordered table with stride columns.

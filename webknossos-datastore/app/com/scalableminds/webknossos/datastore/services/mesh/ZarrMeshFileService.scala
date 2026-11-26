@@ -380,7 +380,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
     ): Fox[Seq[SegmentMeshMetadata]] =
       seedCounts match {
         case seedCount :: laterSeedCounts if remaining.nonEmpty =>
-          val seeds = ZarrMeshFileService.evenlySpaced(remaining.toArray, seedCount)
+          val seeds = ZarrMeshFileService.evenlySpaced(remaining, seedCount)
           for {
             seedIndices <- lookUpSegmentMeshMetadataIndices(meshFileKey, meshFileAttributes, seeds)
             runMeshMetadata <- readAgglomerateRuns(
@@ -572,16 +572,13 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       layerLength <- arrayLength(innerNodesArray)
       entriesPerChunk = innerNodesArray.chunkShape(0).toLong
       entriesByChunk <- readChunks[Long](innerNodesArray, upperLayerPositions.filter(_ >= 0).distinct.sorted.toSeq)
-    } yield upperLayerPositions.zip(sortedSegmentIds).map { case (chunkNumber, segmentId) =>
-      if (chunkNumber < 0) -1L
-      else {
-        val chunkStart = chunkNumber * entriesPerChunk
-        val validEntries = Math.toIntExact(Math.min(entriesPerChunk, layerLength - chunkStart))
-        val indexInChunk =
-          ZarrMeshFileService.lastIndexLessOrEqual(entriesByChunk(chunkNumber), 1, validEntries, segmentId)
-        if (indexInChunk < 0) -1L else chunkStart + indexInChunk
-      }
-    }
+    } yield ZarrMeshFileService.positionsInInnerNodeLayer(
+      entriesByChunk,
+      entriesPerChunk,
+      layerLength,
+      upperLayerPositions,
+      sortedSegmentIds
+    )
 
   /* Reads byte ranges [start, end) of a 1-d uint8 array from the chunks they cover. A range is a failure if a chunk it
    * covers cannot be read, which does not fail the other ranges.
@@ -657,9 +654,12 @@ object ZarrMeshFileService {
   def percentileOfMappingName(mappingName: String): Option[Int] =
     percentileMappingName.findFirstMatchIn(mappingName).flatMap(m => m.group(1).toIntOption)
 
-  def evenlySpaced(values: Array[Long], count: Int): Seq[Long] =
-    if (values.length <= count) values.toSeq
-    else (0 until count).map(i => values((i.toLong * values.length / count).toInt))
+  // At most count segment ids, evenly spaced in sorted order.
+  def evenlySpaced(segmentIds: Set[Long], count: Int): Seq[Long] = {
+    val sorted = segmentIds.toArray.sorted
+    if (sorted.length <= count) sorted.toSeq
+    else (0 until count).map(i => sorted((i.toLong * sorted.length / count).toInt))
+  }
 
   def segmentMeshMetadataAt(
       meshMetadataChunk: Array[Long],
@@ -725,6 +725,27 @@ object ZarrMeshFileService {
     }
     low - 1
   }
+
+  /* For each sorted segment id, its position in an inner node layer, i.e. the index of the last entry at most the
+   * segment id, given the chunk of the layer it falls into. -1 if the chunk is -1 or the segment id is smaller than
+   * all entries.
+   */
+  def positionsInInnerNodeLayer(
+      entriesByChunk: Map[Long, Array[Long]],
+      entriesPerChunk: Long,
+      layerLength: Long,
+      chunkNumbers: Array[Long],
+      sortedSegmentIds: Array[Long]
+  ): Array[Long] =
+    chunkNumbers.zip(sortedSegmentIds).map { case (chunkNumber, segmentId) =>
+      if (chunkNumber < 0) -1L
+      else {
+        val chunkStart = chunkNumber * entriesPerChunk
+        val validEntries = Math.toIntExact(Math.min(entriesPerChunk, layerLength - chunkStart))
+        val indexInChunk = lastIndexLessOrEqual(entriesByChunk(chunkNumber), 1, validEntries, segmentId)
+        if (indexInChunk < 0) -1L else chunkStart + indexInChunk
+      }
+    }
 
   // Index of segmentId among the first validLeaves leaves of a chunk, which are sorted by segment id, -1 if absent.
   def indexOfLeaf(leaves: Array[Long], leafWidth: Int, validLeaves: Int, segmentId: Long): Int = {

@@ -22,6 +22,41 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
     }
   }
 
+  "ZarrMeshFileService.positionsInInnerNodeLayer" should {
+    "descend through several inner node layers to the leaf chunk of each segment id" in {
+      val entriesPerChunk = 4
+      val leafSegmentIds = (1L to 100L).map(_ * 10).toArray
+      def firstEntriesOfChunks(values: Array[Long]) = values.grouped(entriesPerChunk).map(_.head).toArray
+      def chunked(values: Array[Long]): Map[Long, Array[Long]] =
+        values
+          .grouped(entriesPerChunk)
+          .zipWithIndex
+          .map { case (chunk, i) => i.toLong -> chunk.padTo(entriesPerChunk, 0L) }
+          .toMap
+      // Inner node layers, root first; each entry is the first segment id of a chunk of the layer below.
+      var innerNodeLayers = List(firstEntriesOfChunks(leafSegmentIds))
+      while (innerNodeLayers.head.length > entriesPerChunk)
+        innerNodeLayers = firstEntriesOfChunks(innerNodeLayers.head) :: innerNodeLayers
+      assert(innerNodeLayers.map(_.length) == List(2, 7, 25))
+
+      val segmentIds = (0L to 1010L).toArray
+      val leafChunks = innerNodeLayers.foldLeft(segmentIds.map(_ => 0L)) { (upperLayerPositions, layer) =>
+        ZarrMeshFileService.positionsInInnerNodeLayer(
+          chunked(layer),
+          entriesPerChunk,
+          layer.length,
+          upperLayerPositions,
+          segmentIds
+        )
+      }
+      val expected = segmentIds.map { segmentId =>
+        val index = leafSegmentIds.lastIndexWhere(_ <= segmentId)
+        if (index < 0) -1L else (index / entriesPerChunk).toLong
+      }
+      assert(leafChunks.toSeq == expected.toSeq)
+    }
+  }
+
   "ZarrMeshFileService.indexOfLeaf" should {
     "find leaves in a C-ordered chunk" in {
       val leaves = Array(2L, 0L, 5L, 9L, 7L, 9L, 12L, 20L, 0L, 0L, 0L, 0L)
@@ -105,8 +140,8 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
 
   "ZarrMeshFileService.evenlySpaced" should {
     "pick seeds spread over the segment ids" in {
-      assert(ZarrMeshFileService.evenlySpaced(Array(1L, 2L, 3L), 8) == Seq(1L, 2L, 3L))
-      assert(ZarrMeshFileService.evenlySpaced((0L until 100L).toArray, 4) == Seq(0L, 25L, 50L, 75L))
+      assert(ZarrMeshFileService.evenlySpaced(Set(3L, 1L, 2L), 8) == Seq(1L, 2L, 3L))
+      assert(ZarrMeshFileService.evenlySpaced((0L until 100L).toSet, 4) == Seq(0L, 25L, 50L, 75L))
     }
   }
 }

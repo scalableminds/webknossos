@@ -1,0 +1,31 @@
+{
+  "id": { "name": "legacy", "team": "sample_organization" },
+  "version": 1,
+  "scale": [11.24, 11.24, 28.0],
+  "dataLayers": [
+    {
+      "name": "color",
+      "category": "color",
+      "dataFormat": "wkw",
+      "elementClass": "uint8",
+      "boundingBox": { "topLeft": [0, 0, 0], "width": 512, "height": 512, "depth": 256 },
+      "wkwResolutions": [
+        { "resolution": 1, "cubeLength": 1024 },
+        { "resolution": [2, 2, 1], "cubeLength": 1024 }
+      ],
+      "numChannels": 1,
+      "defaultViewConfiguration": {}
+    },
+    {
+      "name": "segmentation",
+      "category": "segmentation",
+      "dataFormat": "wkw",
+      "elementClass": "uint32",
+      "boundingBox": { "topLeft": [0, 0, 0], "width": 512, "height": 512, "depth": 256 },
+      "wkwResolutions": [{ "resolution": [1, 1, 1], "cubeLength": 1024, "path": "segmentation/1/" }],
+      "largestSegmentId": 2504697,
+      "mappings": ["agglomerate_view_5", "agglomerate_view_5", "agglomerate_view_10"],
+      "coordinateTransformations": []
+    }
+  ]
+}

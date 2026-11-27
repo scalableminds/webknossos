@@ -1,0 +1,230 @@
+use std::path::PathBuf;
+use webknossos_datastore::services::mesh::geometry::{combine_stl, draco_to_stl, surface_area};
+fn root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/draco")
+}
+#[test]
+fn draco_to_stl_matches_actual_jni_for_real_and_synthetic_encodings() {
+    for name in [
+        "real_30",
+        "real_11",
+        "real_33",
+        "float_sequential",
+        "float_edgebreaker",
+        "integer_sequential",
+        "integer_edgebreaker",
+    ] {
+        let draco = std::fs::read(root().join(format!("{name}.drc"))).unwrap();
+        let expected = std::fs::read(root().join(format!("{name}.stlraw"))).unwrap();
+        let actual = draco_to_stl(
+            &draco,
+            [10.25, -20.5, 0.125],
+            [2.5, 0.75, 4.],
+            if name.starts_with("integer") { 10 } else { 0 },
+        )
+        .unwrap();
+        assert_eq!(actual, expected, "{name}");
+    }
+}
+#[test]
+fn malformed_draco_is_rejected_and_stl_headers_count_actual_faces() {
+    let bytes = std::fs::read(root().join("float_sequential.drc")).unwrap();
+    for length in 0..bytes.len() {
+        assert!(
+            draco_to_stl(&bytes[..length], [0.; 3], [1.; 3], 0).is_err(),
+            "{length}"
+        );
+    }
+    let chunk = draco_to_stl(&bytes, [0.; 3], [1.; 3], 0).unwrap();
+    let combined = combine_stl(&[chunk.clone(), chunk.clone()]).unwrap();
+    assert_eq!(&combined[..80], &[0; 80]);
+    assert_eq!(
+        u32::from_le_bytes(combined[80..84].try_into().unwrap()) as usize,
+        2 * chunk.len() / 50
+    );
+    assert_eq!(&combined[84..84 + chunk.len()], chunk);
+    assert_eq!(combine_stl(&[]).unwrap().len(), 84);
+    assert!(combine_stl(&[vec![0; 49]]).is_err());
+    assert!(surface_area(&[0; 49]).is_err());
+}
+#[test]
+fn stl_normals_and_areas_match_actual_compiled_scala() {
+    use webknossos_datastore::services::mesh::{
+        geometry::{ad_hoc_surface_area, ad_hoc_to_stl},
+        marching_cubes::AdHocMesh,
+    };
+    let mesh = |vertices: Vec<f32>, indices: Vec<u32>| AdHocMesh {
+        vertices,
+        indices,
+        neighbors: vec![],
+    };
+    let soup = mesh(
+        vec![
+            0., 0., 0., 1., 0., 0., 0., 1., 0., 2., 3., 4., 7., 3., 4., 2., 9., 4.,
+        ],
+        (0..6).collect(),
+    );
+    let expected = std::fs::read(root().join("adhoc.stlraw")).unwrap();
+    assert_eq!(ad_hoc_to_stl(&soup).unwrap(), expected);
+    // Shared vertices are read through the indices; the STL bytes are the same.
+    let indexed = mesh(
+        vec![
+            2., 3., 4., 0., 0., 0., 7., 3., 4., 1., 0., 0., 0., 1., 0., 2., 9., 4.,
+        ],
+        vec![1, 3, 4, 0, 2, 5],
+    );
+    assert_eq!(ad_hoc_to_stl(&indexed).unwrap(), expected);
+    assert_eq!(
+        ad_hoc_surface_area(&indexed).unwrap().to_bits(),
+        surface_area(&expected).unwrap().to_bits()
+    );
+    assert!(ad_hoc_to_stl(&mesh(vec![0.; 9], vec![0, 1, 3])).is_err());
+    let areas: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(root().join("areas.json")).unwrap()).unwrap();
+    for (name, expected) in areas.as_object().unwrap() {
+        let raw = std::fs::read(root().join(name)).unwrap();
+        assert_eq!(
+            surface_area(&raw).unwrap().to_bits(),
+            (expected.as_f64().unwrap() as f32).to_bits(),
+            "{name}"
+        );
+    }
+    assert!(ad_hoc_to_stl(&mesh(vec![0.; 9], vec![0, 1])).is_err());
+    let degenerate = ad_hoc_to_stl(&mesh(vec![0.; 9], vec![0, 1, 2])).unwrap();
+    assert!(f32::from_le_bytes(degenerate[..4].try_into().unwrap()).is_nan());
+}
+fn vertex_bytes(vertices: &[f32]) -> Vec<u8> {
+    vertices.iter().flat_map(|f| f.to_le_bytes()).collect()
+}
+#[test]
+fn every_marching_cube_configuration_and_tile_order_match_actual_scala() {
+    use webknossos_datastore::services::mesh::marching_cubes::marching_cubes;
+    let bytes = std::fs::read(root().join("cubes.bin")).unwrap();
+    let mut cursor = 0;
+    for cube in 0..256 {
+        let corners = [0, 1, 3, 2, 4, 5, 7, 6];
+        let mut data = [false; 8];
+        for (bit, at) in corners.into_iter().enumerate() {
+            data[at] = cube & (1 << bit) != 0;
+        }
+        let (vertices, _) =
+            marching_cubes(&data, [2; 3], [10.25, -20.5, 0.125], [2.5, 0.75, 4.], true).unwrap();
+        let count = i32::from_le_bytes(bytes[cursor..cursor + 4].try_into().unwrap()) as usize;
+        cursor += 4;
+        assert_eq!(vertices.len(), count, "{cube}");
+        assert_eq!(
+            vertex_bytes(&vertices),
+            bytes[cursor..cursor + count * 4],
+            "{cube}"
+        );
+        cursor += count * 4;
+    }
+    assert_eq!(cursor, bytes.len());
+    let n = 35;
+    let mut data = vec![false; n * n * n];
+    for z in 30..34 {
+        for y in 31..34 {
+            for x in 30..34 {
+                data[x + n * (y + n * z)] = true;
+            }
+        }
+    }
+    let (vertices, neighbors) =
+        marching_cubes(&data, [n; 3], [10.25, -20.5, 0.125], [2.5, 0.75, 4.], true).unwrap();
+    assert!(neighbors.is_empty());
+    assert_eq!(
+        vertex_bytes(&vertices),
+        std::fs::read(root().join("tiled.bin")).unwrap()
+    );
+}
+#[test]
+fn marching_cube_neighbors_preserve_excluded_edges_and_degenerate_dimensions() {
+    use webknossos_datastore::services::mesh::marching_cubes::marching_cubes;
+    let generate = |data: &[bool], dims, neighbors| {
+        marching_cubes(data, dims, [0.; 3], [1.; 3], neighbors).unwrap()
+    };
+    let mut data = [false; 27];
+    data[0] = true;
+    assert_eq!(generate(&data, [3; 3], true).1, [0, 1, 2]);
+    data[26] = true;
+    assert_eq!(generate(&data, [3; 3], true).1, [0, 1, 2]);
+    data[18] = true;
+    data[6] = true;
+    data[2] = true;
+    assert_eq!(generate(&data, [3; 3], true).1, [0, 1, 2, 3, 4, 5]);
+    assert!(generate(&data, [3; 3], false).1.is_empty());
+    let (vertices, neighbors) = generate(&[true], [1; 3], true);
+    assert!(vertices.is_empty() && neighbors.is_empty());
+    assert!(marching_cubes(&[true], [usize::MAX, 2, 2], [0.; 3], [1.; 3], true).is_err());
+    assert!(marching_cubes(&[true], [0, 1, 1], [0.; 3], [1.; 3], true).is_err());
+}
+#[test]
+fn typed_json_mapping_matches_actual_scala_parser_including_narrowed_duplicates() {
+    use webknossos_datastore::services::agglomerate::mapping::parse_mapping;
+    let input = std::fs::read(root().join("mapping.json")).unwrap();
+    let oracle: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(root().join("mapping_oracle.json")).unwrap())
+            .unwrap();
+    for width in [1, 2, 4, 8] {
+        let actual = parse_mapping(&input, width).unwrap();
+        let expected = oracle[width.to_string()]
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.parse::<u64>().unwrap(),
+                    v.as_str().unwrap().parse::<u64>().unwrap(),
+                )
+            })
+            .collect();
+        assert_eq!(actual, expected, "{width}");
+    }
+    for bad in [
+        br#"{"classes":[]}"#.as_slice(),
+        br#"{"name":"x","classes":[[1,null]]}"#,
+        br#"{"name":"x","classes":[[1,2.5]]}"#,
+        br#"{"name":"x","classes":false}"#,
+    ] {
+        assert!(parse_mapping(bad, 1).is_err());
+    }
+    assert!(parse_mapping(&input, 3).is_err());
+}
+#[test]
+fn indexed_mesh_bytes_switch_to_u32_indices_above_65535_vertices() {
+    use webknossos_datastore::services::mesh::marching_cubes::{
+        AdHocMesh, MAX_VERTEX_COUNT_FOR_SHORT_INDICES,
+    };
+    let small = AdHocMesh {
+        vertices: vec![0., 1., 2., 3., 4., 5., 6., 7., 8.],
+        indices: vec![0, 1, 2, 2, 1, 0],
+        neighbors: vec![],
+    };
+    let bytes = small.to_bytes();
+    assert_eq!(bytes.len(), 9 * 4 + 6 * 2);
+    assert_eq!(&bytes[36..40], &[0, 0, 1, 0]);
+    assert_eq!(
+        small.triangle_soup(),
+        [
+            0f32, 1., 2., 3., 4., 5., 6., 7., 8., 6., 7., 8., 3., 4., 5., 0., 1., 2.
+        ]
+    );
+    let count = MAX_VERTEX_COUNT_FOR_SHORT_INDICES + 1;
+    let large = AdHocMesh {
+        vertices: vec![0.; 3 * count],
+        indices: vec![0, 1, (count - 1) as u32],
+        neighbors: vec![],
+    };
+    let bytes = large.to_bytes();
+    assert_eq!(bytes.len(), 12 * count + 3 * 4);
+    assert_eq!(&bytes[12 * count + 8..], &(count as u32 - 1).to_le_bytes());
+    let at_limit = AdHocMesh {
+        vertices: vec![0.; 3 * MAX_VERTEX_COUNT_FOR_SHORT_INDICES],
+        indices: vec![0, 1, 2],
+        neighbors: vec![],
+    };
+    assert_eq!(
+        at_limit.to_bytes().len(),
+        12 * MAX_VERTEX_COUNT_FOR_SHORT_INDICES + 3 * 2
+    );
+}

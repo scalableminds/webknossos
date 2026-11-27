@@ -1,0 +1,24 @@
+# N4a annotation finish / finishAll checkpoint
+
+2026-10-10. Owner: n4a-finish sub-agent. Owns src/annotation_finish.rs, tests/annotation_finish.rs, this checkpoint. Router `annotation_finish::router(jobs_enabled)` already registered by parent. No visibility changes elsewhere.
+
+## Contract (Scala AnnotationController.finish/finishAll/finishAnnotation, AnnotationService.finish)
+
+- `PATCH /annotations/:typ/:id/finish?timestamp=Long` and `PATCH /annotations/:typ/finish?timestamp=Long` with body `{"annotations":[ObjectId]}`. `timestamp` is extracted before auth (Play routing binder): missing -> 400 `Missing parameter: timestamp`, invalid -> 400 `Cannot parse parameter timestamp as Long: For input string: "<v>"` (first value wins, Java parseLong grammar).
+- finishAnnotation per id: provideAnnotation `~> 404` -> restrictionsFor `?~> Restrictions.notFound ~> 404` -> AnnotationService.finish `?~> finishFailed` -> provider reload -> `logUserInteractionIfTheyArePotentialContributor(timestamp, user, ORIGINAL annotation)`.
+- allowFinishSoft = (owner || task-project-team manager || owner-org admin) && !isLockedByOwner; owner lookup/task/project failures yield false (`orElse(false)`) even for owner/admin (soft-deleted task -> not allowed). Compound restrictions never allow finishing (400 after real provider resolution/cache hit; restrictions failures 404).
+- State: Active -> modified=now(ms) + state Finished + clear CompoundTask/Project/TaskType cache keys when `_task` set; message `Task is finished.` with task, else `Annotation is archived.`. Finished -> silent success `Annotation is archived.` (no writes, no cache clear, time still logged). Other states -> notActive failure.
+- Single route: every non-5xx failure becomes `Could not finish/archive the annotation.` keeping ParamFailure status (provider/restrictions 404, others 400). Success: restrictionsFor + real `annotation_lists::full_json` serialized AFTER time logging (tracingTime reflects the new span) + `messages:[{success}]`.
+- finishAll: serial, stops at first failure (earlier items stay finished + logged), no outer wrap: provider failure -> 404 with provider message (e.g. `Annotation could not be found or accessed.`), restrictions -> 404 `Could not determine annotation access restrictions.`, finish -> 400 finishFailed, writer -> its own error. Success `{"messages":[{"success":"All selected annotations were finished/archived."}]}`; empty list succeeds.
+- Time: `TimeInteractionWriter::log_user_interaction_if_potential_contributor(pool, AccessContext::requester(Some(user)), user, annotation, original owner, original collaborationMode, timestamp)` after finish commit + provider reload. Only owner or Exclusive/Concurrent mode logs. Writer API fit as-is; no change needed.
+
+## Deviations (intentional, documented in module docs)
+- Lock readable row, manager grant (owner/task/project locks), state check, assertUpdateAccess, modified+state UPDATE and cache-key lookup in ONE transaction; caches cleared only after commit (Scala: sequential DAO calls, cache cleared before completion). Writer runs in its own transaction after commit (as Scala: writer failure leaves annotation Finished).
+- DB faults stay 5xx (crate convention) instead of Scala's 400 wrapping. Scala error chains are not rendered (crate ApiError has no chain).
+- finishAll JSON body errors use the crate `Invalid JSON request body.` 400 and are checked after authentication (Play validates the body before Silhouette auth).
+
+## Status / Done / Next / Evidence
+Status: COMPLETE (both routes, source + tests).
+Done: src/annotation_finish.rs (router, Timestamp extractor + pub `parse_timestamp`, finish_saved transaction, finish_annotation, finish, finish_all, 1 unit test); tests/annotation_finish.rs (1 pure + 4 isolated-DB tests: owner success/time span/repeat/prefixed id/query binder/401; permissions (outsider, foreign admin, non-task manager 400; private/missing/bad type 404; locked; Cancelled/Initializing; org admin no time in OwnerOnly, time in Concurrent/Exclusive; task manager `Task is finished.`; soft-deleted task); finishAll body validation, empty list, all-success incl. already Finished, stop-on-first-error, provider 404 message; compound caches with mock tracingstore: compounds 400, failed/explorational/repeat keep caches, injected UPDATE fault rolls back (500) and keeps caches, Task row via Explorational path clears all three).
+Next: parent central verification + `python3 tools/route_inventory.py` (2 more routes registered).
+Evidence: `CARGO_TARGET_DIR=/tmp/webknossos-rust-verify-c ... cargo test --locked --offline --test annotation_finish -- --include-ignored` -> 5 passed; `cargo test --lib annotation_finish` -> 1 passed; `cargo clippy --locked --offline --all-targets -- -D warnings` clean; `rustfmt --edition 2024 --check` clean on both files.

@@ -1,0 +1,2 @@
+# These are deliberately checked-in tiny archive inputs, not build artifacts.
+!*.zip

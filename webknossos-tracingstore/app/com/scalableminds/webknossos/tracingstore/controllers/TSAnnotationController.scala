@@ -66,6 +66,8 @@ class TSAnnotationController @Inject() (
     extends Controller
     with KeyValueStoreConversions {
 
+  override def allowRemoteOrigin: Boolean = true
+
   def save(annotationId: ObjectId, toTemporaryStore: Boolean = false): Action[AnnotationProto] =
     Action.fox(validateProto[AnnotationProto]) { implicit request =>
       log() {

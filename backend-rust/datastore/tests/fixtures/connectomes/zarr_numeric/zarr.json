@@ -1,0 +1,1 @@
+{"zarr_format": 3, "node_type": "group", "attributes": {"voxelytics": {"artifact_schema_version": 1, "artifact_attributes": {"mapping_name": "connectome_mapping", "synapse_type_names": ["dendritic-shaft-synapse", "spine-head-synapse", "soma-synapse"]}}}}

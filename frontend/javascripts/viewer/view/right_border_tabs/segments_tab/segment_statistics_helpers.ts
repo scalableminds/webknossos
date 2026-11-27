@@ -157,6 +157,8 @@ export type StatisticValue =
       get: (row: SegmentStatisticsRow) => Vector3 | undefined;
     };
 
+export type StatisticCategory = "Size" | "Shape" | "Location";
+
 /*
  * Describes one statistic in both of its representations, so that the rendered table and the
  * exported CSV cannot drift apart when columns are shown conditionally. A spec without a `title`
@@ -166,6 +168,8 @@ export type StatisticValue =
 export type StatisticSpec = {
   key: string;
   title?: string;
+  // Groups the statistics that are shown to the user.
+  category?: StatisticCategory;
   value?: StatisticValue;
   isLoading?: boolean;
   isError?: boolean;

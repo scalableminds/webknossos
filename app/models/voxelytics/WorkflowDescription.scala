@@ -30,8 +30,7 @@ case class WorkflowDescriptionArtifact(
     version: String,
     attributes: JsValue,
     iframes: JsValue,
-    links: JsValue,
-    artifacts_storage_path: Option[String]
+    links: JsValue
 ) derives JsonAutoFormat {
   def metadataAsJson: JsObject =
     Json.obj("attributes" -> attributes, "iframes" -> iframes, "links" -> links)

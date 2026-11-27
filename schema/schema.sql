@@ -24,7 +24,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(196);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(195);
 COMMIT TRANSACTION;
 
 
@@ -808,7 +808,6 @@ CREATE TABLE webknossos.voxelytics_artifacts(
     inodeCount INT8 NOT NULL,
     version TEXT NOT NULL DEFAULT '0',
     metadata JSONB,
-    artifactsStoragePath TEXT,
     PRIMARY KEY (_id),
     UNIQUE (_task, name),
     UNIQUE (_task, path),

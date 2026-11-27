@@ -83,8 +83,7 @@ case class ArtifactEntry(
     version: String,
     metadata: JsObject,
     taskName: String,
-    foreignWorkflow: Option[(String, String)],
-    artifactsStoragePath: Option[String]
+    foreignWorkflow: Option[(String, String)]
 ) derives JsonAutoFormat
 
 case class TaskEntry(taskId: ObjectId, runId: ObjectId, name: String, task: String, config: JsObject)
@@ -202,8 +201,7 @@ class VoxelyticsService @Inject() (voxelyticsDAO: VoxelyticsDAO)(implicit ec: Ex
               artifact.file_size,
               artifact.inode_count,
               artifact.version,
-              artifact.metadataAsJson,
-              artifact.artifacts_storage_path
+              artifact.metadataAsJson
             )
           }
           .toList

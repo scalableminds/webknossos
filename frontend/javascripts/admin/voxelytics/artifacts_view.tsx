@@ -8,24 +8,38 @@ import { Link } from "react-router";
 import type { VoxelyticsArtifactConfig } from "types/api_types";
 import { isObjectEmpty, useTheme } from "./utils";
 
-export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
+function renderCopyablePath(path: string, label?: string) {
   return (
     <div
       style={{
         fontFamily: "monospace",
         border: "1px solid var(--ant-color-border)",
         padding: 10,
+        paddingRight: 30,
         position: "relative",
         overflowWrap: "anywhere",
       }}
     >
-      {artifact.path}
+      {label != null && <div style={{ fontFamily: "initial", fontWeight: "bold" }}>{label}</div>}
+      {path}
       <CopyOutlined
         style={{ top: 10, right: 10, position: "absolute" }}
         onClick={() => {
-          copyToClipboard(artifact.path);
+          copyToClipboard(path);
         }}
       />
+    </div>
+  );
+}
+
+export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
+  if (artifact.artifactsStoragePath == null) {
+    return renderCopyablePath(artifact.path);
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {renderCopyablePath(artifact.path, "Local Path")}
+      {renderCopyablePath(artifact.artifactsStoragePath, "Artifact Storage Path")}
     </div>
   );
 }

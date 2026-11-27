@@ -117,7 +117,8 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findArtifacts(currentUser: User, runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[ArtifactEntry]] =
     for {
-      r <- run(q"""
+      r <- run(
+        q"""
         WITH latest_complete_tasks AS (${latestCompleteOrSkippedTaskQ(runIds, None, staleTimeout)})
         SELECT
           a._id,
@@ -130,7 +131,8 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
           a.metadata,
           t.name AS taskName,
           o.workflow_hash AS other_workflow_hash,
-          o._run AS other_run
+          o._run AS other_run,
+          a.artifactsStoragePath
         FROM webknossos.voxelytics_artifacts a
         JOIN latest_complete_tasks t ON t._id = a._task
         LEFT JOIN ( -- when the task is skipped, the artifact from the producing task run is joined for linking
@@ -146,7 +148,23 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
           JOIN (${visibleRunsQ(currentUser, allowUnlisted = true)}) r ON r._id = t._run
           ORDER BY a.path, ts.beginTime DESC NULLS LAST
         ) o ON o.path = a.path AND t.state = ${VoxelyticsRunState.SKIPPED}
-        """.as[(String, String, String, String, Long, Long, String, String, String, Option[String], Option[String])])
+        """.as[
+          (
+              String,
+              String,
+              String,
+              String,
+              Long,
+              Long,
+              String,
+              String,
+              String,
+              Option[String],
+              Option[String],
+              Option[String]
+          )
+        ]
+      )
     } yield r.toList.map(row =>
       ArtifactEntry(
         artifactId = ObjectId(row._1),
@@ -161,7 +179,8 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
         foreignWorkflow = (row._10, row._11) match {
           case (Some(workflow_hash), Some(run)) => Some((workflow_hash, run))
           case _                                => None
-        }
+        },
+        artifactsStoragePath = row._12
       )
     )
 
@@ -1088,20 +1107,31 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       fileSize: Long,
       inodeCount: Long,
       version: String,
-      metadata: JsValue
+      metadata: JsValue,
+      artifactsStoragePath: Option[String]
   ): Fox[ObjectId] =
     for {
       _ <- run(q"""
-        INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
-        VALUES ${SqlToken
-          .tupleFromValues(ObjectId.generate, taskId, name, path, fileSize, inodeCount, version, metadata)}
+        INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata, artifactsStoragePath)
+        VALUES ${SqlToken.tupleFromValues(
+          ObjectId.generate,
+          taskId,
+          name,
+          path,
+          fileSize,
+          inodeCount,
+          version,
+          metadata,
+          artifactsStoragePath
+        )}
         ON CONFLICT (_task, name)
           DO UPDATE SET
             path = EXCLUDED.path,
             fileSize = EXCLUDED.fileSize,
             inodeCount = EXCLUDED.inodeCount,
             version = EXCLUDED.version,
-            metadata = EXCLUDED.metadata
+            metadata = EXCLUDED.metadata,
+            artifactsStoragePath = EXCLUDED.artifactsStoragePath
         """.asUpdate)
       objectIdList <- run(q"""
         SELECT _id
@@ -1114,7 +1144,7 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
   def upsertArtifacts(runId: ObjectId, artifacts: List[(String, String, WorkflowDescriptionArtifact)]): Fox[Unit] =
     for {
       _ <- run(q"""
-        WITH insert_values(_run, _id, taskName, artifactName, path, fileSize, inodeCount, version, metadata) AS (
+        WITH insert_values(_run, _id, taskName, artifactName, path, fileSize, inodeCount, version, metadata, artifactsStoragePath) AS (
           VALUES ${SqlToken.joinByComma(
           artifacts.map(ev =>
             SqlToken.tupleFromValues(
@@ -1126,12 +1156,13 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
               ev._3.file_size,
               ev._3.inode_count,
               ev._3.version,
-              ev._3.metadataAsJson
+              ev._3.metadataAsJson,
+              ev._3.artifacts_storage_path
             )
           )
         )}
         )
-        INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
+        INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata, artifactsStoragePath)
         SELECT
           iv._id,
           t._id,
@@ -1140,7 +1171,8 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
           iv.fileSize,
           iv.inodeCount,
           iv.version,
-          iv.metadata
+          iv.metadata,
+          iv.artifactsStoragePath
         FROM insert_values iv
         JOIN webknossos.voxelytics_tasks t ON t._run = iv._run AND t.name = iv.taskName
         ON CONFLICT (_task, name)
@@ -1149,7 +1181,8 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
             fileSize = EXCLUDED.fileSize,
             inodeCount = EXCLUDED.inodeCount,
             version = EXCLUDED.version,
-            metadata = EXCLUDED.metadata
+            metadata = EXCLUDED.metadata,
+            artifactsStoragePath = EXCLUDED.artifactsStoragePath
         """.asUpdate)
     } yield ()
 

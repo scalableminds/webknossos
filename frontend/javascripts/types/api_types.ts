@@ -1255,6 +1255,7 @@ export type VoxelyticsArtifactConfig = {
   inodeCount: number;
   createdAt: number;
   path: string;
+  artifactsStoragePath?: string | null;
   version: string;
   metadata: {
     attributes: any;

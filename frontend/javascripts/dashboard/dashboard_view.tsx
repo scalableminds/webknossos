@@ -322,6 +322,13 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
           <ActiveTabContext.Provider value={this.state.activeTabKey}>
             <DashboardTabs
+              // The list tabs cap their width and are centered (see .dashboard-list-with-sidebar).
+              // Let the tab bar follow, except for tabs whose content uses the full width.
+              className={
+                this.state.activeTabKey === "datasets" || this.state.activeTabKey === "annotations"
+                  ? "dashboard-tabs-fit-list"
+                  : undefined
+              }
               activeKey={this.state.activeTabKey}
               onChange={onTabChange}
               items={this.getTabs(user)}

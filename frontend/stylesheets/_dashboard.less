@@ -378,6 +378,13 @@ pre.dataset-import-folder-structure-hint {
   --dashboard-list-max-width: 100rem;
 }
 
+// The tabs are a flex item of the (column) dashboard container. Shrink-wrapping and centering them
+// makes the tab bar as wide as the capped list plus its sidebars, instead of the whole page.
+.dashboard-tabs-fit-list {
+  align-self: center;
+  max-width: 100%;
+}
+
 .dashboard-list-with-sidebar {
   display: grid;
   grid-template-columns:

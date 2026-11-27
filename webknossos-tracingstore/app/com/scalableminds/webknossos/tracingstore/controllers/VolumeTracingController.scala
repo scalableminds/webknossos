@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.Msg
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
@@ -22,13 +23,15 @@ import com.scalableminds.webknossos.datastore.helpers.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
+  AdditionalCoordinate,
   LengthUnit,
   VoxelSize,
   WebknossosAdHocMeshRequest,
   WebknossosDataRequest
 }
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshRequest, MappingType}
+import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshRequest, MappingType, SegmentSurfaceWithVolume}
+import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsMath
 import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -393,35 +396,75 @@ class VolumeTracingController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId)
-          baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
-          surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            val fullMeshRequest = FullMeshRequest(
-              meshFileName = None, // Cannot use static meshfiles for dynamic volume layers
-              lod = None,
-              segmentId = segmentId,
-              mappingName = baseMappingName,
-              mappingType = baseMappingName.map(_ => MappingType.AGGLOMERATE),
-              editableMappingTracingId =
-                None, // This param is used only when loading meshes from static meshfiles. Here, the underlying load bucket function will apply the editable mapping if there is one.
-              annotationVersion = None,
-              mag = Some(request.body.mag),
-              seedPosition = None,
-              additionalCoordinates = request.body.additionalCoordinates
-            )
-            for {
-              data: Array[Byte] <- fullMeshService.loadFor(
-                annotationId,
-                tracingId,
-                fullMeshRequest,
-                request.body.annotationVersion
-              ) ?~> Msg.Mesh.loadFullFailed
-              surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
-            } yield surfaceArea
-          }
-        } yield Ok(Json.toJson(surfaceAreas))
+          surfaces <- measureSegmentSurfaces(
+            annotationId,
+            tracingId,
+            request.body.segmentIds,
+            request.body.mag,
+            request.body.additionalCoordinates,
+            request.body.annotationVersion
+          )
+        } yield Ok(Json.toJson(surfaces.map(_.area)))
       }
     }
+
+  /** Computed from the surface and voxel count of each segment's ad-hoc mesh, like the sphericities of segment
+    * statistics files.
+    */
+  def getSegmentSphericity(tracingId: String): Action[SegmentStatisticsParameters] =
+    Action.fox(validateJson[SegmentStatisticsParameters]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          surfaces <- measureSegmentSurfaces(
+            annotationId,
+            tracingId,
+            request.body.segmentIds,
+            request.body.mag,
+            request.body.additionalCoordinates,
+            request.body.annotationVersion
+          )
+          voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(
+            annotationId
+          ) ?~> Msg.Dataset.voxelSizeFailedToFetch
+          voxelSizeInMag = Vec3Double(request.body.mag) * voxelSize.factor
+        } yield Ok(
+          Json.toJson(
+            surfaces.map(surface => SegmentStatisticsMath.sphericity(surface.area, surface.voxelCount, voxelSizeInMag))
+          )
+        )
+      }
+    }
+
+  private def measureSegmentSurfaces(
+      annotationId: ObjectId,
+      tracingId: String,
+      segmentIds: List[UnsignedLong],
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      annotationVersion: Option[Long]
+  )(using tc: TokenContext): Fox[List[SegmentSurfaceWithVolume]] =
+    for {
+      tracing <- annotationService.findVolume(annotationId, tracingId, annotationVersion) ?~> Msg.Annotation.notFound
+      baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
+      surfaces <- Fox.serialCombined(segmentIds) { segmentId =>
+        val fullMeshRequest = FullMeshRequest(
+          meshFileName = None, // Cannot use static meshfiles for dynamic volume layers
+          lod = None,
+          segmentId = segmentId,
+          mappingName = baseMappingName,
+          mappingType = baseMappingName.map(_ => MappingType.AGGLOMERATE),
+          editableMappingTracingId =
+            None, // This param is used only when loading meshes from static meshfiles. Here, the underlying load bucket function will apply the editable mapping if there is one.
+          annotationVersion = None,
+          mag = Some(mag),
+          seedPosition = None,
+          additionalCoordinates = additionalCoordinates
+        )
+        fullMeshService.measureSurface(annotationId, tracingId, tracing, fullMeshRequest) ?~>
+          Msg.Mesh.measureSurfaceFailed
+      }
+    } yield surfaces
 
   def getSegmentIndex(tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
     Action.fox(validateJson[GetSegmentIndexParameters]) { implicit request =>

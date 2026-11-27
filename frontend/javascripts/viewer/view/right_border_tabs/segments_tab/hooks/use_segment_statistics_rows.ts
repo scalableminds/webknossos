@@ -62,6 +62,7 @@ export function useSegmentStatisticsRows({
     isBoundingBoxAvailable,
     isVolumeAvailable,
     isSurfaceAreaAvailable,
+    isSphericityAvailable,
     availableFileMetrics,
     volumes,
     boundingBoxes,
@@ -237,7 +238,7 @@ export function useSegmentStatisticsRows({
       });
     }
 
-    if (availableFileMetrics.sphericity) {
+    if (isSphericityAvailable) {
       specs.push({
         key: "sphericity",
         title: "Sphericity",
@@ -332,6 +333,7 @@ export function useSegmentStatisticsRows({
     isBoundingBoxAvailable,
     isVolumeAvailable,
     isSurfaceAreaAvailable,
+    isSphericityAvailable,
     volumes.isLoading,
     volumes.isError,
     surfaceAreas.isLoading,

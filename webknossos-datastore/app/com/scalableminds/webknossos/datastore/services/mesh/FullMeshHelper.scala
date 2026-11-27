@@ -1,14 +1,16 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
-import com.scalableminds.util.box.Box
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
-import Box.tryo
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.{ByteBuffer, ByteOrder}
+import scala.concurrent.ExecutionContext
 
 trait FullMeshHelper extends LazyLogging {
   protected lazy val dracoToStlConverter = new NativeDracoToStlConverter()
@@ -18,6 +20,41 @@ trait FullMeshHelper extends LazyLogging {
 
   // Upper bound for ad-hoc meshing requests per full mesh, so that huge segments cannot occupy the meshing workers indefinitely
   protected lazy val maxAdHocFullMeshChunks: Int = 25000
+
+  // Upper bound for the buckets to mesh a segment in (see bucketsToMesh), given at most maxAdHocFullMeshChunks buckets
+  // of the segment. Compact segments add few buckets, sparse ones up to seven per bucket, which this bounds.
+  protected lazy val maxAdHocFullMeshChunksWithNeighbors: Int = 2 * maxAdHocFullMeshChunks
+
+  /** The buckets (in buckets of the mag) to mesh a segment in: the segment's buckets and the ones below them in x, y
+    * and z, also diagonally. A bucket meshes the cubes whose origin lies in it, and a cube touching the segment can
+    * have its origin in a lower bucket without the segment. Without those, the mesh has holes at the lower bucket
+    * faces.
+    */
+  protected def bucketsToMesh(segmentBuckets: Seq[Vec3Int]): Seq[Vec3Int] = {
+    val offsets = for {
+      dx <- 0 to 1
+      dy <- 0 to 1
+      dz <- 0 to 1
+    } yield Vec3Int(dx, dy, dz)
+    segmentBuckets.flatMap(bucket => offsets.map(bucket - _)).filter(p => p.x >= 0 && p.y >= 0 && p.z >= 0).distinct
+  }
+
+  // The mag of an ad-hoc meshing or surface request, which must not be for segment 0.
+  protected def adHocMag(fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext): Fox[Vec3Int] =
+    for {
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+    } yield mag
+
+  /** Measures a segment in the chunks of [[SurfaceChunk.forSegmentBuckets]] and sums them, keeping up to parallelism
+    * chunks in flight, as each one waits for its buckets to load.
+    */
+  protected def measureSurfaceInChunks(segmentBuckets: Seq[Vec3Int], parallelism: Int)(
+      measureChunk: SurfaceChunk => Fox[SegmentSurfaceWithVolume]
+  )(using ec: ExecutionContext): Fox[SegmentSurfaceWithVolume] =
+    for {
+      surfaces <- Fox.batchCombined(SurfaceChunk.forSegmentBuckets(segmentBuckets), parallelism)(measureChunk)
+    } yield surfaces.foldLeft(SegmentSurfaceWithVolume.empty)(_ + _)
 
   protected def generateNextTopLeftsFromNeighbors(
       oldTopLeft: VoxelPosition,
@@ -116,85 +153,4 @@ trait FullMeshHelper extends LazyLogging {
 
   protected def logMeshingDuration(before: Instant, label: String, lengthBytes: Int): Unit =
     Instant.logSince(before, s"Served $lengthBytes-byte STL mesh via $label,", logger)
-
-  // Computes surface area from the raw per-chunk bytes produced by adHocMeshToStl
-  // (50 bytes per face, no 84-byte STL header). Chunks produced by ad-hoc meshing or
-  // dracoToStl are non-overlapping (adjacent chunks are spaced chunkSize apart while
-  // each chunk samples chunkSize+1 voxels, so their marching-cubes cells share no
-  // boundary), meaning the sum of per-chunk areas equals the total surface area.
-  def surfaceAreaFromRawChunkStlBytes(chunkBytes: Array[Byte]): Float = {
-    val dataBuffer = ByteBuffer.wrap(chunkBytes).order(ByteOrder.LITTLE_ENDIAN)
-    val numFaces = chunkBytes.length / 50
-    val normalSize = 12 // each face starts with a normal vector: 3 floats × 4 bytes
-    var surfaceSum = 0.0f
-    val bytesPerFace = 50
-    for (faceIndex <- 0 until numFaces) {
-      // Skip the normal vector at the start of each face record; read the three vertices directly
-      val base = faceIndex * bytesPerFace + normalSize
-      val v1x = dataBuffer.getFloat(base)
-      val v1y = dataBuffer.getFloat(base + 4)
-      val v1z = dataBuffer.getFloat(base + 8)
-      val v2x = dataBuffer.getFloat(base + 12)
-      val v2y = dataBuffer.getFloat(base + 16)
-      val v2z = dataBuffer.getFloat(base + 20)
-      val v3x = dataBuffer.getFloat(base + 24)
-      val v3y = dataBuffer.getFloat(base + 28)
-      val v3z = dataBuffer.getFloat(base + 32)
-
-      surfaceSum += triangleArea(v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z)
-    }
-    surfaceSum
-  }
-
-  // Computes the surface area of an ad-hoc mesh chunk, like surfaceAreaFromRawChunkStlBytes(adHocMeshToStl(mesh)),
-  // but without encoding the STL.
-  def surfaceArea(mesh: AdHocMesh): Float = {
-    val vertices = mesh.vertices
-    val indices = mesh.indices
-    var surfaceSum = 0.0f
-    for (faceIndex <- 0 until indices.length / 3) {
-      val v1 = 3 * indices(3 * faceIndex)
-      val v2 = 3 * indices(3 * faceIndex + 1)
-      val v3 = 3 * indices(3 * faceIndex + 2)
-      surfaceSum += triangleArea(
-        vertices(v1),
-        vertices(v1 + 1),
-        vertices(v1 + 2),
-        vertices(v2),
-        vertices(v2 + 1),
-        vertices(v2 + 2),
-        vertices(v3),
-        vertices(v3 + 1),
-        vertices(v3 + 2)
-      )
-    }
-    surfaceSum
-  }
-
-  private def triangleArea(
-      v1x: Float,
-      v1y: Float,
-      v1z: Float,
-      v2x: Float,
-      v2y: Float,
-      v2z: Float,
-      v3x: Float,
-      v3y: Float,
-      v3z: Float
-  ): Float = {
-    // Build two edge vectors from v1
-    val e1x = v2x - v1x; val e1y = v2y - v1y; val e1z = v2z - v1z // edge v1→v2
-    val e2x = v3x - v1x; val e2y = v3y - v1y; val e2z = v3z - v1z // edge v1→v3
-
-    // Cross product e1 × e2; its magnitude equals twice the triangle area
-    val cx = e1y * e2z - e1z * e2y
-    val cy = e1z * e2x - e1x * e2z
-    val cz = e1x * e2y - e1y * e2x
-    Math.sqrt(cx * cx + cy * cy + cz * cz).toFloat / 2.0f
-  }
-
-  def surfaceAreaFromStlBytes(stlBytes: Array[Byte]): Box[Float] = tryo {
-    val stlHeaderSize = 84
-    surfaceAreaFromRawChunkStlBytes(stlBytes.drop(stlHeaderSize))
-  }
 }

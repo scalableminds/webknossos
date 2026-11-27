@@ -847,6 +847,11 @@ object Msg {
     val segmentIdZeroForAdHoc: String = "Cannot compute an ad-hoc mesh for segment id 0."
     def tooManyAdHocMeshRequests(max: Int): String =
       s"Segment is too large for ad-hoc full mesh computation (more than $max meshing requests). Consider computing a mesh file."
+    val segmentIndexNeededForSurface: String =
+      "Measuring the surface of a segment requires a segment index."
+    val measureSurfaceFailed: String = "Could not measure the surface of the segment."
+    def surfaceNeedsAgglomerateMapping(mappingName: String): String =
+      s"Measuring the surface of a segment supports only agglomerate mappings, but “$mappingName” is not an agglomerate file of the layer."
     object File {
       val meshFileNameRequired: String =
         "Trying to load mesh from mesh file, but no mesh file name was supplied."

@@ -1121,13 +1121,16 @@ export function getSegmentVolumes(
   );
 }
 
-type SegmentStatisticsParametersMeshBased = {
+type SegmentStatisticsParameters = {
   mag: Vector3;
   segmentIds: bigint[];
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
+  annotationVersion?: number;
+};
+
+type SegmentStatisticsParametersMeshBased = SegmentStatisticsParameters & {
   meshFileName?: string | null;
-  annotationVersion: number | undefined;
 };
 
 export function getSegmentSurfaceArea(
@@ -1199,8 +1202,9 @@ export async function getSegmentStatisticsFileInfo(
 }
 
 /**
- * The statistics-file-backed routes below exist only on the datastore, so they are always requested
- * from there – even for a layer that belongs to a volume annotation.
+ * The statistics-file-backed routes below exist only on the datastore, so they are requested from
+ * there by default – even for a layer that belongs to a volume annotation. Pass `useDataStore: false`
+ * for a route that the store holding the layer can compute.
  */
 function fetchSegmentStatistic<T>(
   layerSourceInfo: LayerSourceInfo,
@@ -1209,11 +1213,24 @@ function fetchSegmentStatistic<T>(
   segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  {
+    annotationVersion,
+    useDataStore = true,
+  }: { annotationVersion?: number; useDataStore?: boolean } = {},
 ): Promise<T[]> {
-  const requestUrl = getDataOrTracingStoreUrl({ ...layerSourceInfo, useDataStore: true });
+  const requestUrl = getDataOrTracingStoreUrl(
+    useDataStore ? { ...layerSourceInfo, useDataStore: true } : layerSourceInfo,
+  );
+  const data: SegmentStatisticsParameters = {
+    additionalCoordinates,
+    mag,
+    segmentIds,
+    mappingName,
+    annotationVersion,
+  };
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/${route}?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data,
       method: "POST",
     }),
   );
@@ -1237,13 +1254,19 @@ export function getSegmentMaxDistances(
   );
 }
 
-/** Dimensionless and scale-invariant, in [0, 1]. */
+/**
+ * Dimensionless and scale-invariant: 1 for a ball, smaller for any other shape (tiny segments can
+ * exceed 1 slightly). Read from the statistics file if `fromStatisticsFile` is set (always on the
+ * datastore), otherwise computed from the segment's ad-hoc mesh by the store that holds the layer.
+ */
 export function getSegmentSphericities(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   segmentIds: Array<bigint>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
+  fromStatisticsFile: boolean,
 ): Promise<number[]> {
   return fetchSegmentStatistic<number>(
     layerSourceInfo,
@@ -1252,6 +1275,7 @@ export function getSegmentSphericities(
     segmentIds,
     additionalCoordinates,
     mappingName,
+    { annotationVersion, useDataStore: fromStatisticsFile },
   );
 }
 

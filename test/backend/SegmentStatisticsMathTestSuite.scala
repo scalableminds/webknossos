@@ -1,6 +1,6 @@
 package backend
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.services.segmentstatistics.SegmentStatisticsMath
 import org.scalatest.wordspec.AsyncWordSpec
 
@@ -30,6 +30,34 @@ class SegmentStatisticsMathTestSuite extends AsyncWordSpec {
     "scale down a voxel count for an anisotropically coarser requested mag" in
       // requested mag is 2x coarser in x and y only, so voxels are 4x larger, i.e. 4x fewer of them
       assert(SegmentStatisticsMath.rescaleVolumeToMag(400L, Vec3Int(1, 1, 1), Vec3Int(2, 2, 1)) == 100L)
+  }
+
+  "sphericity" should {
+    "be the area of the ball with the segment's volume, divided by the segment's area" in {
+      // A box of 4 × 5 × 6 voxels of size 2 × 3 × 5, i.e. 8 × 15 × 30. The expected value follows the definition
+      // (via the radius of the ball of equal volume), not the closed form that sphericity uses.
+      val volume = 8.0 * 15.0 * 30.0
+      val area = 2 * (8.0 * 15.0 + 15.0 * 30.0 + 8.0 * 30.0)
+      val ballRadius = Math.cbrt(3 * volume / (4 * Math.PI))
+      val expected = 4 * Math.PI * ballRadius * ballRadius / area
+      val sphericity = SegmentStatisticsMath.sphericity(area, 4L * 5L * 6L, Vec3Double(2, 3, 5))
+      assert(Math.abs(sphericity - expected) < 1e-12)
+      assert(sphericity > 0 && sphericity < 1)
+    }
+    "not depend on the unit or the mag" in {
+      // Voxels of 10 nm instead of 1 nm: the area grows 100-fold. The same segment counted in mag 2 (eight times
+      // fewer voxels, each eight times larger) has the same volume.
+      val inMag1 = SegmentStatisticsMath.sphericity(900.0, 2000L, Vec3Double(1, 1, 1))
+      assert(Math.abs(SegmentStatisticsMath.sphericity(90000.0, 2000L, Vec3Double(10, 10, 10)) - inMag1) < 1e-12)
+      assert(Math.abs(SegmentStatisticsMath.sphericity(900.0, 250L, Vec3Double(2, 2, 2)) - inMag1) < 1e-12)
+    }
+    "be smaller for a cube" in {
+      // A cube of 10³ voxels of size 2: (π · 6 · 8000²)^(1/3) / 2400 = (π / 6)^(1/3).
+      val sphericity = SegmentStatisticsMath.sphericity(6 * 20.0 * 20.0, 1000L, Vec3Double(2, 2, 2))
+      assert(Math.abs(sphericity - Math.cbrt(Math.PI / 6)) < 1e-12)
+    }
+    "be 0 for a segment without surface" in
+      assert(SegmentStatisticsMath.sphericity(0.0, 0L, Vec3Double(1, 1, 1)) == 0.0)
   }
 
   "weightedCenterOfMass" should {

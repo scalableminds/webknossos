@@ -54,59 +54,89 @@ class DSFullMeshService @Inject() (
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
-  lazy val segmentSurfaceAreaCache: AlfuCache[(ObjectId, String, FullMeshRequest), Float] =
+  // Keyed by requests without a mesh file name: the surface of the segment's ad-hoc mesh and its voxel count.
+  lazy val segmentSurfaceCache: AlfuCache[(ObjectId, String, FullMeshRequest), SegmentSurfaceWithVolume] =
     AlfuCache(maxCapacity = 10000)
 
-  def clearCache(datasetId: ObjectId, layerNameOpt: Option[String]): Int =
-    segmentSurfaceAreaCache.clear { case (keyDatasetId, keyLayerName, _) =>
-      keyDatasetId == datasetId && layerNameOpt.forall(_ == keyLayerName)
+  // Keyed by requests with a mesh file name: the surface area of the segment's mesh in that mesh file.
+  lazy val meshFileSurfaceAreaCache: AlfuCache[(ObjectId, String, FullMeshRequest), Double] =
+    AlfuCache(maxCapacity = 10000)
+
+  def clearCache(datasetId: ObjectId, layerNameOpt: Option[String]): Int = {
+    def matches(key: (ObjectId, String, FullMeshRequest)): Boolean = key match {
+      case (keyDatasetId, keyLayerName, _) => keyDatasetId == datasetId && layerNameOpt.forall(_ == keyLayerName)
     }
+    segmentSurfaceCache.clear(matches) + meshFileSurfaceAreaCache.clear(matches)
+  }
 
-  // Computes surface area for a segment by summing per-chunk areas, never building the
-  // combined STL buffer (which overflows Int for large segments).
-  def computeSurfaceArea(
+  /** Measures the surface area and voxel count of a segment in the mag of the request, on the actor pool like ad-hoc
+    * meshes. Needs a segment index.
+    */
+  def measureSurface(
       datasetId: ObjectId,
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Float] =
-    if (fullMeshRequest.meshFileName.isDefined)
-      for {
-        stlChunks <- loadMeshChunksFromMeshFile(dataSource, dataLayer, fullMeshRequest)
-      } yield stlChunks.map(surfaceAreaFromRawChunkStlBytes).sum
-    else
-      computeSurfaceAreaAdHoc(datasetId, dataSource, dataLayer, fullMeshRequest)
-
-  private def computeSurfaceAreaAdHoc(
-      datasetId: ObjectId,
-      dataSource: UsableDataSource,
-      dataLayer: DataLayer,
-      fullMeshRequest: FullMeshRequest
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Float] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[SegmentSurfaceWithVolume] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
-      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+      mag <- adHocMag(fullMeshRequest)
       segmentationLayer <- tryo(
         dataLayer.asInstanceOf[SegmentationLayer]
       ).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
-      hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
-      meshChunks <-
-        if (hasSegmentIndexFile)
-          getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
-        else {
-          for {
-            seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mesh.seedPosNeededForAdHoc
-            chunks <- getAllAdHocChunksWithNeighborLogic(
-              datasetId,
-              dataSource,
-              segmentationLayer,
-              fullMeshRequest,
-              VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
-              adHocChunkSize
+      _ <- Fox.fromBool(
+        segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
+      ) ?~> Msg.Mesh.segmentIndexNeededForSurface
+      segmentBuckets <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
+      surface <- measureSurfaceInChunks(segmentBuckets.toIndexedSeq, config.Datastore.AdHocMesh.actorPoolSize) {
+        chunk =>
+          val meshRequest = AdHocMeshRequest(
+            Some(datasetId),
+            Some(dataSource.id),
+            segmentationLayer,
+            Cuboid(
+              VoxelPosition(chunk.topLeft.x * mag.x, chunk.topLeft.y * mag.y, chunk.topLeft.z * mag.z, mag),
+              chunk.size.x,
+              chunk.size.y,
+              chunk.size.z
+            ),
+            fullMeshRequest.segmentId.toLong,
+            dataSource.scale.factor,
+            tc,
+            fullMeshRequest.mappingName,
+            fullMeshRequest.mappingType,
+            fullMeshRequest.additionalCoordinates,
+            fullMeshRequest.annotationVersion,
+            findNeighbors = false
+          )
+          adHocMeshService.requestSurfaceViaActor(
+            SegmentSurfaceRequest(meshRequest, chunk.interiorStart, chunk.interiorEnd)
+          )
+      }
+    } yield surface
+
+  /** The surface area of the segment's mesh in the mesh file of the request. */
+  def surfaceAreaFromMeshFile(
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Double] =
+    for {
+      chunkAreas <- mapMeshFileChunks(dataSource, dataLayer, fullMeshRequest) {
+        (chunkInfo, dracoBytes, scale, vertexQuantizationBits) =>
+          tryo(
+            dracoToStlConverter.dracoSurfaceArea(
+              dracoBytes,
+              chunkInfo.position.x,
+              chunkInfo.position.y,
+              chunkInfo.position.z,
+              scale.x,
+              scale.y,
+              scale.z,
+              vertexQuantizationBits
             )
-          } yield chunks
-        }
-    } yield meshChunks.map(surfaceArea).sum
+          ).toFox
+      }
+    } yield chunkAreas.sum
 
   def loadFor(
       datasetId: ObjectId,
@@ -126,8 +156,7 @@ class DSFullMeshService @Inject() (
       fullMeshRequest: FullMeshRequest
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
-      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
+      mag <- adHocMag(fullMeshRequest)
       segmentationLayer <- tryo(
         dataLayer.asInstanceOf[SegmentationLayer]
       ).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
@@ -163,25 +192,10 @@ class DSFullMeshService @Inject() (
       mag: Vec3Int
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[AdHocMesh]] =
     for {
-      segmentIndexFileKey <- segmentIndexFileService.lookUpSegmentIndexFileKey(dataSource.id, segmentationLayer)
-      segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
-        dataSource.id,
-        segmentationLayer,
-        fullMeshRequest.mappingName,
-        fullMeshRequest.editableMappingTracingId,
-        fullMeshRequest.annotationVersion,
-        fullMeshRequest.segmentId.toLong,
-        mappingNameForMeshFile = None,
-        omitMissing = false
-      )
-      topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
-        segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId)
-      )
-      topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
-      targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
-      _ <- Fox.fromBool(targetMagPositions.length <= maxAdHocFullMeshChunks) ?~> Msg.Mesh.tooManyAdHocMeshRequests(
-        maxAdHocFullMeshChunks
-      )
+      segmentBuckets <- segmentIndexBucketPositions(dataSource, segmentationLayer, fullMeshRequest, mag)
+      targetMagPositions = bucketsToMesh(segmentBuckets.toSeq)
+      _ <- Fox.fromBool(targetMagPositions.length <= maxAdHocFullMeshChunksWithNeighbors) ?~> Msg.Mesh
+        .tooManyAdHocMeshRequests(maxAdHocFullMeshChunksWithNeighbors)
       // Dispatch chunks to the actor pool keeping actorPoolSize requests in flight at a time.
       meshChunks: List[AdHocMesh] <- Fox.batchCombined(
         targetMagPositions.toIndexedSeq,
@@ -214,6 +228,36 @@ class DSFullMeshService @Inject() (
         adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
       }
     } yield meshChunks
+
+  // The buckets (in buckets of mag) with a voxel of the segment (or of the agglomerate's segments), from the segment
+  // index.
+  private def segmentIndexBucketPositions(
+      dataSource: UsableDataSource,
+      segmentationLayer: SegmentationLayer,
+      fullMeshRequest: FullMeshRequest,
+      mag: Vec3Int
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
+    for {
+      segmentIndexFileKey <- segmentIndexFileService.lookUpSegmentIndexFileKey(dataSource.id, segmentationLayer)
+      segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
+        dataSource.id,
+        segmentationLayer,
+        fullMeshRequest.mappingName,
+        fullMeshRequest.editableMappingTracingId,
+        fullMeshRequest.annotationVersion,
+        fullMeshRequest.segmentId.toLong,
+        mappingNameForMeshFile = None,
+        omitMissing = false
+      )
+      topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
+        segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId)
+      )
+      topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
+      targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
+      _ <- Fox.fromBool(targetMagPositions.length <= maxAdHocFullMeshChunks) ?~> Msg.Mesh.tooManyAdHocMeshRequests(
+        maxAdHocFullMeshChunks
+      )
+    } yield targetMagPositions
 
   private def getAllAdHocChunksWithNeighborLogic(
       datasetId: ObjectId,
@@ -281,12 +325,35 @@ class DSFullMeshService @Inject() (
   }
 
   // Returns individual raw STL chunks (50 bytes/face, no header) for a mesh-file request.
-  // Used both for serving the full mesh and for per-chunk surface-area computation.
   private def loadMeshChunksFromMeshFile(
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Array[Byte]]] =
+    mapMeshFileChunks(dataSource, dataLayer, fullMeshRequest) { (chunkInfo, dracoBytes, scale, vertexQuantizationBits) =>
+      tryo(
+        dracoToStlConverter.dracoToStl(
+          dracoBytes,
+          chunkInfo.position.x,
+          chunkInfo.position.y,
+          chunkInfo.position.z,
+          scale.x,
+          scale.y,
+          scale.z,
+          vertexQuantizationBits
+        )
+      ).toFox
+    }
+
+  // Reads the Draco-encoded chunks of the segment's mesh in the mesh file of the request one by one, and converts each
+  // with the scale of the requested LOD and the vertex quantization bits of the mesh file.
+  private def mapMeshFileChunks[T](
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest
+  )(
+      convert: (MeshChunk, Array[Byte], Vec3Double, Int) => Fox[T]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[T]] =
     for {
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> Msg.Mesh.File.meshFileNameRequired
       meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
@@ -305,17 +372,28 @@ class DSFullMeshService @Inject() (
       chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.lods(selectedLod).chunks
-      // Right now only the scale is used, so we only need to supply these values
+      // Of the transform, only the scale is used
       lodTransform = chunkInfos.lods(selectedLod).transform
-      transform = Array(
-        Array(lodTransform(0)(0), 0, 0),
-        Array(0, lodTransform(1)(1), 0),
-        Array(0, 0, lodTransform(2)(2))
-      )
-      stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { (chunkRange: MeshChunk) =>
-        readMeshChunkAsStl(fullMeshRequest.segmentId.toLong, meshFileKey, chunkRange, transform, vertexQuantizationBits)
+      scale <- tryo(
+        Vec3Double(lodTransform(0)(0), lodTransform(1)(1), lodTransform(2)(2))
+      ).toFox ?~> "could not extract scale from mesh file transform attribute"
+      converted: Seq[T] <- Fox.serialCombined(allChunkRanges) { (chunkInfo: MeshChunk) =>
+        for {
+          (dracoBytes, encoding) <- meshFileService.readMeshChunk(
+            meshFileKey,
+            List(
+              MeshChunkDataRequest(
+                chunkInfo.byteOffset,
+                chunkInfo.byteSize,
+                Some(UnsignedLong(fullMeshRequest.segmentId.toLong)) // only used in neuroglancerPrecomputed case
+              )
+            )
+          ) ?~> Msg.Mesh.File.loadChunkFailed
+          _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
+          result <- convert(chunkInfo, dracoBytes, scale, vertexQuantizationBits)
+        } yield result
       }
-    } yield stlEncodedChunks
+    } yield converted
 
   private def loadFullMeshFromMeshFile(
       dataSource: UsableDataSource,
@@ -328,45 +406,5 @@ class DSFullMeshService @Inject() (
       stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
       _ = logMeshingDuration(before, "meshFile", stlOutput.length)
     } yield stlOutput
-
-  private def readMeshChunkAsStl(
-      segmentId: Long, // only used in neuroglancerPrecomputed case
-      meshFileKey: MeshFileKey,
-      chunkInfo: MeshChunk,
-      transform: Array[Array[Double]],
-      vertexQuantizationBits: Int
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
-    for {
-      (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
-        meshFileKey,
-        List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, Some(UnsignedLong(segmentId))))
-      ) ?~> Msg.Mesh.File.loadChunkFailed
-      _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
-      stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes, vertexQuantizationBits)
-    } yield stlEncodedChunk
-
-  private def getStlEncodedChunkFromDraco(
-      chunkInfo: MeshChunk,
-      transform: Array[Array[Double]],
-      dracoBytes: Array[Byte],
-      vertexQuantizationBits: Int
-  )(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    for {
-      scale <- tryo(
-        Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))
-      ).toFox ?~> "could not extract scale from mesh file transform attribute"
-      stlEncodedChunk <- tryo(
-        dracoToStlConverter.dracoToStl(
-          dracoBytes,
-          chunkInfo.position.x,
-          chunkInfo.position.y,
-          chunkInfo.position.z,
-          scale.x,
-          scale.y,
-          scale.z,
-          vertexQuantizationBits
-        )
-      ).toFox
-    } yield stlEncodedChunk
 
 }

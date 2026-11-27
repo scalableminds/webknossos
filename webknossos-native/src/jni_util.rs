@@ -6,7 +6,9 @@ use std::panic::{self, AssertUnwindSafe};
 
 use jni::elements::ReleaseMode;
 use jni::errors::ThrowRuntimeExAndDefault;
-use jni::objects::{JByteArray, JFloatArray, JIntArray, JLongArray, JPrimitiveArray, TypeArray};
+use jni::objects::{
+    JByteArray, JDoubleArray, JFloatArray, JIntArray, JLongArray, JPrimitiveArray, TypeArray,
+};
 use jni::{Env, EnvUnowned};
 
 /// An error of a native function. It reaches Java as a `RuntimeException`.
@@ -128,6 +130,19 @@ pub fn read_array<T: TypeArray + Default>(
     Ok(values)
 }
 
+/// Copies a Java primitive array of exactly three elements, such as a vector, into an array. `name` names the
+/// argument in the error.
+pub fn read_vec3<T: TypeArray + Default + Copy>(
+    env: &Env,
+    array: &JPrimitiveArray<T>,
+    name: &str,
+) -> NativeResult<[T; 3]> {
+    match read_array(env, array)?[..] {
+        [x, y, z] => Ok([x, y, z]),
+        _ => invalid_argument(format!("{name} must have three elements")),
+    }
+}
+
 /// Creates a new Java `byte[]` with the given contents.
 pub fn new_byte_array<'local>(
     env: &mut Env<'local>,
@@ -169,6 +184,16 @@ pub fn new_float_array<'local>(
     values: &[f32],
 ) -> NativeResult<JFloatArray<'local>> {
     let array = env.new_float_array(values.len())?;
+    array.set_region(env, 0, values)?;
+    Ok(array)
+}
+
+/// Creates a new Java `double[]` with the given contents.
+pub fn new_double_array<'local>(
+    env: &mut Env<'local>,
+    values: &[f64],
+) -> NativeResult<JDoubleArray<'local>> {
+    let array = env.new_double_array(values.len())?;
     array.set_region(env, 0, values)?;
     Ok(array)
 }

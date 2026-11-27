@@ -19,6 +19,7 @@ import type { BoundingBoxObject } from "types/bounding_box";
 import type { Vector3 } from "viewer/constants";
 import {
   getMagInfo,
+  getMappingInfo,
   getMaybeSegmentIndexAvailability,
 } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMappingName } from "viewer/model/accessors/volumetracing_accessor";
@@ -51,6 +52,8 @@ export type SegmentStatistics = {
   isVolumeAvailable: boolean;
   // Either the statistics file holds surfaces, or a segment index can drive ad-hoc meshing.
   isSurfaceAreaAvailable: boolean;
+  // Either the statistics file holds sphericities, or a segment index can drive ad-hoc meshing.
+  isSphericityAvailable: boolean;
   availableFileMetrics: AvailableFileMetrics;
   // Note, that the segment statistics file format has slightly different keys as some are in plural and some in singular.
   volumes: SegmentStatistic<number>;
@@ -87,12 +90,13 @@ const STATISTICS_QUERY_OPTIONS = {
  * Fetches segment statistics for a list of segments. This hook should be used by and component using
  * the segment statistics as it has a shared query cache.
  *
- * Volume, surface area and bounding box are always requested (the backend falls back to computing
- * them). The remaining four come from a precomputed statistics file and are only requested when
- * that file offers them for the currently active mapping.
+ * Volume, surface area, sphericity and bounding box are always requested (the backend falls back to
+ * computing them). The remaining three come from a precomputed statistics file and are only requested
+ * when that file offers them for the currently active mapping.
  *
  * How the fallback works: Volume falls back to counting the segment index. Surface area falls back
- * to a precomputed mesh file, or failing that to ad-hoc meshing, which itself walks the segment index.
+ * to a precomputed mesh file, or failing that to measuring the surface of the ad-hoc mesh, which
+ * itself walks the segment index. Sphericity falls back to that same ad-hoc surface and voxel count.
  * When no source applies, the route 404s rather than returning a value, so it must not be requested at
  * all. We don't support the ad-hoc meshing via seed position here though.
  */
@@ -112,6 +116,15 @@ export function useSegmentStatistics({
   const currentMeshFileName = currentMeshFile?.name;
   const isSegmentIndexAvailable =
     useWkSelector((state) => getMaybeSegmentIndexAvailability(state.dataset, layer?.name)) === true;
+  // The datastore measures ad-hoc surfaces only with agglomerate mappings, it cannot apply a JSON
+  // mapping. Without a mapping, the mapping info also says JSON, so only a requested mapping counts.
+  const mappingType = useWkSelector(
+    (state) =>
+      getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layer?.name).mappingType,
+  );
+  const isJsonMappingRequested = mappingName != null && mappingType === "JSON";
+  const canMeasureAdHocSurface =
+    isSegmentIndexAvailable && !(isJsonMappingRequested && layer?.tracingId == null);
 
   const { fileInfo, isLoading: isLoadingFileInfo } = useSegmentStatisticsFile(layer);
   const availableFileMetrics = useMemo(
@@ -137,7 +150,8 @@ export function useSegmentStatistics({
   const canMeshFileServeSurfaceArea =
     currentMeshFile != null && (currentMeshFile.mappingName || null) === (mappingName || null);
   const isSurfaceAreaAvailable =
-    availableFileMetrics.surfaceArea || canMeshFileServeSurfaceArea || isSegmentIndexAvailable;
+    availableFileMetrics.surfaceArea || canMeshFileServeSurfaceArea || canMeasureAdHocSurface;
+  const isSphericityAvailable = availableFileMetrics.sphericity || canMeasureAdHocSurface;
 
   const layerSourceInfo: LayerSourceInfo | null = useMemo(
     () =>
@@ -225,8 +239,6 @@ export function useSegmentStatistics({
     ...STATISTICS_QUERY_OPTIONS,
   });
 
-  // The remaining metrics are only served from the statistics file, so there is nothing to flush
-  // and nothing to fall back to.
   const maxDistances = useQuery({
     queryKey: ["segmentMaxDistances", statisticsMag, ...sharedKey],
     queryFn: () =>
@@ -242,16 +254,19 @@ export function useSegmentStatistics({
   });
 
   const sphericities = useQuery({
-    queryKey: ["segmentSphericities", statisticsMag, ...sharedKey],
-    queryFn: () =>
+    queryKey: ["segmentSphericities", statisticsMag, availableFileMetrics.sphericity, ...sharedKey],
+    queryFn: async () =>
       getSegmentSphericities(
         layerSourceInfo as LayerSourceInfo,
         statisticsMag,
         segmentIds,
         additionalCoordinates,
         mappingName,
+        // Unlike the file, the fallback measures the annotation, whose pending changes must be saved.
+        availableFileMetrics.sphericity ? undefined : await saveAndGetAnnotationVersion(),
+        availableFileMetrics.sphericity,
       ),
-    enabled: isReady && availableFileMetrics.sphericity,
+    enabled: isReady && isSphericityAvailable,
     ...STATISTICS_QUERY_OPTIONS,
   });
 
@@ -310,6 +325,7 @@ export function useSegmentStatistics({
     isBoundingBoxAvailable: isSegmentIndexAvailable,
     isVolumeAvailable,
     isSurfaceAreaAvailable,
+    isSphericityAvailable,
     fileInfo,
     statisticsMag,
     boundingBoxMag,
@@ -318,7 +334,7 @@ export function useSegmentStatistics({
     boundingBoxes: toStatistic(boundingBoxes, isCoreRequested && isSegmentIndexAvailable),
     surfaceAreas: toStatistic(surfaceAreas, isCoreRequested && isSurfaceAreaAvailable),
     maxDistances: toStatistic(maxDistances, isReady && availableFileMetrics.maxDistance),
-    sphericities: toStatistic(sphericities, isReady && availableFileMetrics.sphericity),
+    sphericities: toStatistic(sphericities, isReady && isSphericityAvailable),
     centersOfMass: toStatistic(centersOfMass, isReady && availableFileMetrics.centerOfMass),
     covarianceMatrices: toStatistic(covarianceMatrices, isReady && availableFileMetrics.covariance),
   };

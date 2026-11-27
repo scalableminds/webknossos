@@ -15,7 +15,7 @@
 //!   triangle soup with three vertices per triangle.
 //! - The neighbors are the faces of the cuboid that contain a voxel of the segment, see [Neighbors].
 
-mod triangle_table;
+pub(crate) mod triangle_table;
 
 use std::sync::Mutex;
 
@@ -77,7 +77,7 @@ impl<'a> Cuboid<'a> {
 
     /// Validates the arguments of a native call for a cuboid of `data_len` bytes. Returns the bytes per element
     /// and the dimensions.
-    fn validate(
+    pub(crate) fn validate(
         data_len: usize,
         bytes_per_element: i32,
         dimensions: &[i32],
@@ -108,6 +108,20 @@ impl<'a> Cuboid<'a> {
             );
         }
         Ok((bytes_per_element as usize, checked))
+    }
+
+    /// Writes the mask of the row at `(y, z)` into `mask`, see [mask_row]. Returns whether any element matched.
+    pub(crate) fn mask_row(&self, y: usize, z: usize, segment_id: i64, mask: &mut [u8]) -> bool {
+        let [width, height, _] = self.dimensions;
+        let row_bytes = width * self.bytes_per_element;
+        let start = (y + height * z) * row_bytes;
+        let row = &self.data[start..start + row_bytes];
+        match self.bytes_per_element {
+            1 => mask_row::<u8>(row, segment_id, mask),
+            2 => mask_row::<u16>(row, segment_id, mask),
+            4 => mask_row::<u32>(row, segment_id, mask),
+            _ => mask_row::<u64>(row, segment_id, mask),
+        }
     }
 }
 
@@ -176,20 +190,12 @@ impl SegmentMask {
         let voxels = &mut self.voxels;
         let occupied_blocks = &mut self.occupied_blocks;
         let mut neighbors: Neighbors = 0;
-        let row_bytes = width * cuboid.bytes_per_element;
 
         for z in 0..depth {
             for y in 0..height {
                 let row_index = y + height * z;
-                let row = &cuboid.data[row_index * row_bytes..(row_index + 1) * row_bytes];
                 let mask = &mut voxels[row_index * width..(row_index + 1) * width];
-                let any = match cuboid.bytes_per_element {
-                    1 => mask_row::<u8>(row, segment_id, mask),
-                    2 => mask_row::<u16>(row, segment_id, mask),
-                    4 => mask_row::<u32>(row, segment_id, mask),
-                    _ => mask_row::<u64>(row, segment_id, mask),
-                };
-                if !any {
+                if !cuboid.mask_row(y, z, segment_id, mask) {
                     continue;
                 }
 
@@ -248,7 +254,7 @@ impl SegmentMask {
 /// The cube index of [TRIANGLES] for each combination of two neighboring columns of four voxels: bits 0..3 of the
 /// key are the voxels at x of the rows (y, z), (y + 1, z), (y, z + 1) and (y + 1, z + 1), bits 4..7 the same at
 /// x + 1.
-const CUBE_INDEX: [u8; 256] = {
+pub(crate) const CUBE_INDEX: [u8; 256] = {
     const fn bit(key: usize, i: usize) -> u8 {
         ((key >> i) & 1) as u8
     }
@@ -459,12 +465,15 @@ fn mesh_segment(mask: &SegmentMask, offset: [f32; 3], scale: [f32; 3]) -> Mesh {
     }
 }
 
-fn read_vec3_f32(env: &jni::Env, array: &JFloatArray, name: &str) -> NativeResult<[f32; 3]> {
-    let values = jni_util::read_array(env, array)?;
-    match values[..] {
-        [x, y, z] => Ok([x, y, z]),
-        _ => invalid_argument(format!("{name} must have three elements")),
-    }
+/// Meshes a cuboid like the native function, for the tests of other modules.
+#[cfg(test)]
+pub(crate) fn mesh_cuboid(
+    cuboid: &Cuboid,
+    segment_id: i64,
+    offset: [f32; 3],
+    scale: [f32; 3],
+) -> Mesh {
+    mesh_segment(&SegmentMask::new(cuboid, segment_id), offset, scale)
 }
 
 #[unsafe(no_mangle)]
@@ -484,8 +493,8 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
 ) -> JFloatArray<'local> {
     jni_util::run(env, "AdHocMesher adHocMesh", |env| {
         let dimensions = jni_util::read_array(env, &dimensions)?;
-        let offset = read_vec3_f32(env, &offset, "offset")?;
-        let scale = read_vec3_f32(env, &scale, "scale")?;
+        let offset = jni_util::read_vec3(env, &offset, "offset")?;
+        let scale = jni_util::read_vec3(env, &scale, "scale")?;
         if neighbors_out.len(env)? != 1 {
             return invalid_argument("neighborsOut must have one element");
         }

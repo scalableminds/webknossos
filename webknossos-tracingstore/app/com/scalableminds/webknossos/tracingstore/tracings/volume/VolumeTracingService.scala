@@ -26,7 +26,9 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   AdHocMesh,
   AdHocMeshRequest,
   AdHocMeshService,
-  AdHocMeshServiceHolder
+  AdHocMeshServiceHolder,
+  SegmentSurfaceWithVolume,
+  SegmentSurfaceRequest
 }
 import com.scalableminds.webknossos.tracingstore.annotation.UpdateTimingStats
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
@@ -710,6 +712,33 @@ class VolumeTracingService @Inject() (
       request: WebknossosAdHocMeshRequest
   )(using tc: TokenContext): Fox[AdHocMesh] =
     for {
+      adHocMeshRequest <- adHocMeshRequestFor(annotationId, tracingId, tracing, request)
+      result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+    } yield result
+
+  // Measures the surface of a segment in the interior of the request's cuboid, see NativeSegmentSurface.
+  def measureAdHocSurface(
+      annotationId: ObjectId,
+      tracingId: String,
+      tracing: VolumeTracing,
+      request: WebknossosAdHocMeshRequest,
+      interiorStart: Vec3Int,
+      interiorEnd: Vec3Int
+  )(using tc: TokenContext): Fox[SegmentSurfaceWithVolume] =
+    for {
+      adHocMeshRequest <- adHocMeshRequestFor(annotationId, tracingId, tracing, request)
+      surface <- adHocMeshService.requestSurfaceViaActor(
+        SegmentSurfaceRequest(adHocMeshRequest, interiorStart, interiorEnd)
+      )
+    } yield surface
+
+  private def adHocMeshRequestFor(
+      annotationId: ObjectId,
+      tracingId: String,
+      tracing: VolumeTracing,
+      request: WebknossosAdHocMeshRequest
+  )(using tc: TokenContext): Fox[AdHocMeshRequest] =
+    for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       volumeLayer = volumeTracingLayer(
         annotationId,
@@ -718,22 +747,20 @@ class VolumeTracingService @Inject() (
         includeFallbackDataIfAvailable = true,
         isTemporaryTracing = isTemporaryTracing
       )
-      adHocMeshRequest = AdHocMeshRequest(
-        None,
-        None,
-        volumeLayer,
-        request.cuboid,
-        request.segmentId.toLong,
-        request.voxelSizeFactorInUnit,
-        tc,
-        None,
-        None,
-        request.additionalCoordinates,
-        request.annotationVersion,
-        request.findNeighbors
-      )
-      result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-    } yield result
+    } yield AdHocMeshRequest(
+      None,
+      None,
+      volumeLayer,
+      request.cuboid,
+      request.segmentId.toLong,
+      request.voxelSizeFactorInUnit,
+      tc,
+      None,
+      None,
+      request.additionalCoordinates,
+      request.annotationVersion,
+      request.findNeighbors
+    )
 
   def findData(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing): Fox[Option[Vec3Int]] =
     for {

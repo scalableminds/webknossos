@@ -19,7 +19,7 @@ RUN chmod +x bin/webknossos \
   && chmod +x tools/postgres/dbtool.js \
   && chmod go+w .
 
-RUN echo '#!/bin/bash\numask 002\nbin/webknossos -J-XX:-UseBASE64Intrinsics "$@"\n' > /docker-entrypoint.sh \
+RUN echo '#!/bin/bash\numask 002\nbin/webknossos "$@"\n' > /docker-entrypoint.sh \
   && chmod +x /docker-entrypoint.sh
 
 HEALTHCHECK \

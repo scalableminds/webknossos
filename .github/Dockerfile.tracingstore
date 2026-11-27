@@ -15,7 +15,7 @@ COPY --chown=webknossos:webknossos target/universal/stage .
 RUN chmod +x bin/webknossos-tracingstore \
   && chmod go+w .
 
-RUN echo '#!/bin/bash\numask 002\nbin/webknossos-tracingstore -J-XX:-UseBASE64Intrinsics "$@"\n' > /docker-entrypoint.sh \
+RUN echo '#!/bin/bash\numask 002\nbin/webknossos-tracingstore "$@"\n' > /docker-entrypoint.sh \
   && chmod +x /docker-entrypoint.sh
 
 USER webknossos

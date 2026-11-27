@@ -140,9 +140,12 @@ class MeshFileService @Inject() (
       case _ => Fox.successful(0)
     }
 
+  // segmentIdsFromAgglomerate: whether the segment ids belong to one agglomerate, e.g. of a mapping or an editable
+  // mapping.
   def listMeshChunksForSegmentsMerged(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
+      segmentIdsFromAgglomerate: Boolean,
       failOnZeroChunks: Boolean = true
   )(using
       ec: ExecutionContext,
@@ -150,7 +153,12 @@ class MeshFileService @Inject() (
   ): Fox[WebknossosSegmentInfo] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, failOnZeroChunks)
+        zarrMeshFileService.listMeshChunksForMultipleSegments(
+          meshFileKey,
+          segmentIds,
+          segmentIdsFromAgglomerate,
+          failOnZeroChunks
+        )
       case LayerAttachmentDataformat.hdf5 =>
         hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, failOnZeroChunks)
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>

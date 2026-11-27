@@ -2,7 +2,7 @@ import segmentationEmOverlay from "@images/vx/segmentation-em-overlay.webp";
 import { Badge, Button, Card, Flex, Typography, theme } from "antd";
 import features from "features";
 import type { CSSProperties } from "react";
-import { ColorWKBlueZircon } from "theme";
+import { ColorWKMint } from "theme";
 
 const smallCapsStyle: CSSProperties = {
   fontSize: 11,
@@ -37,7 +37,7 @@ export default function VoxelyticsBanner() {
         <Flex vertical align="flex-start" gap="large">
           <Flex vertical gap="small">
             <Badge
-              color={ColorWKBlueZircon}
+              color={ColorWKMint}
               text={
                 <Typography.Text type="secondary" style={smallCapsStyle}>
                   AI add-on

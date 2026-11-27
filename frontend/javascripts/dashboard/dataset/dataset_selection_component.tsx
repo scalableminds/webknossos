@@ -8,7 +8,7 @@ export interface DatasetSelectionValue {
 }
 
 async function fetchDatasets(query: string): Promise<DatasetSelectionValue[]> {
-  const datasets = await getDatasets(false, null, query, null, 20);
+  const datasets = await getDatasets({ isUnreported: false, searchQuery: query, limit: 20 });
 
   return datasets.map((d) => ({
     label: d.name,

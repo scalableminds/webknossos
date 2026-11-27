@@ -2,7 +2,7 @@ import { DownOutlined } from "@ant-design/icons";
 import { Badge, Button, Flex, Popover, Typography, theme } from "antd";
 import features from "features";
 import { useState } from "react";
-import { ColorWKBlueZircon } from "theme";
+import { ColorWKMint } from "theme";
 
 type Service = {
   eyebrow: string;
@@ -34,7 +34,7 @@ function Eyebrow({ children }: { children: string }) {
   const { token } = theme.useToken();
   return (
     <Badge
-      color={ColorWKBlueZircon}
+      color={ColorWKMint}
       text={
         <span
           style={{

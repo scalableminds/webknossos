@@ -55,7 +55,7 @@ export function AnnotationDetailsSidebar({
   if (annotation == null) {
     return (
       <div className="dashboard-details-sidebar text-center">
-        <Typography.Text type="secondary">Select an annotation to see its details.</Typography.Text>
+        <Typography.Text type="secondary">Select an annotation to see details.</Typography.Text>
       </div>
     );
   }

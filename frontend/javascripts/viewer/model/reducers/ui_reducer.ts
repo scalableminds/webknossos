@@ -220,6 +220,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_BOOKMARK_ID_TO_FOCUS": {
+      return updateKey(state, "uiInformation", {
+        bookmarkIdToFocus: action.bookmarkId,
+      });
+    }
+
     case "SET_GLOBAL_PROGRESS": {
       return updateKey(state, "uiInformation", {
         globalProgress: action.value,

@@ -23,12 +23,11 @@ class FullMeshHelperTestSuite extends AnyWordSpec with FullMeshHelper {
       val data = Array.tabulate(dims.x * dims.y * dims.z) { i =>
         if (segmentVoxels.contains((i % dims.x, i / dims.x % dims.y, i / (dims.x * dims.y)))) 1.toByte else 0.toByte
       }
-      val vertices =
-        new NativeAdHocMesher()
-          .mesh(data, 1, dims, 1L, Vec3Float(10, 20, 30), Vec3Float(11.24f, 11.24f, 28f))
-          .triangleSoup
+      val mesh =
+        new NativeAdHocMesher().mesh(data, 1, dims, 1L, Vec3Float(10, 20, 30), Vec3Float(11.24f, 11.24f, 28f))
+      val vertices = mesh.triangleSoup
 
-      val stl = ByteBuffer.wrap(adHocMeshToStl(vertices)).order(ByteOrder.LITTLE_ENDIAN)
+      val stl = ByteBuffer.wrap(adHocMeshToStl(mesh)).order(ByteOrder.LITTLE_ENDIAN)
       def readVec(offset: Int): Vec =
         (stl.getFloat(offset).toDouble, stl.getFloat(offset + 4).toDouble, stl.getFloat(offset + 8).toDouble)
       val numFaces = vertices.length / 9

@@ -27,7 +27,7 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 18;
+export const currentLayoutVersion = 19;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInFlightMode = false;
@@ -245,6 +245,18 @@ const _getDefaultLayouts = () => {
     rightBorderWidth,
     borderIsOpenByDefault,
   );
+  // Bookmarks belong to annotations, so the bookmarks tab is not shown in view mode.
+  const rightBorderForViewMode = buildBorder(
+    "right",
+    [
+      borderTabs.DatasetInfoTabView,
+      borderTabs.BoundingBoxTab,
+      borderTabs.SegmentsView,
+      borderTabs.ConnectomeView,
+    ],
+    rightBorderWidth,
+    borderIsOpenByDefault,
+  );
   const OrthoMainLayout = buildMainLayout([
     [[OrthoViewports.PLANE_XY], [OrthoViewports.PLANE_XZ]],
     [[OrthoViewports.PLANE_YZ], [OrthoViewports.TDView]],
@@ -260,19 +272,19 @@ const _getDefaultLayouts = () => {
     ],
   ]);
 
-  const buildOrthoLayout = (withSkeleton: boolean, is2D: boolean) =>
+  const buildOrthoLayout = (rightBorder: Border, is2D: boolean) =>
     buildLayout(
       globalLayoutSettings,
-      [leftBorder, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
+      [leftBorder, rightBorder],
       is2D ? OrthoMainLayout2d : OrthoMainLayout,
     );
 
-  const OrthoLayout = buildOrthoLayout(true, false);
-  const OrthoLayoutView = buildOrthoLayout(false, false);
-  const VolumeTracingView = buildOrthoLayout(false, false);
-  const OrthoLayout2d = buildOrthoLayout(true, true);
-  const OrthoLayoutView2d = buildOrthoLayout(false, true);
-  const VolumeTracingView2d = buildOrthoLayout(false, true);
+  const OrthoLayout = buildOrthoLayout(rightBorderWithSkeleton, false);
+  const OrthoLayoutView = buildOrthoLayout(rightBorderForViewMode, false);
+  const VolumeTracingView = buildOrthoLayout(rightBorderWithoutSkeleton, false);
+  const OrthoLayout2d = buildOrthoLayout(rightBorderWithSkeleton, true);
+  const OrthoLayoutView2d = buildOrthoLayout(rightBorderForViewMode, true);
+  const VolumeTracingView2d = buildOrthoLayout(rightBorderWithoutSkeleton, true);
   const eventual3DViewportForFlightMode = show3DViewportInFlightMode
     ? [[[OrthoViewports.TDView]]]
     : [];
@@ -281,15 +293,11 @@ const _getDefaultLayouts = () => {
     ...eventual3DViewportForFlightMode,
   ]);
 
-  const buildFlightModeLayout = (withSkeleton: boolean) =>
-    buildLayout(
-      globalLayoutSettings,
-      [leftBorder, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
-      FlightModeMainLayout,
-    );
+  const buildFlightModeLayout = (rightBorder: Border) =>
+    buildLayout(globalLayoutSettings, [leftBorder, rightBorder], FlightModeMainLayout);
 
-  const FlightModeLayoutView = buildFlightModeLayout(false);
-  const FlightModeLayout = buildFlightModeLayout(true);
+  const FlightModeLayoutView = buildFlightModeLayout(rightBorderForViewMode);
+  const FlightModeLayout = buildFlightModeLayout(rightBorderWithSkeleton);
   return {
     OrthoLayout,
     OrthoLayoutView,

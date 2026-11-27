@@ -15,6 +15,7 @@ import {
 import Store from "viewer/store";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { type MenuGroup, MenuGroupKeys } from "./menu_groups";
+import { openInMenu } from "./open_in/open_in_menu";
 
 // Menu entries shared by the dataset view, the annotation view and the command palette. They live
 // here instead of in a component module so that importing them doesn't pull in any UI components.
@@ -65,6 +66,7 @@ export function getViewDatasetMenuGroups(layoutMenu: SubMenuType | null): MenuGr
         pythonClientMenuItem,
         screenshotMenuItem,
         renderAnimationMenuItem,
+        openInMenu,
       ],
     },
     {

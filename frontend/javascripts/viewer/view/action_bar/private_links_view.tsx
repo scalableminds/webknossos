@@ -51,7 +51,7 @@ import { useState } from "react";
 import { ModalWidth } from "theme";
 import type { ZarrPrivateLink } from "types/api_types";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
-import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
+import { getZarrBaseUrl, getZarrLayerName } from "viewer/model/helpers/zarr_links";
 
 function useLinksQuery(annotationId: string) {
   return useQuery({
@@ -174,18 +174,13 @@ function useZarrLinks(maybeAccessToken: string | null) {
   const baseUrl =
     apiVersion == null
       ? null
-      : maybeAccessToken
-        ? `${dataStoreURL}/data/v${apiVersion}/annotations/zarr3/${maybeAccessToken}`
-        : `${dataStoreURL}/data/v${apiVersion}/zarr3/${dataset.id}`;
+      : getZarrBaseUrl(dataStoreURL, apiVersion, dataset.id, maybeAccessToken);
 
   const isLoading = buildInfoQuery.isLoading;
   const isUnavailable = !isLoading && baseUrl == null;
 
   const layerRows: ZarrLinkRow[] = dataLayers.map((layer) => {
-    const readableLayerName =
-      "tracingId" in layer && layer.tracingId != null
-        ? getReadableNameByVolumeTracingId(annotation, layer.tracingId)
-        : layer.name;
+    const readableLayerName = getZarrLayerName(layer, annotation);
     return {
       key: layer.name,
       label: readableLayerName,
